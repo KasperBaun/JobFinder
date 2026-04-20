@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jobmatch.Cli/Jobmatch.Cli.csproj" />
+    <Project Path="src/Jobmatch/Jobmatch.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jobmatch.Tests/Jobmatch.Tests.csproj" />
+  </Folder>
+</Solution>

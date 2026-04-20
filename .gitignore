@@ -1,0 +1,25 @@
+# .NET build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# User configs (examples are committed; active configs are not)
+config/skillset.md
+config/portals.yml
+
+# Runtime data
+data/
+
+# Playwright browsers
+.playwright/
