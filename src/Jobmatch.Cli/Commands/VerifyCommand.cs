@@ -4,12 +4,19 @@ using Spectre.Console.Cli;
 
 namespace Jobmatch.Cli.Commands;
 
-public sealed class VerifyCommand : AsyncCommand
+public sealed class VerifyCommand : AsyncCommand<VerifyCommand.Settings>
 {
-    public override async Task<int> ExecuteAsync(CommandContext context)
+    public sealed class Settings : Spectre.Console.Cli.CommandSettings
+    {
+        [System.ComponentModel.Description("Skip connectivity checks (offline mode).")]
+        [Spectre.Console.Cli.CommandOption("--offline")]
+        public bool Offline { get; init; }
+    }
+
+    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         var verifier = new ConfigVerifier();
-        var report = await verifier.VerifyAsync(includeConnectivity: false);
+        var report = await verifier.VerifyAsync(includeConnectivity: !settings.Offline);
 
         var reportDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
         Directory.CreateDirectory(reportDir);

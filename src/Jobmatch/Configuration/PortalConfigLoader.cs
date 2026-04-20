@@ -58,6 +58,7 @@ public static class PortalConfigLoader
         var responseMapping = ReadStringDict(map, "response_mapping");
         var rateLimit = ReadDouble(map, "rate_limit_rps", 1.0);
         var notes = map.TryGetValue("notes", out var n) ? n?.ToString() : null;
+        var html = ReadHtmlSelectors(map, name, type);
 
         return new PortalConfig(
             Name: name,
@@ -68,8 +69,50 @@ public static class PortalConfigLoader
             QueryParams: queryParams,
             Headers: headers,
             ResponseMapping: responseMapping,
+            Html: html,
             RateLimitRps: rateLimit,
             Notes: notes);
+    }
+
+    private static HtmlSelectors? ReadHtmlSelectors(IReadOnlyDictionary<string, object?> map, string portalName, PortalType type)
+    {
+        if (!map.TryGetValue("html", out var v) || v is not IDictionary<object, object?> inner) return null;
+        var h = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var kvp in inner)
+        {
+            var k = kvp.Key?.ToString();
+            var val = kvp.Value?.ToString() ?? string.Empty;
+            if (!string.IsNullOrEmpty(k)) h[k] = val;
+        }
+
+        if (!h.TryGetValue("list_selector", out var list) || string.IsNullOrWhiteSpace(list))
+        {
+            if (type == PortalType.Html)
+            {
+                throw new ConfigException($"portal '{portalName}': html.list_selector is required for html portals");
+            }
+            return null;
+        }
+        h.TryGetValue("title_selector", out var title);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new ConfigException($"portal '{portalName}': html.title_selector is required");
+        }
+
+        h.TryGetValue("link_selector", out var link);
+        h.TryGetValue("company_selector", out var company);
+        h.TryGetValue("location_selector", out var location);
+        h.TryGetValue("description_selector", out var description);
+        h.TryGetValue("url_attribute", out var urlAttr);
+
+        return new HtmlSelectors(
+            ListSelector: list,
+            TitleSelector: title!,
+            LinkSelector: string.IsNullOrWhiteSpace(link) ? null : link,
+            CompanySelector: string.IsNullOrWhiteSpace(company) ? null : company,
+            LocationSelector: string.IsNullOrWhiteSpace(location) ? null : location,
+            DescriptionSelector: string.IsNullOrWhiteSpace(description) ? null : description,
+            UrlAttribute: string.IsNullOrWhiteSpace(urlAttr) ? "href" : urlAttr);
     }
 
     private static IReadOnlyDictionary<string, object?> NormaliseKeys(IDictionary<object, object?> map)
