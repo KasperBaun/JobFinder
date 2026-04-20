@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="CodeHollow.FeedReader" />
   </ItemGroup>
 
 </Project>
