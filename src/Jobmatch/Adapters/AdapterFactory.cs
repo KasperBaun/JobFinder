@@ -12,7 +12,7 @@ public static class AdapterFactory
             PortalType.Api => new ApiAdapter(portal, http, logger),
             PortalType.Rss => new RssAdapter(portal, http, logger),
             PortalType.Manual => new ManualAdapter(portal, http, logger, importsDirectory),
-            PortalType.Html => null,
+            PortalType.Html => new HtmlAdapter(portal, http, logger),
             _ => null,
         };
     }

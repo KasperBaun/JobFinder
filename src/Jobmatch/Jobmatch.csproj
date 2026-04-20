@@ -4,6 +4,7 @@
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="CodeHollow.FeedReader" />
+    <PackageReference Include="Microsoft.Playwright" />
   </ItemGroup>
 
 </Project>
