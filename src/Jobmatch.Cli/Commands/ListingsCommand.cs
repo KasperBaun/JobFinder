@@ -5,6 +5,7 @@ using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
 using Jobmatch.Models;
 using Jobmatch.Output;
+using Jobmatch.Ranking;
 using Microsoft.Extensions.Logging.Abstractions;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -28,25 +29,13 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
     {
         var root = Directory.GetCurrentDirectory();
 
-        var portalsPath = Path.Combine(root, "config", "portals.yml");
-        if (!File.Exists(portalsPath))
+        if (!TryLoadConfigs(root, out var portals, out var skillset, out var ranking, out var error))
         {
-            AnsiConsole.MarkupLine($"[red]Missing {portalsPath}. Copy config/portals.example.yml to get started.[/]");
+            AnsiConsole.MarkupLine($"[red]{error.EscapeMarkup()}[/]");
             return 1;
         }
 
-        IReadOnlyList<PortalConfig> portals;
-        try
-        {
-            portals = PortalConfigLoader.Load(portalsPath);
-        }
-        catch (ConfigException ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Cannot read portals.yml:[/] {ex.Message.EscapeMarkup()}");
-            return 1;
-        }
-
-        var enabled = portals
+        var enabled = portals!
             .Where(p => p.Enabled)
             .Where(p => settings.Portal is null || p.Name.Equals(settings.Portal, StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -65,15 +54,15 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
         var logger = NullLogger.Instance;
 
         var allListings = new List<Listing>();
-        var perPortalCounts = new Dictionary<string, (int fetched, string? error)>();
+        var perPortal = new Dictionary<string, (int fetched, string? error)>();
 
         foreach (var portal in enabled)
         {
             var adapter = AdapterFactory.Create(portal, http, logger, imports);
             if (adapter is null)
             {
-                AnsiConsole.MarkupLine($"[yellow]{portal.Name}[/] — adapter type '{portal.Type}' not available in this phase; skipping.");
-                perPortalCounts[portal.Name] = (0, $"adapter '{portal.Type}' not available");
+                AnsiConsole.MarkupLine($"[yellow]{portal.Name.EscapeMarkup()}[/] — adapter type '{portal.Type}' not available in this phase; skipping.");
+                perPortal[portal.Name] = (0, $"adapter '{portal.Type}' not available");
                 continue;
             }
 
@@ -84,31 +73,84 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
                 var stamp = DateTimeOffset.Now.ToString("yyyyMMdd");
                 JsonReportWriter.WriteListings(deduped, Path.Combine(raw, $"{portal.Name}-{stamp}.json"));
                 allListings.AddRange(deduped);
-                perPortalCounts[portal.Name] = (deduped.Count, null);
+                perPortal[portal.Name] = (deduped.Count, null);
                 AnsiConsole.MarkupLine($"[green]✓[/] {portal.Name.EscapeMarkup()} — {deduped.Count} listing(s)");
             }
             catch (Exception ex)
             {
-                perPortalCounts[portal.Name] = (0, ex.Message);
+                perPortal[portal.Name] = (0, ex.Message);
                 AnsiConsole.MarkupLine($"[red]✗[/] {portal.Name.EscapeMarkup()} — {ex.GetType().Name.EscapeMarkup()}: {ex.Message.EscapeMarkup()}");
             }
         }
 
         var merged = Deduper.Deduplicate(allListings);
         JsonReportWriter.WriteListings(merged, Path.Combine(root, "data", "all_listings.json"));
-        MarkdownReportWriter.WriteListings(merged, Path.Combine(root, "data", "top_jobs.md"),
-            title: "Job listings (unranked — ranking arrives in Phase 4)");
+
+        var rankingCfg = ranking!;
+        if (settings.Top is int t and > 0)
+        {
+            rankingCfg = rankingCfg with { TopN = t };
+        }
+
+        var matches = Ranker.Rank(merged, skillset!, rankingCfg);
+        JsonReportWriter.WriteMatches(matches, Path.Combine(root, "data", "ranked_listings.json"));
+        MarkdownReportWriter.WriteMatches(matches, Path.Combine(root, "data", "top_jobs.md"),
+            title: $"Top {matches.Count} job matches for {skillset!.Name.EscapeMarkup()}");
 
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[bold]Summary[/]");
-        foreach (var (portal, (count, error)) in perPortalCounts)
+        foreach (var (portal, (count, err)) in perPortal)
         {
-            var status = error is null ? $"[green]{count}[/]" : $"[red]error: {error.EscapeMarkup()}[/]";
+            var status = err is null ? $"[green]{count}[/]" : $"[red]error: {err.EscapeMarkup()}[/]";
             AnsiConsole.MarkupLine($"  {portal.EscapeMarkup()}: {status}");
         }
-        AnsiConsole.MarkupLine($"  [bold]total after dedupe[/]: {merged.Count}");
-        AnsiConsole.MarkupLine($"[dim]Wrote data/all_listings.json and data/top_jobs.md[/]");
+        AnsiConsole.MarkupLine($"  [bold]after dedupe[/]: {merged.Count}");
+        AnsiConsole.MarkupLine($"  [bold]shortlisted[/]: {matches.Count} (min score {rankingCfg.MinScoreToInclude:0.00}, top {rankingCfg.TopN})");
+        if (matches.Count > 0)
+        {
+            AnsiConsole.MarkupLine($"  [bold]top score[/]: {matches[0].Score:0.00}");
+        }
+        AnsiConsole.MarkupLine("[dim]Wrote data/all_listings.json, data/ranked_listings.json, data/top_jobs.md[/]");
 
         return 0;
+    }
+
+    private static bool TryLoadConfigs(
+        string root,
+        out IReadOnlyList<PortalConfig>? portals,
+        out Skillset? skillset,
+        out RankingConfig? ranking,
+        out string error)
+    {
+        portals = null;
+        skillset = null;
+        ranking = null;
+        error = string.Empty;
+
+        var skillsetPath = Path.Combine(root, "config", "skillset.md");
+        var portalsPath = Path.Combine(root, "config", "portals.yml");
+        var rankingPath = Path.Combine(root, "config", "ranking.yml");
+
+        foreach (var (path, label) in new[] { (skillsetPath, "skillset.md"), (portalsPath, "portals.yml"), (rankingPath, "ranking.yml") })
+        {
+            if (!File.Exists(path))
+            {
+                error = $"Missing config/{label}. Copy config/{label}.example (if applicable) and edit.";
+                return false;
+            }
+        }
+
+        try
+        {
+            portals = PortalConfigLoader.Load(portalsPath);
+            skillset = SkillsetParser.Load(skillsetPath);
+            ranking = RankingConfigLoader.Load(rankingPath);
+            return true;
+        }
+        catch (ConfigException ex)
+        {
+            error = $"Config error: {ex.Message}";
+            return false;
+        }
     }
 }
