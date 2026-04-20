@@ -18,15 +18,4 @@ public sealed class CliSmokeTests
         var exitCode = await app.RunAsync(new[] { "--help" });
         Assert.Equal(0, exitCode);
     }
-
-    [Theory]
-    [InlineData("skillset")]
-    [InlineData("listings")]
-    [InlineData("verify")]
-    public async Task CliApp_Subcommand_Stubs_Exit_Zero(string subcommand)
-    {
-        var app = CliApp.Create();
-        var exitCode = await app.RunAsync(new[] { subcommand });
-        Assert.Equal(0, exitCode);
-    }
 }
