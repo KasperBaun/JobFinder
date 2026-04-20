@@ -1,0 +1,15 @@
+# Weights must sum to 1.0 (± 0.01). The verifier warns if they don't.
+# disqualifier_penalty is applied multiplicatively — 0.0 zeroes the score on any hit.
+
+weights:
+  primary_stack: 0.40
+  secondary_stack: 0.15
+  seniority: 0.15
+  location_remote: 0.15
+  domain: 0.10
+  freshness: 0.05
+
+disqualifier_penalty: 0.0
+top_n: 10
+freshness_half_life_days: 14
+min_score_to_include: 0.25

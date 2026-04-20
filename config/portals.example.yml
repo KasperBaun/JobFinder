@@ -1,0 +1,43 @@
+# Each portal has a `type` that selects the adapter.
+# Disable portals by setting `enabled: false` — no code change needed.
+
+portals:
+  - name: jobnet
+    type: api
+    enabled: true
+    endpoint: https://job.jobnet.dk/CV/FindWork/Search
+    query_params:
+      SearchString: "software engineer"
+      Country: Danmark
+      Offset: 0
+      SortValue: CreationDate
+    response_mapping:
+      items_path: "JobPositionPostings"
+      id: "Id"
+      title: "Title"
+      company: "HiringOrgName"
+      location: "WorkPlaceCity"
+      description: "Description"
+      url_template: "https://job.jobnet.dk/CV/FindWork/Details/{Id}"
+      posted_at: "PostingCreated"
+    rate_limit_rps: 2.0
+    notes: "Public STAR (Danish labour-market authority) API. No authentication."
+
+  - name: generic-rss-example
+    type: rss
+    enabled: false
+    endpoint: https://example.com/jobs.rss
+
+  - name: jobindex
+    type: manual
+    enabled: false
+    notes: |
+      jobindex.dk has no public API and automation may violate its ToS.
+      To include listings, export or copy results from the browser and drop a
+      CSV or JSON file at data/imports/jobindex-*.csv with columns:
+      title, company, location, url, description, posted_at.
+
+  - name: linkedin
+    type: manual
+    enabled: false
+    notes: "LinkedIn requires a logged-in session. Use job alerts or a manual export."
