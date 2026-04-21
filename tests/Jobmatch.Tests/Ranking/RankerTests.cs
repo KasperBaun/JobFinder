@@ -142,6 +142,27 @@ public sealed class RankerTests
         var matches = Ranker.Rank([listing], skillset, RankingCfg());
         Assert.True(matches[0].Breakdown["seniority"] >= DefaultWeights.Seniority - 0.0001,
             $"expected full seniority credit, got {matches[0].Breakdown["seniority"]:0.000}");
+        // User asked Seniority.Any — the reasoning must say "fits", not "not stated".
+        Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
+    }
+
+    [Fact]
+    public void Rank_RemoteMatch_Boolean_Is_True_Only_For_Exact_Fit()
+    {
+        // Hybrid listing + Remote-preferring user scores 0.5 (partial), boolean must be false (not true).
+        var listing = MakeListing("Engineer", "C# .NET Azure SQL Server", location: null, remote: RemoteMode.Hybrid, postedAt: DateTimeOffset.UtcNow);
+        var skillset = MikkelPersona() with { RemotePreference = RemotePreference.Remote };
+        var scored = Ranker.Score([listing], skillset, RankingCfg());
+        Assert.Equal(false, scored[0].Reasoning.RemoteMatch);
+    }
+
+    [Fact]
+    public void Rank_RemoteMatch_Boolean_Is_True_For_Exact_Fit()
+    {
+        var listing = MakeListing("Engineer", "C# .NET Azure SQL Server", remote: RemoteMode.Remote, postedAt: DateTimeOffset.UtcNow);
+        var skillset = MikkelPersona() with { RemotePreference = RemotePreference.Remote };
+        var scored = Ranker.Score([listing], skillset, RankingCfg());
+        Assert.Equal(true, scored[0].Reasoning.RemoteMatch);
     }
 
     [Fact]
@@ -197,6 +218,49 @@ public sealed class RankerTests
         {
             Assert.InRange(m.Score, 0.0, 1.0);
         }
+    }
+
+    [Fact]
+    public void Score_Returns_Everything_Unfiltered_Even_Below_MinScore()
+    {
+        var weak = MakeListing("Unrelated", "pottery", remote: RemoteMode.Remote);
+        var strong = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server", location: "Copenhagen", remote: RemoteMode.Hybrid, postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([weak, strong], MikkelPersona(), RankingCfg(minScore: 0.5));
+        Assert.Equal(2, scored.Count);
+    }
+
+    [Fact]
+    public void Filter_Respects_MinScore_And_TopN()
+    {
+        var weak = MakeListing("Unrelated", "pottery", remote: RemoteMode.Remote);
+        var strong = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server", location: "Copenhagen", remote: RemoteMode.Hybrid, postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([weak, strong], MikkelPersona(), RankingCfg());
+        var filtered = Ranker.Filter(scored, RankingCfg(minScore: 0.5, topN: 1));
+        Assert.Single(filtered);
+        Assert.Equal("Senior .NET Engineer", filtered[0].Listing.Title);
+    }
+
+    [Fact]
+    public void Score_Stale_Listing_Reasoning_Mentions_Age()
+    {
+        var stale = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-90));
+        var scored = Ranker.Score([stale], MikkelPersona(), RankingCfg());
+        Assert.Contains("days ago", scored[0].Reasoning.Notes);
+    }
+
+    [Fact]
+    public void Score_Disqualified_Listing_Retains_DisqualifierHits()
+    {
+        var listing = MakeListing("Senior .NET Engineer",
+            "C# .NET Azure SQL Server unpaid internship.",
+            remote: RemoteMode.Remote);
+        var scored = Ranker.Score([listing], MikkelPersona(), RankingCfg());
+        Assert.Single(scored);
+        Assert.Contains("unpaid", scored[0].Reasoning.DisqualifierHits);
     }
 
     [Fact]

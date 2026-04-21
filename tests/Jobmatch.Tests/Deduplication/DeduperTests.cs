@@ -6,14 +6,14 @@ namespace Jobmatch.Tests.Deduplication;
 
 public sealed class DeduperTests
 {
-    private static Listing Make(string portal, string title, string? company, string url)
+    private static Listing Make(string portal, string title, string? company, string url, string? location = null)
     {
         return new Listing(
             Id: $"{portal}-{title}-{url}",
             Portal: portal,
             Title: title,
             Company: company,
-            Location: null,
+            Location: location,
             RemoteMode: RemoteMode.Unknown,
             Description: string.Empty,
             Url: new Uri(url),
@@ -76,6 +76,18 @@ public sealed class DeduperTests
             Make("b", "senior engineer", "ACME CORP", "https://b.com/2"),
         };
         Assert.Single(Deduper.Deduplicate(input));
+    }
+
+    [Fact]
+    public void Deduplicate_Same_Title_Company_Different_Location_Are_Distinct()
+    {
+        // Acme hiring Senior Engineer in both Copenhagen and Berlin — two legit distinct roles.
+        var input = new[]
+        {
+            Make("jobnet", "Senior Engineer", "Acme", "https://acme.com/jobs/cph", location: "Copenhagen"),
+            Make("jobnet", "Senior Engineer", "Acme", "https://acme.com/jobs/ber", location: "Berlin"),
+        };
+        Assert.Equal(2, Deduper.Deduplicate(input).Count);
     }
 
     [Fact]

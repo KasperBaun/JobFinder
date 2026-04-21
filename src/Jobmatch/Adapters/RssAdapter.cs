@@ -36,7 +36,7 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
                     location: null,
                     description: description,
                     url: uri,
-                    postedAt: item.PublishingDate is DateTime d ? new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Utc)) : null,
+                    postedAt: ToUtc(item.PublishingDate),
                     raw: JsonDocument.Parse("{}").RootElement.Clone()));
             }
             catch (Exception ex)
@@ -46,5 +46,17 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
         }
 
         return listings;
+    }
+
+    private static DateTimeOffset? ToUtc(DateTime? dt)
+    {
+        if (dt is null) return null;
+        var v = dt.Value;
+        return v.Kind switch
+        {
+            DateTimeKind.Utc => new DateTimeOffset(v, TimeSpan.Zero),
+            DateTimeKind.Local => new DateTimeOffset(v.ToUniversalTime(), TimeSpan.Zero),
+            _ => new DateTimeOffset(DateTime.SpecifyKind(v, DateTimeKind.Utc), TimeSpan.Zero),
+        };
     }
 }

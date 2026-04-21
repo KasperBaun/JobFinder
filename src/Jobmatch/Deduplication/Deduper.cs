@@ -10,7 +10,7 @@ public static class Deduper
     public static IReadOnlyList<Listing> Deduplicate(IEnumerable<Listing> listings)
     {
         var seenUrls = new HashSet<string>(StringComparer.Ordinal);
-        var seenTitleCompany = new HashSet<string>(StringComparer.Ordinal);
+        var seenTitleCompanyLocation = new HashSet<string>(StringComparer.Ordinal);
         var result = new List<Listing>();
 
         foreach (var listing in listings)
@@ -18,8 +18,8 @@ public static class Deduper
             var urlKey = NormaliseUrl(listing.Url);
             if (!seenUrls.Add(urlKey)) continue;
 
-            var tcKey = $"{Normalise(listing.Title)}|{Normalise(listing.Company ?? string.Empty)}";
-            if (!seenTitleCompany.Add(tcKey)) continue;
+            var tclKey = $"{Normalise(listing.Title)}|{Normalise(listing.Company ?? string.Empty)}|{Normalise(listing.Location ?? string.Empty)}";
+            if (!seenTitleCompanyLocation.Add(tclKey)) continue;
 
             result.Add(listing);
         }
