@@ -28,6 +28,10 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
         [Description("Override min_score_to_include from ranking.yml (0.0–1.0).")]
         [CommandOption("--min-score <SCORE>")]
         public double? MinScore { get; init; }
+
+        [Description("Print a full score breakdown for the given listing URL (even if filtered out).")]
+        [CommandOption("--explain <URL>")]
+        public string? Explain { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -149,7 +153,65 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
         }
         AnsiConsole.MarkupLine("[dim]Wrote data/all_listings.json, data/ranked_listings.json, data/top_jobs.md[/]");
 
+        if (!string.IsNullOrWhiteSpace(settings.Explain))
+        {
+            ExplainListing(settings.Explain, scored, rankingCfg);
+        }
+
         return 0;
+    }
+
+    private static void ExplainListing(string urlInput, IReadOnlyList<Jobmatch.Models.Match> scored, RankingConfig rankingCfg)
+    {
+        AnsiConsole.WriteLine();
+        if (!Uri.TryCreate(urlInput, UriKind.Absolute, out var target))
+        {
+            AnsiConsole.MarkupLine($"[red]--explain:[/] '{urlInput.EscapeMarkup()}' is not a valid absolute URL.");
+            return;
+        }
+
+        var targetKey = Deduper.NormaliseUrl(target);
+        var match = scored.FirstOrDefault(m => Deduper.NormaliseUrl(m.Listing.Url) == targetKey);
+        if (match is null)
+        {
+            AnsiConsole.MarkupLine($"[yellow]--explain:[/] {urlInput.EscapeMarkup()} was not in the fetched listings.");
+            var sample = scored.Take(5).Select(m => m.Listing.Url.ToString()).ToList();
+            if (sample.Count > 0)
+            {
+                AnsiConsole.MarkupLine("[dim]First few URLs that were fetched:[/]");
+                foreach (var u in sample)
+                {
+                    AnsiConsole.MarkupLine($"  • {u.EscapeMarkup()}");
+                }
+            }
+            return;
+        }
+
+        var l = match.Listing;
+        var includedState = match.Reasoning.DisqualifierHits.Count > 0
+            ? "[red]DROPPED (disqualified)[/]"
+            : match.Score < rankingCfg.MinScoreToInclude
+                ? $"[yellow]DROPPED (below min score {rankingCfg.MinScoreToInclude.ToString("0.00", CultureInfo.InvariantCulture)})[/]"
+                : "[green]INCLUDED[/]";
+
+        AnsiConsole.MarkupLine($"[bold cyan]Explain:[/] {l.Title.EscapeMarkup()} [dim](via {l.Portal.EscapeMarkup()})[/]");
+        AnsiConsole.MarkupLine(string.Format(CultureInfo.InvariantCulture, "  [bold]score[/]: {0:0.000}  {1}", match.Score, includedState));
+        AnsiConsole.MarkupLine("  [bold]signals[/]:");
+        foreach (var kv in match.Breakdown.OrderByDescending(k => k.Value))
+        {
+            AnsiConsole.MarkupLine(string.Format(CultureInfo.InvariantCulture, "    {0,-16} {1:0.000}", kv.Key, kv.Value));
+        }
+        AnsiConsole.MarkupLine($"  [bold]reasoning[/]: {match.Reasoning.Notes.EscapeMarkup()}");
+        PrintHitList("primary stack", match.Reasoning.PrimaryStackHits);
+        PrintHitList("secondary stack", match.Reasoning.SecondaryStackHits);
+        PrintHitList("domains", match.Reasoning.DomainHits);
+        PrintHitList("disqualifiers", match.Reasoning.DisqualifierHits);
+    }
+
+    private static void PrintHitList(string label, IReadOnlyList<string> hits)
+    {
+        if (hits.Count == 0) return;
+        AnsiConsole.MarkupLine($"    {label.EscapeMarkup()}: {string.Join(", ", hits).EscapeMarkup()}");
     }
 
     private static Dictionary<string, int> CountDisqualifiers(IReadOnlyList<Jobmatch.Models.Match> scored)
