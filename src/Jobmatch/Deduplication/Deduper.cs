@@ -27,7 +27,7 @@ public static class Deduper
         return result;
     }
 
-    internal static string NormaliseUrl(Uri url)
+    public static string NormaliseUrl(Uri url)
     {
         var builder = new UriBuilder(url)
         {
