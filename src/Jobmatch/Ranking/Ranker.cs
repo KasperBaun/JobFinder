@@ -6,7 +6,10 @@ namespace Jobmatch.Ranking;
 
 public static class Ranker
 {
-    public static IReadOnlyList<Match> Rank(IEnumerable<Listing> listings, Skillset skillset, RankingConfig ranking)
+    public static IReadOnlyList<Match> Rank(IEnumerable<Listing> listings, Skillset skillset, RankingConfig ranking) =>
+        Filter(Score(listings, skillset, ranking), ranking);
+
+    public static IReadOnlyList<Match> Score(IEnumerable<Listing> listings, Skillset skillset, RankingConfig ranking)
     {
         var primaryRegexes = CompileKeywords(skillset.PrimaryStack);
         var secondaryRegexes = CompileKeywords(skillset.SecondaryStack);
@@ -49,7 +52,8 @@ public static class Ranker
             }
             score = Math.Clamp(score, 0.0, 1.0);
 
-            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, locationMatch, remoteMatch, disqualifierHits, listing);
+            var ageDays = AgeInDays(listing.PostedAt);
+            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, locationMatch, remoteMatch, disqualifierHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
 
             matches.Add(new Match(
                 Listing: listing,
@@ -66,12 +70,15 @@ public static class Ranker
                     Notes: notes)));
         }
 
-        return matches
+        return matches;
+    }
+
+    public static IReadOnlyList<Match> Filter(IReadOnlyList<Match> scored, RankingConfig ranking) =>
+        scored
             .Where(m => m.Score >= ranking.MinScoreToInclude)
             .OrderByDescending(m => m.Score)
             .Take(ranking.TopN)
             .ToList();
-    }
 
     private static Dictionary<string, Regex> CompileKeywords(IReadOnlyList<string> keywords)
     {
@@ -99,7 +106,7 @@ public static class Ranker
     private static (double score, bool? match) ScoreSeniority(Listing listing, Seniority user)
     {
         var inferred = InferSeniority(listing.Title);
-        if (user == Seniority.Any) return (1.0, inferred.HasValue ? true : (bool?)null);
+        if (user == Seniority.Any) return (1.0, true);
         if (inferred is null) return (0.5, null);
         if (inferred.Value == user) return (1.0, true);
         return IsAdjacent(inferred.Value, user) ? (0.5, true) : (0.0, false);
@@ -178,9 +185,6 @@ public static class Ranker
             (RemoteMode.Remote, RemotePreference.Remote) => true,
             (RemoteMode.Hybrid, RemotePreference.Hybrid) => true,
             (RemoteMode.Onsite, RemotePreference.Onsite) => true,
-            (RemoteMode.Remote, RemotePreference.Hybrid) => true,
-            (RemoteMode.Hybrid, RemotePreference.Remote) => true,
-            (RemoteMode.Hybrid, RemotePreference.Onsite) => true,
             _ => false,
         };
     }
@@ -193,6 +197,13 @@ public static class Ranker
         return Math.Exp(-age / Math.Max(0.01, halfLifeDays));
     }
 
+    private static double? AgeInDays(DateTimeOffset? postedAt)
+    {
+        if (postedAt is null) return null;
+        var age = (DateTimeOffset.UtcNow - postedAt.Value).TotalDays;
+        return age < 0 ? 0 : age;
+    }
+
     private static string BuildNotes(
         IReadOnlyList<string> primaryHits,
         IReadOnlyList<string> secondaryHits,
@@ -201,7 +212,9 @@ public static class Ranker
         bool? locationMatch,
         bool? remoteMatch,
         IReadOnlyList<string> disqualifierHits,
-        Listing listing)
+        Listing listing,
+        double? ageDays,
+        double halfLifeDays)
     {
         if (disqualifierHits.Count > 0)
         {
@@ -244,6 +257,11 @@ public static class Ranker
             (null, false) => "Location unknown; remote mode doesn't fit.",
         };
         parts.Add(locPart);
+
+        if (ageDays is double age && age > 2 * halfLifeDays)
+        {
+            parts.Add($"Posted {(int)Math.Round(age)} days ago — freshness signal heavily decayed.");
+        }
 
         return string.Join(" ", parts);
     }

@@ -6,7 +6,7 @@ See [PRD.md](./PRD.md) for what it does and why, and [implementation-plan.md](./
 
 ## Status
 
-**Phase 1 — skeleton.** Solution builds, CLI wires up three no-op subcommands, smoke tests pass. Real behaviour lands in Phases 2–5 (see implementation plan §9).
+**All five build phases complete.** Skillset authoring, portal fetch (API / RSS / manual import / HTML via Playwright), deduplication, ranking with honest reasoning, and the connectivity-aware verifier are all wired up. See `implementation-plan.md` §9 for the per-phase deliverables and `PRD.md` §9 for the acceptance criteria.
 
 ## Prerequisites
 

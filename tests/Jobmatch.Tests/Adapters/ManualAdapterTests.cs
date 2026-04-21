@@ -97,6 +97,30 @@ public sealed class ManualAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task FetchAsync_Infers_Hybrid_Before_Remote()
+    {
+        // "Hybrid role with remote Fridays" must be classified as Hybrid, not Remote.
+        File.WriteAllText(Path.Combine(_imports, "mine-1.json"),
+            """
+            [
+              {
+                "title": "Engineer",
+                "company": "Acme",
+                "location": "Copenhagen",
+                "url": "https://acme.com/jobs/1",
+                "description": "Hybrid role with remote Fridays."
+              }
+            ]
+            """);
+
+        using var http = new HttpClient();
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+
+        var results = await adapter.FetchAsync();
+        Assert.Equal(RemoteMode.Hybrid, results[0].RemoteMode);
+    }
+
+    [Fact]
     public async Task FetchAsync_Missing_Imports_Directory_Returns_Empty()
     {
         Directory.Delete(_imports);

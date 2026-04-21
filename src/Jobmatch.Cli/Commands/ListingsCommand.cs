@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using Jobmatch;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
@@ -23,6 +24,10 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
         [Description("Override the top-N cutoff from ranking.yml.")]
         [CommandOption("--top <N>")]
         public int? Top { get; init; }
+
+        [Description("Override min_score_to_include from ranking.yml (0.0–1.0).")]
+        [CommandOption("--min-score <SCORE>")]
+        public double? MinScore { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -69,9 +74,9 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
             try
             {
                 var fetched = await adapter.FetchAsync();
+                var stamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+                JsonReportWriter.WriteListings(fetched, Path.Combine(raw, $"{portal.Name}-{stamp}.json"));
                 var deduped = Deduper.Deduplicate(fetched);
-                var stamp = DateTimeOffset.Now.ToString("yyyyMMdd");
-                JsonReportWriter.WriteListings(deduped, Path.Combine(raw, $"{portal.Name}-{stamp}.json"));
                 allListings.AddRange(deduped);
                 perPortal[portal.Name] = (deduped.Count, null);
                 AnsiConsole.MarkupLine($"[green]✓[/] {portal.Name.EscapeMarkup()} — {deduped.Count} listing(s)");
@@ -91,11 +96,25 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
         {
             rankingCfg = rankingCfg with { TopN = t };
         }
+        if (settings.MinScore is double ms)
+        {
+            if (ms < 0.0 || ms > 1.0)
+            {
+                AnsiConsole.MarkupLine(string.Format(CultureInfo.InvariantCulture,
+                    "[yellow]--min-score {0:0.00} is outside 0.0–1.0; ignoring and using {1:0.00} from ranking.yml[/]",
+                    ms, rankingCfg.MinScoreToInclude));
+            }
+            else
+            {
+                rankingCfg = rankingCfg with { MinScoreToInclude = ms };
+            }
+        }
 
-        var matches = Ranker.Rank(merged, skillset!, rankingCfg);
+        var scored = Ranker.Score(merged, skillset!, rankingCfg);
+        var matches = Ranker.Filter(scored, rankingCfg);
         JsonReportWriter.WriteMatches(matches, Path.Combine(root, "data", "ranked_listings.json"));
         MarkdownReportWriter.WriteMatches(matches, Path.Combine(root, "data", "top_jobs.md"),
-            title: $"Top {matches.Count} job matches for {skillset!.Name.EscapeMarkup()}");
+            title: $"Top {matches.Count} job matches for {skillset!.Name}");
 
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[bold]Summary[/]");
@@ -105,14 +124,45 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
             AnsiConsole.MarkupLine($"  {portal.EscapeMarkup()}: {status}");
         }
         AnsiConsole.MarkupLine($"  [bold]after dedupe[/]: {merged.Count}");
-        AnsiConsole.MarkupLine($"  [bold]shortlisted[/]: {matches.Count} (min score {rankingCfg.MinScoreToInclude:0.00}, top {rankingCfg.TopN})");
+
+        var disqualifiers = CountDisqualifiers(scored);
+        if (disqualifiers.Count > 0)
+        {
+            var breakdown = string.Join(", ", disqualifiers.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key.EscapeMarkup()}×{kv.Value}"));
+            AnsiConsole.MarkupLine($"  [bold]disqualified[/]: {disqualifiers.Values.Sum()} ({breakdown})");
+        }
+
+        var filtered = scored.Count(m => m.Reasoning.DisqualifierHits.Count == 0 && m.Score < rankingCfg.MinScoreToInclude);
+        AnsiConsole.MarkupLine(string.Format(CultureInfo.InvariantCulture,
+            "  [bold]shortlisted[/]: {0} (min score {1:0.00}, top {2})",
+            matches.Count, rankingCfg.MinScoreToInclude, rankingCfg.TopN));
+        if (matches.Count == 0 && filtered > 0)
+        {
+            AnsiConsole.MarkupLine(string.Format(CultureInfo.InvariantCulture,
+                "  [yellow]hint[/]: {0} listing(s) fell below the threshold — try [yellow]--min-score {1:0.00}[/] to see more",
+                filtered, Math.Max(0.05, rankingCfg.MinScoreToInclude - 0.10)));
+        }
         if (matches.Count > 0)
         {
-            AnsiConsole.MarkupLine($"  [bold]top score[/]: {matches[0].Score:0.00}");
+            AnsiConsole.MarkupLine(string.Format(CultureInfo.InvariantCulture,
+                "  [bold]top score[/]: {0:0.00}", matches[0].Score));
         }
         AnsiConsole.MarkupLine("[dim]Wrote data/all_listings.json, data/ranked_listings.json, data/top_jobs.md[/]");
 
         return 0;
+    }
+
+    private static Dictionary<string, int> CountDisqualifiers(IReadOnlyList<Jobmatch.Models.Match> scored)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var m in scored)
+        {
+            foreach (var dq in m.Reasoning.DisqualifierHits)
+            {
+                counts[dq] = counts.GetValueOrDefault(dq) + 1;
+            }
+        }
+        return counts;
     }
 
     private static bool TryLoadConfigs(
@@ -131,11 +181,18 @@ public sealed class ListingsCommand : AsyncCommand<ListingsCommand.Settings>
         var portalsPath = Path.Combine(root, "config", "portals.yml");
         var rankingPath = Path.Combine(root, "config", "ranking.yml");
 
-        foreach (var (path, label) in new[] { (skillsetPath, "skillset.md"), (portalsPath, "portals.yml"), (rankingPath, "ranking.yml") })
+        foreach (var (path, label, hasExample) in new[]
+        {
+            (skillsetPath, "skillset.md", true),
+            (portalsPath, "portals.yml", true),
+            (rankingPath, "ranking.yml", false),
+        })
         {
             if (!File.Exists(path))
             {
-                error = $"Missing config/{label}. Copy config/{label}.example (if applicable) and edit.";
+                error = hasExample
+                    ? $"Missing config/{label}. Copy config/{label.Replace(".md", ".example.md").Replace(".yml", ".example.yml")} and edit."
+                    : $"Missing config/{label}. Restore it from version control or regenerate it from the PRD defaults.";
                 return false;
             }
         }

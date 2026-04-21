@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Jobmatch.Models;
 
@@ -27,7 +28,7 @@ public static class MarkdownReportWriter
                 if (listing.PostedAt.HasValue) meta.Add($"posted {listing.PostedAt.Value:yyyy-MM-dd}");
                 meta.Add($"via {listing.Portal}");
                 sb.Append(string.Join(" — ", meta)).Append('\n').Append('\n');
-                sb.Append($"[{listing.Url}]({listing.Url})").Append('\n').Append('\n');
+                sb.Append('<').Append(listing.Url).Append('>').Append('\n').Append('\n');
             }
         }
 
@@ -51,7 +52,7 @@ public static class MarkdownReportWriter
             foreach (var (match, index) in matches.Select((m, i) => (m, i + 1)))
             {
                 var l = match.Listing;
-                sb.Append($"## {index}. {l.Title} — score {match.Score:0.00}").Append('\n');
+                sb.Append(CultureInfo.InvariantCulture, $"## {index}. {l.Title} — score {match.Score:0.00}").Append('\n');
                 var meta = new List<string>();
                 if (!string.IsNullOrWhiteSpace(l.Company)) meta.Add($"**{l.Company}**");
                 if (!string.IsNullOrWhiteSpace(l.Location)) meta.Add(l.Location!);
@@ -60,12 +61,12 @@ public static class MarkdownReportWriter
                 meta.Add($"via {l.Portal}");
                 sb.Append(string.Join(" — ", meta)).Append('\n').Append('\n');
 
-                sb.Append($"[{l.Url}]({l.Url})").Append('\n').Append('\n');
+                sb.Append('<').Append(l.Url).Append('>').Append('\n').Append('\n');
 
                 sb.Append("| signal | score |\n| --- | --- |\n");
-                foreach (var kvp in match.Breakdown)
+                foreach (var kvp in match.Breakdown.OrderByDescending(kv => kv.Value))
                 {
-                    sb.Append($"| {kvp.Key} | {kvp.Value:0.00} |\n");
+                    sb.Append(CultureInfo.InvariantCulture, $"| {kvp.Key} | {kvp.Value:0.00} |\n");
                 }
                 sb.Append('\n');
 

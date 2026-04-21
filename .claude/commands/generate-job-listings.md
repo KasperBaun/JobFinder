@@ -10,6 +10,7 @@ Run the full jobmatch pipeline: every enabled portal in `config/portals.yml` is 
 - Check that `config/skillset.md`, `config/portals.yml`, and `config/ranking.yml` exist. If any is missing, instruct the user to run `/generate-skillset` or copy the `.example` files.
 - If the user wants only one portal, pass `--portal <name>`.
 - If the user wants a different shortlist size than `ranking.yml`'s `top_n`, pass `--top <N>`.
+- If the shortlist is empty and the summary shows a hint, broaden the threshold with `--min-score <0.0–1.0>` (e.g. `--min-score 0.10`).
 - This may take a minute for HTML portals (Playwright boots a headless Chromium). API and RSS portals are typically fast.
 
 ## What to do
@@ -31,3 +32,4 @@ Common invocations:
 - `/generate-job-listings` — run everything enabled
 - `/generate-job-listings --portal jobnet` — one portal only
 - `/generate-job-listings --top 5` — smaller shortlist
+- `/generate-job-listings --min-score 0.10` — broaden the shortlist threshold
