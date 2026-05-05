@@ -7,4 +7,9 @@
     <PackageReference Include="Microsoft.Playwright" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\config\*.example.*" CopyToOutputDirectory="PreserveNewest" Link="config\%(Filename)%(Extension)" />
+    <None Include="..\config\ranking.yml" CopyToOutputDirectory="PreserveNewest" Link="config\%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

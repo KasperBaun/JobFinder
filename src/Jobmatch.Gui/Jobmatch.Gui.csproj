@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Jobmatch.Gui</RootNamespace>
+    <BuildGui Condition="'$(BuildGui)' == ''">false</BuildGui>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jobmatch\Jobmatch.csproj" />
+  </ItemGroup>
+
+  <!--
+    Don't let MSBuild compile or watch the React client tree as if it were C#/web content.
+    Without these excludes the SDK pulls every .ts/.tsx/node_modules file into the build.
+  -->
+  <ItemGroup>
+    <Compile Remove="Client\**" />
+    <Content Remove="Client\**" />
+    <None Remove="Client\**" />
+    <EmbeddedResource Remove="Client\**" />
+  </ItemGroup>
+
+  <Target Name="BuildGuiClient" BeforeTargets="Build" Condition="'$(BuildGui)' == 'true'">
+    <Message Importance="high" Text="Building React GUI client..." />
+    <Exec Command="npm install" WorkingDirectory="Client" />
+    <Exec Command="npm run build" WorkingDirectory="Client" />
+    <ItemGroup>
+      <_GuiDist Include="Client\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_GuiDist)"
+          DestinationFiles="@(_GuiDist->'$(OutDir)gui\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="GuiBuildSkippedNotice" BeforeTargets="Build" Condition="'$(BuildGui)' != 'true'">
+    <Message Importance="high" Text="GUI client not bundled. Pass -p:BuildGui=true to include the React app." />
+  </Target>
+
+</Project>
