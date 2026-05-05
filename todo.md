@@ -4,17 +4,16 @@ Current status of work on `jobfinder`. Per-task specs live in [`docs/tasks/`](do
 
 ## In progress
 
-_(none — Spectre/CLI removal landed; next is the GUI scaffold T-002)_
+_(none — T-003 landed; next is whatever comes after a real-world test of the GUI)_
 
 ## Backlog (next up)
 
-| ID | Task | Spec |
-|---|---|---|
-| T-002 | GUI scaffolding — Kestrel + Vite/React, UserContext, mwt server pattern | [`docs/tasks/T-002-gui-scaffolding.md`](docs/tasks/T-002-gui-scaffolding.md) |
-| T-003 | GUI feature pages — providers, skillset, search (SSE), history, marks | [`docs/tasks/T-003-gui-feature-pages.md`](docs/tasks/T-003-gui-feature-pages.md) |
+_(empty — see Pending engine improvements + Nice-to-haves below for smaller items)_
 
 ## Completed (recent)
 
+- **T-003 — GUI feature pages.** Providers, Skillset, Search (SSE), History (list + detail), Marks. New `Jobmatch/Search/SearchService` orchestrates the load → fetch → dedupe → rank → write → persist-history pipeline and yields polymorphic progress events. Five endpoint groups + handlers + DTOs; client gains TopNav, dashboard HomePage, four feature pages, MarkButton (optimistic with rollback), useSearchStream. 99 tests green; bundle 296 KB JS / 92 KB gzipped.
+- **T-002 — GUI scaffold.** `Jobmatch.Gui` (Kestrel slim host, ephemeral port, `/api/ping` + `/api/shutdown`, SPA fallback, browser auto-launch). `Jobmatch/UserContext` (typed paths under `data/<email>/`, three-source email resolution, first-run example seeding, ranking-override fallback). React 19 + Vite 6 + react-query + react-router-dom client. `BuildGuiClient` MSBuild target gated on `-p:BuildGui=true`. 7 UserContext tests added.
 - **Spectre + Jobmatch.Cli removed** — GUI is the only entry point. Deleted `src/Jobmatch.Cli/`, `Spectre.*` package pins, dependent tests (`CliSmokeTests`, `ListingsIntegrationTests`), and `.claude/commands/`. Build green at 86 tests.
 - **`data/<email>/examples/` convention** — seed-archetype listings (liked or disliked) live here, one markdown file per listing with YAML frontmatter. Four user-curated examples saved as initial input. Captured as R-054 / R-055.
 - **`data/` symlink convention** — typical setup is a junction/symlink to a personal sync folder; data never tracked.
