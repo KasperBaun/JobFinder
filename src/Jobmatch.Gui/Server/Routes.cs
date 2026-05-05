@@ -12,4 +12,30 @@ public static class Routes
     {
         public const string Get = "/api/whoami";
     }
+
+    public static class Providers
+    {
+        public const string Get = "/api/providers";
+    }
+
+    public static class Skillset
+    {
+        public const string Get = "/api/skillset";
+    }
+
+    public static class Search
+    {
+        public const string Run = "/api/search";
+    }
+
+    public static class History
+    {
+        public const string List = "/api/history";
+        public const string Detail = "/api/history/{runId}";
+    }
+
+    public static class Marks
+    {
+        public const string Set = "/api/marks";
+    }
 }

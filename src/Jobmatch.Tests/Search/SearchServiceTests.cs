@@ -1,0 +1,301 @@
+using Jobmatch.Search;
+using JobmatchUserContext = Jobmatch.UserContext;
+
+namespace Jobmatch.Tests.Search;
+
+public sealed class SearchServiceTests : IDisposable
+{
+    private readonly string _tempRoot;
+    private readonly string? _envBackup;
+
+    public SearchServiceTests()
+    {
+        _tempRoot = Path.Combine(Path.GetTempPath(), "jobmatch-search-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tempRoot);
+        _envBackup = Environment.GetEnvironmentVariable("JOBFINDER_USER");
+        Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
+    }
+
+    public void Dispose()
+    {
+        Environment.SetEnvironmentVariable("JOBFINDER_USER", _envBackup);
+        try
+        {
+            if (Directory.Exists(_tempRoot)) Directory.Delete(_tempRoot, recursive: true);
+        }
+        catch
+        {
+            // best-effort cleanup
+        }
+    }
+
+    private const string MinimalSkillset = """
+        ---
+        name: Test User
+        location: Copenhagen, Denmark
+        experience_years: 5
+        target_roles:
+          - Software Engineer
+        remote_preference: remote
+        seniority: mid
+        languages:
+          - English
+        employment_types:
+          - full-time
+        ---
+
+        ## Primary stack
+        Must-have.
+
+        - Python
+        - TypeScript
+
+        ## Secondary stack
+        Nice-to-have.
+
+        - Kubernetes
+
+        ## Domains
+
+        ## Disqualifiers
+        """;
+
+    private const string MinimalRanking = """
+        weights:
+          primary_stack: 0.5
+          secondary_stack: 0.1
+          seniority: 0.1
+          location_remote: 0.2
+          domain: 0.05
+          freshness: 0.05
+
+        disqualifier_penalty: 0.0
+        top_n: 10
+        freshness_half_life_days: 14
+        min_score_to_include: 0.0
+        require_primary_stack_hit: false
+        """;
+
+    private JobmatchUserContext CreateContext(string email, string portalsYaml, string? rankingYaml = null)
+    {
+        var ctx = JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
+        File.WriteAllText(ctx.SkillsetPath, MinimalSkillset);
+        File.WriteAllText(ctx.PortalsPath, portalsYaml);
+        // Always use a local ranking.yml so we don't depend on AppContext.BaseDirectory being writable.
+        File.WriteAllText(Path.Combine(ctx.RootDir, "ranking.yml"), rankingYaml ?? MinimalRanking);
+        // Re-resolve so RankingPath now points at the user-local file.
+        return JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
+    }
+
+    private static async Task<List<SearchProgressEvent>> Drain(IAsyncEnumerable<SearchProgressEvent> stream)
+    {
+        var list = new List<SearchProgressEvent>();
+        await foreach (var evt in stream) list.Add(evt);
+        return list;
+    }
+
+    [Fact]
+    public async Task RunAsync_Empty_Enabled_Yields_Started_Dedupe_Rank_Complete()
+    {
+        const string portals = """
+            portals:
+              - name: jobnet
+                type: api
+                enabled: false
+                endpoint: https://job.jobnet.dk/CV/FindWork/Search
+            """;
+        var ctx = CreateContext("empty@example.com", portals);
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest()));
+
+        Assert.Equal(4, events.Count);
+        var started = Assert.IsType<StartedEvent>(events[0]);
+        Assert.Equal(0, started.Total);
+        var dedupe = Assert.IsType<DedupeEvent>(events[1]);
+        Assert.Equal(0, dedupe.MergedCount);
+        var rank = Assert.IsType<RankEvent>(events[2]);
+        Assert.Equal(0, rank.RankedCount);
+        Assert.Equal(0.0, rank.TopScore);
+        var complete = Assert.IsType<CompleteEvent>(events[3]);
+        Assert.NotEmpty(complete.RunId);
+        Assert.Empty(complete.Shortlist);
+    }
+
+    [Fact]
+    public async Task RunAsync_Single_Manual_Provider_Streams_Per_Provider_Events()
+    {
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+            """;
+        var ctx = CreateContext("manual@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-2026-04-20.json"),
+            """
+            [
+              {
+                "title": "Senior Python Engineer",
+                "company": "Acme",
+                "location": "Copenhagen",
+                "url": "https://acme.com/jobs/1",
+                "description": "Python and TypeScript stack. Fully remote.",
+                "posted_at": "2026-05-01T09:00:00Z"
+              }
+            ]
+            """);
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest()));
+
+        Assert.IsType<StartedEvent>(events[0]);
+        var running = Assert.IsType<ProviderRunningEvent>(events[1]);
+        Assert.Equal("mine", running.Provider);
+        Assert.Equal(1, running.Index);
+        Assert.Equal(1, running.Total);
+        var done = Assert.IsType<ProviderDoneEvent>(events[2]);
+        Assert.Equal("mine", done.Provider);
+        Assert.Equal(1, done.FetchedCount);
+        Assert.IsType<DedupeEvent>(events[3]);
+        var rank = Assert.IsType<RankEvent>(events[4]);
+        Assert.Equal(1, rank.RankedCount);
+        Assert.True(rank.TopScore > 0);
+        var complete = Assert.IsType<CompleteEvent>(events[5]);
+        Assert.Single(complete.Shortlist);
+        Assert.Equal("Senior Python Engineer", complete.Shortlist[0].Title);
+        Assert.Contains("Python", complete.Shortlist[0].PrimaryStackHits);
+    }
+
+    [Fact]
+    public async Task RunAsync_Mixed_Success_And_Failure_Records_Both_Statuses()
+    {
+        // Two manual providers — the second uses a name that won't match any imports file,
+        // but a manual provider with no files just returns 0 (it doesn't fail). Force a real
+        // failure by making one provider an api type with an unreachable endpoint.
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+              - name: broken
+                type: api
+                enabled: true
+                endpoint: http://127.0.0.1:1/unreachable
+                response_mapping:
+                  items_path: "data"
+                  id: "id"
+                  title: "title"
+                  url_template: "http://x/{id}"
+            """;
+        var ctx = CreateContext("mixed@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-x.json"),
+            """
+            [
+              {
+                "title": "Backend Engineer",
+                "company": "Acme",
+                "location": "Copenhagen",
+                "url": "https://acme.com/jobs/2",
+                "description": "Python role.",
+                "posted_at": "2026-04-20T09:00:00Z"
+              }
+            ]
+            """);
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest()));
+
+        var started = Assert.IsType<StartedEvent>(events[0]);
+        Assert.Equal(2, started.Total);
+
+        var hasOk = events.OfType<ProviderDoneEvent>().Any(e => e.Provider == "mine");
+        var hasFailed = events.OfType<ProviderFailedEvent>().Any(e => e.Provider == "broken");
+        Assert.True(hasOk, "expected provider_done for 'mine'");
+        Assert.True(hasFailed, "expected provider_failed for 'broken'");
+
+        var complete = Assert.IsType<CompleteEvent>(events[^1]);
+        Assert.Single(complete.Shortlist);
+    }
+
+    [Fact]
+    public async Task RunAsync_Writes_History_File_With_RunId()
+    {
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+            """;
+        var ctx = CreateContext("history@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
+            """
+            [
+              { "title": "Python Dev", "company": "X", "url": "https://x.com/1", "description": "Python.", "location": "Copenhagen" }
+            ]
+            """);
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var complete = Assert.IsType<CompleteEvent>(events[^1]);
+
+        var historyFile = Path.Combine(ctx.HistoryDir, $"{complete.RunId}.json");
+        Assert.True(File.Exists(historyFile), $"expected history file at {historyFile}");
+
+        var json = File.ReadAllText(historyFile);
+        Assert.Contains("\"runId\"", json);
+        Assert.Contains(complete.RunId, json);
+        Assert.Contains("\"providers\"", json);
+        Assert.Contains("\"shortlist\"", json);
+    }
+
+    [Fact]
+    public async Task RunAsync_Does_Not_Touch_MarksFile()
+    {
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+            """;
+        var ctx = CreateContext("marks-untouched@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
+            """
+            [
+              { "title": "Python Dev", "company": "X", "url": "https://x.com/1", "description": "Python.", "location": "Copenhagen" }
+            ]
+            """);
+
+        var service = new SearchService(ctx);
+        await Drain(service.RunAsync(new SearchRequest()));
+
+        Assert.False(File.Exists(ctx.MarksPath), "search should not create marks.json");
+    }
+
+    [Fact]
+    public async Task RunAsync_Provider_Filter_Limits_Run_To_Named_Portals()
+    {
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+              - name: other
+                type: manual
+                enabled: true
+            """;
+        var ctx = CreateContext("filter@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
+            """[ { "title": "X", "url": "https://x.com/1" } ]""");
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "other-1.json"),
+            """[ { "title": "Y", "url": "https://y.com/1" } ]""");
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest(Providers: ["mine"])));
+
+        var started = Assert.IsType<StartedEvent>(events[0]);
+        Assert.Equal(1, started.Total);
+        Assert.Single(events.OfType<ProviderRunningEvent>());
+        Assert.Equal("mine", events.OfType<ProviderRunningEvent>().Single().Provider);
+    }
+}

@@ -86,6 +86,11 @@ public static class GuiServer
 
         // Register API endpoint groups
         WhoamiEndpoints.Map(app);
+        ProvidersEndpoints.Map(app);
+        SkillsetEndpoints.Map(app);
+        SearchEndpoints.Map(app);
+        HistoryEndpoints.Map(app);
+        MarksEndpoints.Map(app);
 
         // Heartbeat — client polls to detect server disconnect
         app.MapGet(Routes.System.Ping, () => Results.Ok());
