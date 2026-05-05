@@ -1,58 +1,35 @@
-# jobmatch
+# jobfinder
 
-A local, configurable job-matching tool. Define your skillset in one file, list the portals you care about in another, run one command, get a ranked shortlist.
+A personal job-search assistant that runs on your laptop.
 
-See [PRD.md](./PRD.md) for what it does and why, and [implementation-plan.md](./implementation-plan.md) for how it's built.
+You describe your skills, preferences, and dealbreakers in one place. You list the job sites you want to check. You run one command — or open the desktop app — and get a short, ranked list of openings that actually fit you. Over time, you mark the ones you liked, and the system learns to put more like those at the top.
+
+Everything stays on your machine. No sign-up, no cloud account, no telemetry. Your skillset, your provider list, your search history, and your "good match" marks all live in a folder under your email on your own disk.
+
+## What you get
+
+- **A single skillset.** One file describes who you are professionally — stack, seniority, location, deal-breakers. Edit it any time; every search uses the latest version.
+- **A list of providers.** Pick the job sites you actually use (e.g. JOBNET). Toggle them on and off without touching anything else.
+- **A ranked shortlist on demand.** One click, one command — the tool checks every enabled provider, removes duplicates, scores everything against your skillset, and surfaces the top matches with honest reasoning per match.
+- **A history of your runs.** Every search is remembered. You can look back at last Sunday's run, see which listings came back, and see how many you marked as a real fit.
+- **A way to teach it.** Mark listings as good matches (or not). The system uses those signals to improve future rankings.
+
+## Two ways to use it
+
+- **Desktop app (default).** Launch with no arguments and a local app opens in your browser. See your providers, your search criteria, and your search history at a glance. Run searches and mark good matches with a click.
+- **Command line.** Every operation also runs from the terminal — useful for scripts, scheduled runs from an OS-level scheduler, or when you just want a quick refresh without opening the app.
+
+## Where your data lives
+
+Everything personal lives under `data/<your-email>/` on your own machine. That folder is never committed to git, never sent anywhere, never shared. If you delete it, the tool forgets everything about you and starts fresh.
+
+## Where to look next
+
+- [`docs/prd.md`](./docs/prd.md) — what this product is and who it's for.
+- [`docs/requirements.md`](./docs/requirements.md) — the one-line requirement list.
+- [`docs/mwt-tool-analysis.md`](./docs/mwt-tool-analysis.md) — the architecture pattern the desktop app follows.
+- [`todo.md`](./todo.md) — what's done, what's in flight, and what's next.
 
 ## Status
 
-**All five build phases complete.** Skillset authoring, portal fetch (API / RSS / manual import / HTML via Playwright), deduplication, ranking with honest reasoning, and the connectivity-aware verifier are all wired up. See `implementation-plan.md` §9 for the per-phase deliverables and `PRD.md` §9 for the acceptance criteria.
-
-## Prerequisites
-
-- .NET 10 SDK (pinned in `global.json`)
-
-## Quickstart
-
-```bash
-# Copy the example configs and edit them
-cp config/skillset.example.md config/skillset.md
-cp config/portals.example.yml config/portals.yml
-
-# Show the CLI help
-dotnet run --project src/Jobmatch.Cli -- --help
-
-# Run individual subcommands (all stubs in Phase 1)
-dotnet run --project src/Jobmatch.Cli -- skillset
-dotnet run --project src/Jobmatch.Cli -- listings
-dotnet run --project src/Jobmatch.Cli -- verify
-```
-
-## Build and test
-
-```bash
-dotnet build
-dotnet test
-```
-
-## Slash commands
-
-Three Claude Code slash commands in `.claude/commands/` wrap the CLI subcommands:
-
-| Slash command | What it does |
-|---|---|
-| `/generate-skillset` | Author or refresh `config/skillset.md` |
-| `/generate-job-listings` | Fetch, dedupe, rank, write `data/top_jobs.md` |
-| `/verify-config` | Validate config files and portal connectivity |
-
-Each slash command shells out to the matching CLI subcommand — identical behaviour from the terminal.
-
-## Repository layout
-
-Highlights (full tree in `implementation-plan.md` §2):
-
-- `src/Jobmatch/` — library (models, parsing, adapters, ranking, output)
-- `src/Jobmatch.Cli/` — CLI entrypoint on Spectre.Console.Cli
-- `tests/Jobmatch.Tests/` — xUnit tests
-- `config/` — user configs (`*.example.*` committed; active copies gitignored)
-- `data/` — runtime outputs (gitignored)
+The fetch / dedupe / rank pipeline runs from the command line today. The desktop app, the per-user `data/<email>/` layout, and the "mark as good match" feedback loop are the next milestones.
