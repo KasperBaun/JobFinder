@@ -2,7 +2,15 @@
 
 Working list of unfinished work. Landed changes are in git history.
 
-## Round 5 candidates (not started)
+## Pending engine improvements
+
+- **Country → region mapping for cross-EU remotes.** A listing in "Germany"
+  for an EU-region user falls to else tier (0.1) because the matcher only
+  recognises "EU/Europe/EMEA" synonyms, not member states. Add a small
+  hardcoded EU-country list (DE, FR, NL, SE, NO, FI, IS, IE, ES, IT, AT,
+  BE, LU, PL, CZ, etc.) so Region: "EU" matches any of them. Or expose
+  `region_countries:` in the skillset for explicit control.
+
 
 - **ApiAdapter pagination.** The implementation plan mentions "supports
   offset/page pagination if configured" but `ApiAdapter.FetchAsync` does a
@@ -44,7 +52,3 @@ Working list of unfinished work. Landed changes are in git history.
   requires model extension.
 - `InferSeniority` looks only at the title, not the description. Listings
   that spell out "senior" only in the body get classified as `null`.
-- `ComputeLocationMatch` tokenizes on space/comma/slash/dash and keeps
-  tokens ≥ 4 chars. A user location "Remote, EU timezone" spuriously
-  matches any listing with "remote" in the location (coincidence, not
-  a real city match).
