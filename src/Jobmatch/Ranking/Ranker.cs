@@ -141,9 +141,6 @@ public static class Ranker
             return (1.0, locationMatch, remoteMatch);
         }
 
-        double score = 0.0;
-        if (locationMatch == true) score = Math.Max(score, 1.0);
-
         var remoteScore = (listing.RemoteMode, skillset.RemotePreference) switch
         {
             (RemoteMode.Remote, RemotePreference.Remote) => 1.0,
@@ -155,9 +152,43 @@ public static class Ranker
             (RemoteMode.Unknown, _) => 0.0,
             _ => 0.0,
         };
-        score = Math.Max(score, remoteScore);
+
+        double score;
+        if (locationMatch == true)
+        {
+            score = 1.0;
+        }
+        else if (locationMatch is null)
+        {
+            // Listing has no location string — fall back to remote-mode compatibility.
+            score = remoteScore;
+        }
+        else
+        {
+            // Listing has a location but it doesn't match the user. Discount by how
+            // open the listing is to the user's region.
+            score = remoteScore * LocationOpenness(listing.Location);
+        }
 
         return (score, locationMatch, remoteMatch);
+    }
+
+    // Coarse heuristic: when a listing's location string doesn't match the user's,
+    // is it nonetheless plausible the user could take the role? "Worldwide / EMEA /
+    // Europe" → mostly yes (0.7). "USA only / LATAM" → mostly no (0.1). Anything
+    // else (a single foreign city, an unfamiliar region) → ambiguous (0.3).
+    private static double LocationOpenness(string? listingLocation)
+    {
+        if (string.IsNullOrWhiteSpace(listingLocation)) return 0.5;
+        var l = listingLocation.ToLowerInvariant();
+
+        string[] open = ["worldwide", "anywhere", "global", "europe", "european", "emea", " eu ", "eu/", "/eu"];
+        if (open.Any(t => l.Contains(t, StringComparison.Ordinal))) return 0.7;
+
+        string[] restrictive = ["usa", "u.s.", "united states", "americas", "latam", "brazil", "mexico", "argentina", "asia", "apac"];
+        if (restrictive.Any(t => l.Contains(t, StringComparison.Ordinal))) return 0.1;
+
+        return 0.3;
     }
 
     private static bool? ComputeLocationMatch(string? listingLocation, string userLocation)
