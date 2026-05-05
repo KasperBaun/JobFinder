@@ -24,6 +24,7 @@ Two ways out, pick when ready:
 
 ## Completed (recent)
 
+- **`data/<email>/examples/` convention** — seed-archetype listings (liked or disliked) live here, one markdown file per listing with YAML frontmatter. Four user-curated examples saved as initial input. Captured as R-054 / R-055.
 - **Repo restructure** — `docs/`, `src/` (with tests + configs), `data/<email>/`, root `README.md`, `CLAUDE.md`, `todo.md`. Build infra moved under `src/`. Existing user state migrated to `data/tappah2510@gmail.com/`.
 - **`docs/prd.md`** — rewritten as actor + vision PRD.
 - **`docs/requirements.md`** — new one-line requirement list (`R-001`..`R-084`).

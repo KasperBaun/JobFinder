@@ -16,11 +16,13 @@ src/                   ALL source, tests, configs, build infra
   Directory.Packages.props
   Jobmatch.slnx
 data/                  GITIGNORED — per-user state under data/<email>/
+                       (typically a junction/symlink to a personal sync folder; never tracked)
   <email>/
     skillset.md, portals.yml, [ranking.yml override]
     raw/, imports/
     all_listings.json, ranked_listings.json, top_jobs.md
-    history/<run-id>.json    (planned)
+    examples/                 user-curated seed listings (liked / disliked archetypes)
+    history/<run-id>.json     (planned)
     marks.json                (planned)
 README.md              business-level intro
 todo.md                ongoing/completed/backlog — references docs/tasks/
