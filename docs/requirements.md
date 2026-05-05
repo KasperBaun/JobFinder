@@ -5,7 +5,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## Identity & per-user data
 
 - **R-001** The system should identify each user by email and keep all of that user's state under `data/<email>/`, never co-mingling users.
-- **R-002** The system should default a user's email from `git config user.email` and accept an explicit `--user <email>` override.
+- **R-002** The system should default a user's email from `git config user.email` and accept an explicit override (env `JOBFINDER_USER`, or a setting in the GUI).
 - **R-003** The system should treat `data/<email>/` as private and gitignored — nothing in it is ever committed.
 
 ## Skillset
@@ -25,7 +25,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 
 ## Running a search
 
-- **R-030** The system should run a search across all enabled providers in a single command, deduplicate, rank against the user's skillset, and produce a top-N shortlist.
+- **R-030** The system should run a search across all enabled providers in a single user-initiated action, deduplicate, rank against the user's skillset, and produce a top-N shortlist.
 - **R-031** The system should keep one provider's failure (timeout, rate limit, parse error) from killing the rest of the run.
 - **R-032** The system should persist raw per-provider results so a run can be re-examined or re-ranked without re-fetching.
 - **R-033** The system should write a human-readable top-N report alongside the machine-readable ranked output.
@@ -49,16 +49,16 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 
 ## Verification
 
-- **R-060** The system should provide a verify command that checks config files exist, parse, point at reachable endpoints, and have manual imports where required.
+- **R-060** The system should let a user verify that config files exist, parse, point at reachable endpoints, and have manual imports where required.
 - **R-061** The system should report verification results as pass / warn / fail per check, never crashing on a single failure.
-- **R-062** The system should write a verification report file and print a matching summary, exiting non-zero when any check fails.
+- **R-062** The system should persist a verification report alongside an in-app summary.
 
 ## Entry points
 
-- **R-070** The system should run as a single binary with two modes: GUI when launched with no arguments, CLI for every other invocation.
-- **R-071** The system should auto-launch a browser pointed at an ephemeral local server when started in GUI mode.
-- **R-072** The system should expose every CLI capability through the GUI as well — neither mode should be a feature island.
-- **R-073** The system should detect server disconnect from the browser and tell the user the GUI is no longer attached.
+- **R-070** The system should run as a single binary that launches a browser-based desktop app on start.
+- **R-071** The system should auto-launch a browser pointed at an ephemeral local server when started.
+- **R-072** The system should expose all of its capabilities through the same browser interface — there is no parallel headless or text-mode surface in v1.
+- **R-073** The system should detect server disconnect from the browser and tell the user the app is no longer attached.
 
 ## Non-functional
 

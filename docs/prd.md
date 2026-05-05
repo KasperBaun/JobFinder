@@ -77,4 +77,3 @@ The system fulfils the user's goals through the following responsibilities and q
 
 - [`requirements.md`](./requirements.md) — one-line requirements (the contract).
 - [`mwt-tool-analysis.md`](./mwt-tool-analysis.md) — architectural reference for implementers.
-- [`implementation-plan.md`](./implementation-plan.md) — implementation plan for the existing build; will be superseded as the next milestones land.

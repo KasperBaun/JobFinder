@@ -10,7 +10,6 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="coverlet.collector" />
-    <PackageReference Include="Spectre.Console.Testing" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,7 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Jobmatch\Jobmatch.csproj" />
-    <ProjectReference Include="..\Jobmatch.Cli\Jobmatch.Cli.csproj" />
   </ItemGroup>
 
 </Project>
