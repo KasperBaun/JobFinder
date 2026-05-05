@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Jobmatch\Jobmatch.csproj" />
-    <ProjectReference Include="..\..\src\Jobmatch.Cli\Jobmatch.Cli.csproj" />
+    <ProjectReference Include="..\Jobmatch\Jobmatch.csproj" />
+    <ProjectReference Include="..\Jobmatch.Cli\Jobmatch.Cli.csproj" />
   </ItemGroup>
 
 </Project>
