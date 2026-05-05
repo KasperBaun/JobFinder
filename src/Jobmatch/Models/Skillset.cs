@@ -16,4 +16,9 @@ public sealed record Skillset(
     IReadOnlyList<string> Domains,
     IReadOnlyList<string> Disqualifiers,
     IReadOnlyList<string> Languages,
-    IReadOnlyList<string> EmploymentTypes);
+    IReadOnlyList<string> EmploymentTypes)
+{
+    public string? Country { get; init; }
+    public string? Region { get; init; }
+    public IReadOnlyList<string> Metro { get; init; } = [];
+}

@@ -29,7 +29,12 @@ public sealed class RankerTests
         Domains: ["internal tools", "B2B SaaS"],
         Disqualifiers: ["unpaid", "pure frontend"],
         Languages: ["English", "Danish"],
-        EmploymentTypes: ["full-time", "consulting"]);
+        EmploymentTypes: ["full-time", "consulting"])
+    {
+        Country = "Denmark",
+        Region = "EU",
+        Metro = ["Frederiksberg", "Hellerup", "Lyngby"],
+    };
 
     private static Skillset LenaPersona() => new(
         Name: "Lena",
@@ -287,6 +292,168 @@ public sealed class RankerTests
         // US-only must drop substantially below the full weight (it currently sits at full).
         Assert.True(usLR < 0.5 * DefaultWeights.LocationRemote,
             $"US-only should be < half of full location_remote weight, got {usLR:0.000}");
+    }
+
+    [Fact]
+    public void Score_Location_Tiers_City_Metro_Country_Region_Else_In_Order()
+    {
+        // Mikkel is in Copenhagen; Frederiksberg is in Mikkel.Metro; Aarhus is in Denmark (country);
+        // Berlin is in EU (region); USA-only is restrictive (else).
+        var pref = MikkelPersona() with { RemotePreference = RemotePreference.Onsite };
+        var w = DefaultWeights.LocationRemote;
+
+        var city = MakeListing("A", "C# .NET Azure SQL Server",
+            location: "Copenhagen, Denmark", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var metro = MakeListing("B", "C# .NET Azure SQL Server",
+            location: "Frederiksberg, Denmark", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var country = MakeListing("C", "C# .NET Azure SQL Server",
+            location: "Aarhus, Denmark", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var region = MakeListing("D", "C# .NET Azure SQL Server",
+            location: "Berlin, European timezones", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var elsewhere = MakeListing("E", "C# .NET Azure SQL Server",
+            location: "USA only", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([city, metro, country, region, elsewhere], pref, RankingCfg());
+        double LR(string id) => scored.Single(s => s.Listing.Id == id).Breakdown["location_remote"];
+
+        // Strictly descending tiers.
+        Assert.True(LR(city.Id) > LR(metro.Id), $"city ({LR(city.Id):0.000}) should beat metro ({LR(metro.Id):0.000})");
+        Assert.True(LR(metro.Id) > LR(country.Id), $"metro ({LR(metro.Id):0.000}) should beat country ({LR(country.Id):0.000})");
+        Assert.True(LR(country.Id) > LR(region.Id), $"country ({LR(country.Id):0.000}) should beat region ({LR(region.Id):0.000})");
+        Assert.True(LR(region.Id) > LR(elsewhere.Id), $"region ({LR(region.Id):0.000}) should beat else ({LR(elsewhere.Id):0.000})");
+
+        // City scores at full weight; else scores at 0.1*weight.
+        Assert.Equal(w * 1.0, LR(city.Id), 3);
+        Assert.Equal(w * 0.85, LR(metro.Id), 3);
+        Assert.Equal(w * 0.6, LR(country.Id), 3);
+    }
+
+    [Fact]
+    public void Score_Unknown_RemoteMode_Falls_Back_To_Location_Tier()
+    {
+        // When the adapter couldn't infer remote/hybrid/onsite, location alone should
+        // drive the score — otherwise a perfectly local listing would score 0.
+        var listing = MakeListing("Software Developer Intern", "TypeScript",
+            location: "Hellerup, Denmark",
+            remote: RemoteMode.Unknown,
+            postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([listing], MikkelPersona(), RankingCfg());
+
+        // Hellerup is in Mikkel's metro list — expect ~0.85 * weight.
+        Assert.Equal(DefaultWeights.LocationRemote * 0.85, scored[0].Breakdown["location_remote"], 3);
+    }
+
+    [Fact]
+    public void Score_Worldwide_Listing_Is_Top_Tier_For_Any_User()
+    {
+        var pref = MikkelPersona() with { RemotePreference = RemotePreference.Remote };
+        var worldwide = MakeListing("W", "C# .NET Azure SQL Server",
+            location: "Worldwide / fully remote",
+            remote: RemoteMode.Remote, postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([worldwide], pref, RankingCfg());
+        Assert.Equal(DefaultWeights.LocationRemote, scored[0].Breakdown["location_remote"], 3);
+    }
+
+    [Fact]
+    public void Score_Custom_Tier_Weights_Are_Honored()
+    {
+        var pref = MikkelPersona() with { RemotePreference = RemotePreference.Onsite };
+        var country = MakeListing("C", "C# .NET Azure SQL Server",
+            location: "Aarhus, Denmark", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+
+        var rankingDefault = RankingCfg();
+        var rankingCustom = RankingCfg() with { LocationTierWeights = new LocationTierWeights(1.0, 0.9, 0.2, 0.1, 0.0) };
+
+        var def = Ranker.Score([country], pref, rankingDefault)[0].Breakdown["location_remote"];
+        var cus = Ranker.Score([country], pref, rankingCustom)[0].Breakdown["location_remote"];
+
+        // Custom country tier (0.2) should produce a lower contribution than the default (0.6).
+        Assert.True(cus < def, $"custom (0.2) should yield smaller contribution than default (0.6); cus={cus:0.000} def={def:0.000}");
+    }
+
+    [Fact]
+    public void Filter_Drops_Listings_With_No_Primary_Stack_Hit_When_Required()
+    {
+        var marketing = MakeListing("Brand & Growth Marketer",
+            "Drive marketing campaigns for our B2B SaaS product. Manage budget.",
+            location: "Copenhagen", remote: RemoteMode.Onsite,
+            postedAt: DateTimeOffset.UtcNow);
+        var engineering = MakeListing("Senior .NET Engineer",
+            "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow);
+        var ranking = RankingCfg() with { RequirePrimaryStackHit = true };
+
+        var scored = Ranker.Score([marketing, engineering], MikkelPersona(), ranking);
+        var filtered = Ranker.Filter(scored, ranking);
+
+        Assert.Single(filtered);
+        Assert.Equal(engineering.Id, filtered[0].Listing.Id);
+    }
+
+    [Fact]
+    public void Filter_RequirePrimaryStackHit_Off_Keeps_Listings_Without_Primary_Hits()
+    {
+        var marketing = MakeListing("Brand & Growth Marketer",
+            "Drive marketing campaigns for our B2B SaaS product.",
+            location: "Copenhagen", remote: RemoteMode.Onsite,
+            postedAt: DateTimeOffset.UtcNow);
+        var ranking = RankingCfg(); // RequirePrimaryStackHit defaults to false
+
+        var scored = Ranker.Score([marketing], MikkelPersona(), ranking);
+        var filtered = Ranker.Filter(scored, ranking);
+
+        // Marketing listing has no primary hits but is still scored on location/seniority/domain.
+        // It must be retained when the gate is off.
+        Assert.Single(filtered);
+    }
+
+    [Fact]
+    public void Filter_Drops_Listings_Older_Than_MaxAgeDays()
+    {
+        var fresh = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-5));
+        var stale = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-90));
+        var ranking = RankingCfg() with { MaxAgeDays = 14 };
+
+        var scored = Ranker.Score([fresh, stale], MikkelPersona(), ranking);
+        var filtered = Ranker.Filter(scored, ranking);
+
+        Assert.Single(filtered);
+        Assert.Equal(fresh.Id, filtered[0].Listing.Id);
+    }
+
+    [Fact]
+    public void Filter_Listing_With_Null_PostedAt_Is_Kept_When_MaxAgeDays_Set()
+    {
+        var noDate = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: null);
+        var ranking = RankingCfg() with { MaxAgeDays = 14 };
+
+        var scored = Ranker.Score([noDate], MikkelPersona(), ranking);
+        var filtered = Ranker.Filter(scored, ranking);
+
+        Assert.Single(filtered);
+    }
+
+    [Fact]
+    public void Filter_MaxAgeDays_Null_Disables_Cutoff()
+    {
+        var ancient = MakeListing("Senior .NET Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-365));
+        var ranking = RankingCfg(); // MaxAgeDays defaults to null
+
+        var scored = Ranker.Score([ancient], MikkelPersona(), ranking);
+        var filtered = Ranker.Filter(scored, ranking);
+
+        Assert.Single(filtered);
     }
 
     [Fact]

@@ -198,6 +198,69 @@ public sealed class SkillsetParserTests
     }
 
     [Fact]
+    public void Parse_Country_Region_Metro_Are_Read_When_Present()
+    {
+        var content = """
+            ---
+            name: Mikkel
+            location: Copenhagen, Denmark
+            experience_years: 7
+            remote_preference: hybrid
+            seniority: senior
+            country: Denmark
+            region: EU
+            metro:
+              - Frederiksberg
+              - Hellerup
+              - Lyngby
+            ---
+
+            ## Primary stack
+            - C#
+            """;
+        var s = SkillsetParser.Parse(content);
+        Assert.Equal("Denmark", s.Country);
+        Assert.Equal("EU", s.Region);
+        Assert.Equal(new[] { "Frederiksberg", "Hellerup", "Lyngby" }, s.Metro);
+    }
+
+    [Fact]
+    public void Parse_Country_Region_Metro_Default_When_Absent()
+    {
+        var s = SkillsetParser.Parse(ValidSkillset);
+        Assert.Null(s.Country);
+        Assert.Null(s.Region);
+        Assert.Empty(s.Metro);
+    }
+
+    [Fact]
+    public void Serialize_Roundtrip_Preserves_Country_Region_Metro()
+    {
+        var content = """
+            ---
+            name: Mikkel
+            location: Copenhagen, Denmark
+            experience_years: 7
+            remote_preference: hybrid
+            seniority: senior
+            country: Denmark
+            region: EU
+            metro:
+              - Frederiksberg
+              - Hellerup
+            ---
+
+            ## Primary stack
+            - C#
+            """;
+        var s1 = SkillsetParser.Parse(content);
+        var s2 = SkillsetParser.Parse(SkillsetParser.Serialize(s1));
+        Assert.Equal(s1.Country, s2.Country);
+        Assert.Equal(s1.Region, s2.Region);
+        Assert.Equal(s1.Metro, s2.Metro);
+    }
+
+    [Fact]
     public void Parse_Handles_CRLF_Line_Endings()
     {
         var crlf = ValidSkillset.Replace("\n", "\r\n");
