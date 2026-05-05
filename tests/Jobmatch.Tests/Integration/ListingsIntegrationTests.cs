@@ -51,7 +51,8 @@ public sealed class ListingsIntegrationTests : IDisposable
             enabled: true
         """;
 
-    private const string ValidRanking = """
+    private static string BuildRanking(double minScore) =>
+        $$"""
         weights:
           primary_stack: 0.40
           secondary_stack: 0.15
@@ -62,7 +63,7 @@ public sealed class ListingsIntegrationTests : IDisposable
         top_n: 5
         disqualifier_penalty: 0.0
         freshness_half_life_days: 14
-        min_score_to_include: 0.0
+        min_score_to_include: {{minScore.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}}
         """;
 
     public ListingsIntegrationTests()
@@ -86,17 +87,17 @@ public sealed class ListingsIntegrationTests : IDisposable
         try { Directory.Delete(_root, recursive: true); } catch { /* best effort */ }
     }
 
-    private void WriteConfigs()
+    private void WriteConfigs(double minScore = 0.10)
     {
         File.WriteAllText(Path.Combine(_root, "config", "skillset.md"), ValidSkillset);
         File.WriteAllText(Path.Combine(_root, "config", "portals.yml"), ValidPortals);
-        File.WriteAllText(Path.Combine(_root, "config", "ranking.yml"), ValidRanking);
+        File.WriteAllText(Path.Combine(_root, "config", "ranking.yml"), BuildRanking(minScore));
     }
 
     private void WriteFixtureImport(string filename, string json) =>
         File.WriteAllText(Path.Combine(_root, "data", "imports", filename), json);
 
-    [Fact(Skip = "See todo.md: ValidRanking YAML min_score value is out of sync with the HappyPath filter expectation — needs fixture rewrite.")]
+    [Fact]
     public async Task Listings_HappyPath_Writes_All_Expected_Files_And_Ranks_Strongly()
     {
         WriteConfigs();
@@ -169,13 +170,11 @@ public sealed class ListingsIntegrationTests : IDisposable
         Assert.Contains("Missing config/skillset.md", _console.Output);
     }
 
-    [Fact(Skip = "See todo.md: the .Replace() into ValidRanking misses when the base string drifts; needs a templated YAML fixture.")]
+    [Fact]
     public async Task Listings_Explain_Prints_Breakdown_For_Filtered_Listing()
     {
         // min_score high enough that nothing is included, but --explain should still show the listing.
-        WriteConfigs();
-        File.WriteAllText(Path.Combine(_root, "config", "ranking.yml"),
-            ValidRanking.Replace("min_score_to_include: 0.10", "min_score_to_include: 0.99"));
+        WriteConfigs(minScore: 0.99);
         WriteFixtureImport("mine-fixture.json", $$"""
             [
               {

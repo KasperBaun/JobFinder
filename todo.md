@@ -2,27 +2,6 @@
 
 Working list of unfinished work. Landed changes are in git history.
 
-## In-flight (round 4) — tests skipped, production code shipped
-
-The `--explain <url>` flag, `--version`, and the `CliApp.Create(IAnsiConsole?)`
-overload are all in and tested where possible. Two integration tests in
-`tests/Jobmatch.Tests/Integration/ListingsIntegrationTests.cs` are currently
-`[Fact(Skip = …)]`:
-
-- **`Listings_HappyPath_Writes_All_Expected_Files_And_Ranks_Strongly`** — the
-  disqualified listing ("Unpaid Intern") appears in `top_jobs.md` because
-  the fixture's `min_score_to_include` ended up at `0.0` after a stale Edit;
-  the assertion expects it to be filtered. Fix: rewrite `ValidRanking` with a
-  known value (e.g. `0.10`) and stop using `.Replace()` to template variants.
-- **`Listings_Explain_Prints_Breakdown_For_Filtered_Listing`** — same
-  root cause: the `.Replace("min_score_to_include: 0.10", "0.99")` at
-  line 177 misses because the base string drifted. Template the YAML as
-  `string.Format` or use a small builder helper.
-
-Fix approach: introduce a `private static string BuildRanking(double minScore)`
-helper that returns the full YAML with the supplied value interpolated.
-Remove the `.Replace` hack.
-
 ## Round 5 candidates (not started)
 
 - **ApiAdapter pagination.** The implementation plan mentions "supports
@@ -43,8 +22,8 @@ Remove the `.Replace` hack.
 - **`ApiAdapter.RenderTemplate` silently drops unknown template keys.**
   Consider warning or throwing when a template key isn't in the item.
 - **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
-- **Rate-limited test for `--explain`.** Once the two skipped tests are
-  fixed, add one more: `--explain` on an INCLUDED listing prints the full
+- **Additional `--explain` test.** The two previously-skipped tests now
+  pass; add one more: `--explain` on an INCLUDED listing prints the full
   breakdown with state = `INCLUDED`.
 
 ## Nice-to-haves / polish
