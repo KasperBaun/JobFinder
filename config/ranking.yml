@@ -2,10 +2,10 @@
 # disqualifier_penalty is applied multiplicatively — 0.0 zeroes the score on any hit.
 
 weights:
-  primary_stack: 0.40
-  secondary_stack: 0.15
+  primary_stack: 0.35
+  secondary_stack: 0.10
   seniority: 0.15
-  location_remote: 0.15
+  location_remote: 0.25
   domain: 0.10
   freshness: 0.05
 

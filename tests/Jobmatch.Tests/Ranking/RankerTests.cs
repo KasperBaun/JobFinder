@@ -264,6 +264,32 @@ public sealed class RankerTests
     }
 
     [Fact]
+    public void Rank_Remote_Listing_Restricted_To_Foreign_Region_Is_Penalized()
+    {
+        // Copenhagen-based user, prefers remote. An EU/worldwide-open remote listing
+        // should score higher on location_remote than a remote listing restricted to
+        // a non-EU region (e.g. "USA only") that the user can't actually take.
+        var skillset = MikkelPersona() with { RemotePreference = RemotePreference.Remote };
+
+        var euOpen = MakeListing("Eng A", "C# .NET Azure SQL Server",
+            location: "Europe, European timezones",
+            remote: RemoteMode.Remote, postedAt: DateTimeOffset.UtcNow);
+        var usOnly = MakeListing("Eng B", "C# .NET Azure SQL Server",
+            location: "USA only",
+            remote: RemoteMode.Remote, postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([euOpen, usOnly], skillset, RankingCfg());
+        var euLR = scored.Single(s => s.Listing.Title == "Eng A").Breakdown["location_remote"];
+        var usLR = scored.Single(s => s.Listing.Title == "Eng B").Breakdown["location_remote"];
+
+        Assert.True(euLR > usLR,
+            $"EU-open should beat US-only on location_remote: euLR={euLR:0.000}, usLR={usLR:0.000}");
+        // US-only must drop substantially below the full weight (it currently sits at full).
+        Assert.True(usLR < 0.5 * DefaultWeights.LocationRemote,
+            $"US-only should be < half of full location_remote weight, got {usLR:0.000}");
+    }
+
+    [Fact]
     public void Rank_Keyword_Matching_Is_CaseInsensitive_And_WholeWord()
     {
         var listing = MakeListing(
