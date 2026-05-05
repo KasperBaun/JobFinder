@@ -1,6 +1,14 @@
 ---
 name: Alex Example
-location: Remote, EU timezone
+location: Copenhagen, Denmark
+country: Denmark        # used for country-tier matching when listing is outside city/metro
+region: EU              # 'EU'/'Europe'/'EMEA' all match each other; otherwise free-form
+metro:                  # listings whose location contains any of these match metro tier
+  - Frederiksberg
+  - Hellerup
+  - Lyngby
+  - Greater Copenhagen
+  - Hovedstaden
 experience_years: 5
 target_roles:
   - Software Engineer

@@ -36,8 +36,28 @@ public static class RankingConfigLoader
         var topN = ReadInt(map, "top_n", 10);
         var halfLife = ReadDouble(map, "freshness_half_life_days", 14.0);
         var minScore = ReadDouble(map, "min_score_to_include", 0.25);
+        var maxAgeDays = ReadNullableInt(map, "max_age_days");
+        var requirePrimaryStackHit = ReadBool(map, "require_primary_stack_hit", false);
+        var tierWeights = BuildTierWeights(map);
 
-        return new RankingConfig(weights, disqualifierPenalty, topN, halfLife, minScore);
+        return new RankingConfig(weights, disqualifierPenalty, topN, halfLife, minScore, maxAgeDays, requirePrimaryStackHit)
+        {
+            LocationTierWeights = tierWeights,
+        };
+    }
+
+    private static LocationTierWeights BuildTierWeights(IReadOnlyDictionary<string, object?> root)
+    {
+        if (!root.TryGetValue("location_tier_weights", out var raw) || raw is not IDictionary<object, object?> map)
+            return LocationTierWeights.Default;
+        var n = Normalise(map);
+        var d = LocationTierWeights.Default;
+        return new LocationTierWeights(
+            City: ReadDouble(n, "city", d.City),
+            Metro: ReadDouble(n, "metro", d.Metro),
+            Country: ReadDouble(n, "country", d.Country),
+            Region: ReadDouble(n, "region", d.Region),
+            Else: ReadDouble(n, "else", d.Else));
     }
 
     public static RankingConfig Load(string path) => Parse(File.ReadAllText(path));
@@ -72,5 +92,19 @@ public static class RankingConfigLoader
     {
         if (!map.TryGetValue(key, out var v) || v is null) return defaultValue;
         return int.TryParse(v.ToString(), out var n) ? n : defaultValue;
+    }
+
+    private static int? ReadNullableInt(IReadOnlyDictionary<string, object?> map, string key)
+    {
+        if (!map.TryGetValue(key, out var v) || v is null) return null;
+        var s = v.ToString();
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        return int.TryParse(s, out var n) ? n : null;
+    }
+
+    private static bool ReadBool(IReadOnlyDictionary<string, object?> map, string key, bool defaultValue)
+    {
+        if (!map.TryGetValue(key, out var v) || v is null) return defaultValue;
+        return bool.TryParse(v.ToString(), out var b) ? b : defaultValue;
     }
 }

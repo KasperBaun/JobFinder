@@ -13,3 +13,24 @@ disqualifier_penalty: 0.0
 top_n: 10
 freshness_half_life_days: 14
 min_score_to_include: 0.25
+
+# Hard filter: drop listings older than this many days (null/absent = no cutoff).
+max_age_days: 60
+
+# Hard filter: drop listings that don't hit any keyword from your primary stack.
+# Useful when search portals return non-engineering roles (marketing, sales, ops) that
+# happen to mention some of your keywords in passing.
+require_primary_stack_hit: true
+
+# Per-tier multipliers applied to the location_remote signal.
+#   city    — listing is in your declared city
+#   metro   — listing is in one of your declared metro areas
+#   country — listing is in your country (but outside city/metro)
+#   region  — listing is in your region (e.g. EU/EMEA/Europe synonyms)
+#   else    — listing is restricted to a region that excludes you (e.g. "USA only")
+location_tier_weights:
+  city: 1.0
+  metro: 0.85
+  country: 0.6
+  region: 0.3
+  else: 0.1

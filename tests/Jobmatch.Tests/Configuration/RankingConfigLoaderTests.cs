@@ -49,6 +49,86 @@ public sealed class RankingConfigLoaderTests
     }
 
     [Fact]
+    public void Parse_MaxAgeDays_When_Present()
+    {
+        var yaml = """
+            weights:
+              primary_stack: 1.0
+              secondary_stack: 0.0
+              seniority: 0.0
+              location_remote: 0.0
+              domain: 0.0
+              freshness: 0.0
+            max_age_days: 60
+            """;
+        var cfg = RankingConfigLoader.Parse(yaml);
+        Assert.Equal(60, cfg.MaxAgeDays);
+    }
+
+    [Fact]
+    public void Parse_MaxAgeDays_Defaults_To_Null_When_Missing()
+    {
+        var yaml = """
+            weights:
+              primary_stack: 1.0
+              secondary_stack: 0.0
+              seniority: 0.0
+              location_remote: 0.0
+              domain: 0.0
+              freshness: 0.0
+            """;
+        var cfg = RankingConfigLoader.Parse(yaml);
+        Assert.Null(cfg.MaxAgeDays);
+    }
+
+    [Fact]
+    public void Parse_LocationTierWeights_When_Present()
+    {
+        var yaml = """
+            weights:
+              primary_stack: 1.0
+              secondary_stack: 0.0
+              seniority: 0.0
+              location_remote: 0.0
+              domain: 0.0
+              freshness: 0.0
+            location_tier_weights:
+              city: 1.0
+              metro: 0.9
+              country: 0.5
+              region: 0.2
+              else: 0.0
+            """;
+        var cfg = RankingConfigLoader.Parse(yaml);
+        Assert.Equal(1.0, cfg.LocationTierWeights.City);
+        Assert.Equal(0.9, cfg.LocationTierWeights.Metro);
+        Assert.Equal(0.5, cfg.LocationTierWeights.Country);
+        Assert.Equal(0.2, cfg.LocationTierWeights.Region);
+        Assert.Equal(0.0, cfg.LocationTierWeights.Else);
+    }
+
+    [Fact]
+    public void Parse_LocationTierWeights_Defaults_When_Missing()
+    {
+        var yaml = """
+            weights:
+              primary_stack: 1.0
+              secondary_stack: 0.0
+              seniority: 0.0
+              location_remote: 0.0
+              domain: 0.0
+              freshness: 0.0
+            """;
+        var cfg = RankingConfigLoader.Parse(yaml);
+        var d = Jobmatch.Models.LocationTierWeights.Default;
+        Assert.Equal(d.City, cfg.LocationTierWeights.City);
+        Assert.Equal(d.Metro, cfg.LocationTierWeights.Metro);
+        Assert.Equal(d.Country, cfg.LocationTierWeights.Country);
+        Assert.Equal(d.Region, cfg.LocationTierWeights.Region);
+        Assert.Equal(d.Else, cfg.LocationTierWeights.Else);
+    }
+
+    [Fact]
     public void Parse_Default_Values_Applied_When_Scalars_Missing()
     {
         var yaml = """

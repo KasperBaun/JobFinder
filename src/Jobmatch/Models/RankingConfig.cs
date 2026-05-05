@@ -5,7 +5,12 @@ public sealed record RankingConfig(
     double DisqualifierPenalty,
     int TopN,
     double FreshnessHalfLifeDays,
-    double MinScoreToInclude);
+    double MinScoreToInclude,
+    int? MaxAgeDays = null,
+    bool RequirePrimaryStackHit = false)
+{
+    public LocationTierWeights LocationTierWeights { get; init; } = LocationTierWeights.Default;
+}
 
 public sealed record RankingWeights(
     double PrimaryStack,
@@ -16,4 +21,14 @@ public sealed record RankingWeights(
     double Freshness)
 {
     public double Sum() => PrimaryStack + SecondaryStack + Seniority + LocationRemote + Domain + Freshness;
+}
+
+public sealed record LocationTierWeights(
+    double City,
+    double Metro,
+    double Country,
+    double Region,
+    double Else)
+{
+    public static LocationTierWeights Default { get; } = new(City: 1.0, Metro: 0.85, Country: 0.6, Region: 0.3, Else: 0.1);
 }

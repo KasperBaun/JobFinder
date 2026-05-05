@@ -56,6 +56,9 @@ public static class SkillsetParser
             ["languages"] = skillset.Languages.ToList(),
             ["employment_types"] = skillset.EmploymentTypes.ToList(),
         };
+        if (!string.IsNullOrWhiteSpace(skillset.Country)) frontmatter["country"] = skillset.Country;
+        if (!string.IsNullOrWhiteSpace(skillset.Region)) frontmatter["region"] = skillset.Region;
+        if (skillset.Metro.Count > 0) frontmatter["metro"] = skillset.Metro.ToList();
 
         var yaml = Serializer.Serialize(frontmatter).TrimEnd();
 
@@ -127,6 +130,9 @@ public static class SkillsetParser
         var seniority = RequireEnum<Seniority>(yaml, "seniority");
         var languages = ReadList(yaml, "languages");
         var employmentTypes = ReadList(yaml, "employment_types", ["full-time"]);
+        var country = OptionalString(yaml, "country");
+        var region = OptionalString(yaml, "region");
+        var metro = ReadList(yaml, "metro");
 
         return new Skillset(
             Name: name,
@@ -140,7 +146,19 @@ public static class SkillsetParser
             Domains: ReadSection(sections, DomainsSection),
             Disqualifiers: ReadSection(sections, DisqualifiersSection),
             Languages: languages,
-            EmploymentTypes: employmentTypes);
+            EmploymentTypes: employmentTypes)
+        {
+            Country = country,
+            Region = region,
+            Metro = metro,
+        };
+    }
+
+    private static string? OptionalString(IReadOnlyDictionary<string, object?> yaml, string key)
+    {
+        if (!yaml.TryGetValue(key, out var v) || v is null) return null;
+        var s = v.ToString();
+        return string.IsNullOrWhiteSpace(s) ? null : s;
     }
 
     private static string RequireString(IReadOnlyDictionary<string, object?> yaml, string key)
