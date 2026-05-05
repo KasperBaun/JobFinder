@@ -6,11 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- CLI / rendering -->
-    <PackageVersion Include="Spectre.Console" Version="0.55.2" />
-    <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
-    <PackageVersion Include="Spectre.Console.Testing" Version="0.55.2" />
-
     <!-- Config parsing -->
     <PackageVersion Include="YamlDotNet" Version="17.1.0" />
 

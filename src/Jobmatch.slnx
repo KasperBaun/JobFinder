@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="Jobmatch/Jobmatch.csproj" />
-    <Project Path="Jobmatch.Cli/Jobmatch.Cli.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="Jobmatch.Tests/Jobmatch.Tests.csproj" />

@@ -2,49 +2,51 @@
 
 ## Why
 
-The user wants to see what they configured (providers, search criteria), look at past runs, and mark good matches — all from the GUI. Depends on T-001 (per-user paths) and T-002 (GUI scaffolding).
+The user wants to see what they configured (providers, search criteria), look at past runs, and mark good matches — all from the GUI. Depends on T-002 (GUI scaffold + UserContext).
 
 ## Outcome
 
-Four working pages in the SPA, backed by four endpoint groups:
+Four feature pages in the SPA, backed by five endpoint groups:
 
 | Page | Endpoint group | Purpose |
 |---|---|---|
-| **Providers** | `/api/providers` | List configured providers, show enabled/disabled, type, last fetch summary |
+| **Providers** | `/api/providers` | List configured providers, show enabled/disabled, type, last-fetch summary |
 | **Skillset** | `/api/skillset` | Show the parsed active skillset (stack, location, disqualifiers, weights) |
-| **Search** | `/api/search` | Run a search; SSE stream of per-provider progress; render results |
-| **History** | `/api/history` | List past runs with timestamp, listings count, and good-match count |
-
-Plus a **mark** action on the Search and History pages: click "good match" on a listing → POSTs `/api/marks` → persisted under `data/<email>/marks.json`.
+| **Search** | `/api/search` (SSE) | Run a search; stream per-provider progress; render results |
+| **History** | `/api/history` | List past runs with timestamp, listings count, good-match count |
+| (mark action) | `/api/marks` | Persist a "good match" toggle per listing per run |
 
 ## Scope
 
 ### Server
-- `Server/Endpoints/ProvidersEndpoints.cs`, `SkillsetEndpoints.cs`, `SearchEndpoints.cs`, `HistoryEndpoints.cs`, `MarksEndpoints.cs`.
+
+- New `Server/Endpoints/{Providers,Skillset,Search,History,Marks}Endpoints.cs`.
 - Matching handlers under `Server/Handlers/`.
 - DTOs under `Server/Models/`.
-- `Search` handler runs the existing pipeline as an `IAsyncEnumerable<StepEvent>` over SSE — one event per provider fetch start / done / failed, plus dedupe / rank / write events.
-- After a successful run, persist a `data/<email>/history/<run-id>.json` summary with: timestamp, providers, fetched count, deduped count, ranked count, top score, shortlist length.
+- A new `Jobmatch.Search.SearchService` in the library that orchestrates load → fetch → dedupe → rank → write. The GUI search handler invokes it and streams `IAsyncEnumerable<SearchProgressEvent>` over SSE.
+- After a successful search, persist a `data/<email>/history/<run-id>.json` summary: timestamp, providers (with status), fetched count, deduped count, ranked count, top score, shortlist length.
+- `marks.json` shape: `{ "<runId>": { "<listingId>": "good" | "bad" } }`. Atomic writes via temp file + rename.
 
 ### Client
+
 - New pages under `Client/src/pages/`: `ProvidersPage`, `SkillsetPage`, `SearchPage`, `HistoryPage`.
-- Top nav linking the four pages plus Home.
-- React Query for the GETs; `useStepStream` hook (lifted from mwt) for the search SSE.
-- Mark button on listings: optimistic update, POST to `/api/marks`, rollback on failure.
-- History page shows a small chart or count column: "marked good / total shortlist".
+- Top nav linking Home + the four pages.
+- React Query for GETs; a `useSearchStream` hook that consumes the SSE stream from `/api/search`.
+- Mark control on listings: optimistic update, POST `/api/marks`, rollback on failure.
+- History page shows per-run "marked good / total shortlist" counts.
 
 ## Out of scope
 
-- Editing skillset or providers from the GUI in this pass — read-only views; users still edit the underlying files. (Editing is a future task.)
-- Algorithm changes that *use* the marks data — feedback collection only; learning loop is later.
+- Editing skillset or providers from the GUI — read-only this pass; users still edit the underlying files. (Editing is a future task.)
+- Algorithm changes that *use* the marks data — feedback collection only; the learning loop is a separate task.
 
 ## Acceptance
 
 - All four pages render against a populated `data/<email>/`.
-- Running a search from the GUI matches the CLI's output for the same skillset/providers (compare `top_jobs.md`).
-- Marking a listing persists; refreshing keeps the mark.
+- A search run from the GUI streams progress per provider and lands a top-N shortlist plus a `history/<run-id>.json` entry.
+- Marking a listing persists across refresh.
 - History page reflects new runs without restart.
 
 ## Requirements covered
 
-R-020, R-023, R-030, R-033, R-050, R-051, R-052, R-053.
+R-020, R-023, R-030, R-031, R-032, R-033, R-040, R-041, R-042, R-050, R-051, R-052, R-053.
