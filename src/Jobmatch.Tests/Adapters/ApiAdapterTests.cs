@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using Jobmatch;
 using Jobmatch.Adapters;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -183,6 +185,115 @@ public sealed class ApiAdapterTests
         await Assert.ThrowsAsync<HttpRequestException>(() => adapter.FetchAsync());
     }
 
+    private static PortalConfig JoobleLike() => new(
+        Name: "jooble",
+        Type: PortalType.Api,
+        Enabled: true,
+        Method: "post",
+        Endpoint: new Uri("https://example.com/api/{api_key}"),
+        QueryParams: new Dictionary<string, object?>
+        {
+            ["api_key"] = "ABC123",
+        },
+        BodyTemplate: new Dictionary<string, object?>
+        {
+            ["keywords"] = "software",
+            ["location"] = "Denmark",
+            ["page"] = 1,
+        },
+        ResponseMapping: new Dictionary<string, string>
+        {
+            ["items_path"] = "jobs",
+            ["id"] = "id",
+            ["title"] = "title",
+            ["url"] = "link",
+        });
+
+    [Fact]
+    public async Task FetchAsync_Post_Sends_Json_Body_From_BodyTemplate()
+    {
+        var handler = new CapturingHandler("""{"jobs":[]}""");
+        using var http = new HttpClient(handler);
+        var adapter = new ApiAdapter(JoobleLike(), http, NullLogger.Instance);
+
+        await adapter.FetchAsync();
+
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.NotNull(handler.LastBody);
+        using var body = JsonDocument.Parse(handler.LastBody!);
+        Assert.Equal("software", body.RootElement.GetProperty("keywords").GetString());
+        Assert.Equal("Denmark", body.RootElement.GetProperty("location").GetString());
+        Assert.Equal(1, body.RootElement.GetProperty("page").GetInt32());
+    }
+
+    [Fact]
+    public async Task FetchAsync_Post_Sets_ContentType_Application_Json()
+    {
+        var handler = new CapturingHandler("""{"jobs":[]}""");
+        using var http = new HttpClient(handler);
+        var adapter = new ApiAdapter(JoobleLike(), http, NullLogger.Instance);
+
+        await adapter.FetchAsync();
+
+        Assert.Equal("application/json", handler.LastRequest!.Content!.Headers.ContentType!.MediaType);
+    }
+
+    [Fact]
+    public async Task FetchAsync_EndpointTemplate_Substitutes_From_QueryParams_And_Removes_Consumed_Key()
+    {
+        var handler = new CapturingHandler("""{"jobs":[]}""");
+        using var http = new HttpClient(handler);
+        var cfg = JoobleLike() with
+        {
+            QueryParams = new Dictionary<string, object?>
+            {
+                ["api_key"] = "ABC123",
+                ["other"] = "preserved",
+            },
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        await adapter.FetchAsync();
+
+        var actualUri = handler.LastRequest!.RequestUri!.ToString();
+        Assert.Contains("/api/ABC123", actualUri);
+        Assert.DoesNotContain("api_key=", actualUri);
+        Assert.Contains("other=preserved", actualUri);
+    }
+
+    [Fact]
+    public async Task FetchAsync_EndpointTemplate_Unknown_Key_Throws_ConfigException()
+    {
+        var handler = new CapturingHandler("""{"jobs":[]}""");
+        using var http = new HttpClient(handler);
+        var cfg = JoobleLike() with
+        {
+            Endpoint = new Uri("https://example.com/api/{missing_key}"),
+            QueryParams = new Dictionary<string, object?>
+            {
+                ["api_key"] = "ABC123",
+            },
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var ex = await Assert.ThrowsAsync<ConfigException>(() => adapter.FetchAsync());
+        Assert.Contains("missing_key", ex.Message);
+    }
+
+    [Fact]
+    public async Task FetchAsync_Method_Defaults_To_Get_When_Unspecified()
+    {
+        var handler = new CapturingHandler(HappyPathPayload);
+        using var http = new HttpClient(handler);
+        var adapter = new ApiAdapter(JobnetLike(), http, NullLogger.Instance);
+
+        await adapter.FetchAsync();
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest!.Method);
+        Assert.Null(handler.LastRequest!.Content);
+    }
+
     private sealed class StubHandler(string body, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
@@ -190,5 +301,24 @@ public sealed class ApiAdapterTests
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             });
+    }
+
+    private sealed class CapturingHandler(string responseBody, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
+    {
+        public HttpRequestMessage? LastRequest { get; private set; }
+        public string? LastBody { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            if (request.Content is not null)
+            {
+                LastBody = await request.Content.ReadAsStringAsync(cancellationToken);
+            }
+            return new HttpResponseMessage(status)
+            {
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
+            };
+        }
     }
 }

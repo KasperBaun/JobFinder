@@ -247,3 +247,170 @@ portals:
     notes: |
       Requires Playwright browsers. Install once with:
       pwsh bin/Debug/net10.0/playwright.ps1 install chromium
+
+  # ────────────────────────────────────────────────────────────────
+  # T-007 — DK portal research findings (2026-05). All disabled by
+  # default. See docs/tasks/T-007/INDEX.md for the per-portal verdicts
+  # and full Findings.
+  # ────────────────────────────────────────────────────────────────
+
+  - name: jobindex-rss
+    type: rss
+    enabled: false
+    endpoint: https://www.jobindex.dk/jobsoegning.rss
+    query_params:
+      q: "software engineer"
+    rate_limit_rps: 0.5
+    notes: |
+      Jobindex.dk public RSS feed (undocumented but stable as of 2026-05).
+      Returns latest postings; `q=` accepts space-separated keywords matched
+      as OR-of-words, not strict phrase. Channel title echoes the filter so
+      you can sanity-check what got applied. Items expose title, link
+      (e.g. https://www.jobindex.dk/vis-job/h1662717), pubDate, and a short
+      description; full body requires fetching the link.
+      The same backend powers it-jobbank.dk/jobsoegning.rss and ofir.dk
+      (which now 301-redirects to jobindex.dk). Run only one of jobindex /
+      it-jobbank as enabled to avoid heavy duplicates — the dedupe layer
+      will drop the rest, but you waste calls. Keep rate_limit_rps low;
+      this feed is unadvertised and ToS does not bless automation.
+
+  - name: it-jobbank-rss
+    type: rss
+    enabled: false
+    endpoint: https://www.it-jobbank.dk/jobsoegning.rss
+    query_params:
+      q: "developer"
+    rate_limit_rps: 0.5
+    notes: |
+      IT-jobbank.dk public RSS feed (undocumented but stable as of 2026-05).
+      Same Jobindex backend as the `jobindex-rss` block, but pre-scoped to
+      IT-only inventory — narrower and tech-denser. `q=` accepts
+      space-separated keywords matched as OR-of-words; channel title
+      echoes the applied filter for sanity-check. Items expose title,
+      link (e.g. https://www.it-jobbank.dk/vis-job/h1662606), pubDate,
+      and a short description; full body requires fetching the link.
+      Heavy overlap with `jobindex-rss` — enable one or the other, not
+      both, unless you want the dedupe layer to drop ~90% of the smaller
+      feed. Keep rate_limit_rps low; this feed is unadvertised and ToS
+      does not bless automation.
+
+  - name: jobsearch-dk
+    type: rss
+    enabled: false
+    endpoint: https://www.jobsearch.dk/feed/job-annoncer
+    rate_limit_rps: 1.0
+    notes: |
+      Jobsearch.dk — open RSS 2.0 feed, ~100 newest postings, no auth.
+      Items expose title / description / link only (no pubDate, no
+      company/location fields — those have to be inferred from the
+      title or the slug in the URL `/{role}/{city}/{id}`).
+      Same backend as Jobzonen.dk (Jobzonen was relaunched on top of
+      Jobsearch.dk in 2019). Enable jobsearch-dk *or* jobzonen, not
+      both — they produce the same listing pool and would dedupe to
+      noise. jobsearch-dk is the canonical pick because the RSS link
+      points directly at the source domain.
+
+  - name: careerjet-dk
+    type: api
+    enabled: false
+    endpoint: https://search.api.careerjet.net/v4/query
+    query_params:
+      affid: "YOUR_AFFID"
+      user_ip: "8.8.8.8"
+      user_agent: "Mozilla/5.0"
+      url: "https://example.com/jobs"
+      locale_code: "da_DK"
+      keywords: "software"
+      location: "Copenhagen"
+      page_size: 100
+      sort: "date"
+    response_mapping:
+      items_path: "jobs"
+      id: "url"
+      title: "title"
+      company: "company"
+      location: "locations"
+      description: "description"
+      url: "url"
+      posted_at: "date"
+    rate_limit_rps: 1.0
+    notes: |
+      Careerjet DK — Danish coverage of the global Careerjet aggregator
+      (free tier). Register at https://www.careerjet.com/partners/api to
+      get an affid, paste it into query_params above, then flip
+      enabled: true. The user_ip / user_agent / url params are required
+      by Careerjet on every request — the placeholder values are fine
+      for personal use; substitute your own if you prefer. There is no
+      per-job id in the response, so url is used as the dedupe key.
+
+  - name: jooble
+    type: api
+    enabled: false
+    method: post
+    endpoint: https://jooble.org/api/{api_key}
+    query_params:
+      api_key: "YOUR_API_KEY"
+    body_template:
+      keywords: "software engineer"
+      location: "Denmark"
+      radius: 0
+      page: 1
+      ResultOnPage: 50
+      SearchMode: 0
+    response_mapping:
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      company: "company"
+      location: "location"
+      description: "snippet"
+      url: "link"
+      posted_at: "updated"
+    rate_limit_rps: 1.0
+    notes: |
+      Jooble.org — global aggregator with Danish coverage (free tier).
+      Register at https://jooble.org/api/about to obtain an api_key,
+      paste it into query_params.api_key (it gets substituted into
+      {api_key} in the endpoint path), then flip enabled: true.
+      No published rate limits on the free tier; 1.0 rps is a guess.
+      Errors: 403 = bad key, 404 = wrong endpoint.
+
+  - name: recruit-it
+    type: html
+    enabled: false
+    endpoint: https://recruit-it.dk/ledige-stillinger-danmark
+    html:
+      list_selector: "a:has(> div.ledige-stillinger-box)"
+      title_selector: ".ls-title"
+      link_selector: ":scope"
+      description_selector: ".ls-description"
+      url_attribute: "href"
+    static_fields:
+      company: "Recruit IT (agency)"
+    notes: |
+      Small Danish IT recruitment agency (~tens of roles). The hiring company
+      is embedded in the title (e.g. "IT-chef til 3F") rather than a separate
+      field, so the static_fields.company stamps the agency name and downstream
+      parsing/ranking should treat the title as authoritative for company.
+      Location is rendered as a plain text node next to an icon with no
+      wrapper class, so location_selector is intentionally omitted and
+      listings will have null location until the markup changes. Requires
+      Playwright; install with `pwsh bin/Debug/net10.0/playwright.ps1 install chromium`.
+      Note: link_selector ":scope" relies on Playwright accepting :scope inside
+      IElementHandle.QuerySelectorAsync — verify with a smoke test before flipping
+      enabled: true. If :scope doesn't resolve, extend HtmlAdapter to read
+      url_attribute from the matched list element directly instead of a child.
+
+  - name: stepstone-dk
+    type: manual
+    enabled: false
+    notes: |
+      stepstone.dk has no public RSS or consumer-facing API as of 2026-05.
+      Despite being in the Jobindex group, the /jobsoegning.rss pattern
+      that works on jobindex.dk and it-jobbank.dk returns 404 here.
+      api.stepstone.com is a partner job-distribution system (Pull/Push
+      Feed for ATS vendors pushing vacancies into Stepstone), not for
+      consuming listings, and requires a business contract.
+      To include Stepstone.dk listings, export results from the browser
+      and drop a CSV/JSON at data/imports/stepstone-*.csv with columns:
+      title, company, location, url, description, posted_at.

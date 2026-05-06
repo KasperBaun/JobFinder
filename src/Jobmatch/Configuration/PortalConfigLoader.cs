@@ -60,6 +60,8 @@ public static class PortalConfigLoader
         var notes = map.TryGetValue("notes", out var n) ? n?.ToString() : null;
         var html = ReadHtmlSelectors(map, name, type);
         var staticFields = ReadStringDict(map, "static_fields");
+        var method = map.TryGetValue("method", out var m) ? m?.ToString() : null;
+        var bodyTemplate = ReadDict(map, "body_template");
 
         return new PortalConfig(
             Name: name,
@@ -73,7 +75,9 @@ public static class PortalConfigLoader
             Html: html,
             RateLimitRps: rateLimit,
             Notes: notes,
-            StaticFields: staticFields);
+            StaticFields: staticFields,
+            Method: method,
+            BodyTemplate: bodyTemplate);
     }
 
     private static HtmlSelectors? ReadHtmlSelectors(IReadOnlyDictionary<string, object?> map, string portalName, PortalType type)

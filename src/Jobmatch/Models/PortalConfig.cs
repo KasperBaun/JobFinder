@@ -14,4 +14,6 @@ public sealed record PortalConfig(
     HtmlSelectors? Html = null,
     double RateLimitRps = 1.0,
     string? Notes = null,
-    IReadOnlyDictionary<string, string>? StaticFields = null);
+    IReadOnlyDictionary<string, string>? StaticFields = null,
+    string? Method = null,
+    IReadOnlyDictionary<string, object?>? BodyTemplate = null);
