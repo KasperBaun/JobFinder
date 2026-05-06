@@ -4,30 +4,29 @@ using Jobmatch.Models;
 
 public static class ProviderStateMerger
 {
+    public static bool IsUserEnabled(PortalConfig catalogPortal, ProviderState state)
+        => catalogPortal.Enabled && !state.Disabled.Contains(catalogPortal.Id);
+
+    public static bool HasSecretValue(PortalConfig catalogPortal, ProviderState state)
+    {
+        if (catalogPortal.RequiresSecret is null) return false;
+        if (!state.Secrets.TryGetValue(catalogPortal.Id, out var secrets)) return false;
+        return secrets.TryGetValue(catalogPortal.RequiresSecret, out var v) && !string.IsNullOrEmpty(v);
+    }
+
     public static IReadOnlyList<PortalConfig> Merge(
         IReadOnlyList<PortalConfig> catalog,
         ProviderState state)
     {
-        var disabled = new HashSet<int>(state.Disabled);
         var result = new List<PortalConfig>(catalog.Count);
         foreach (var p in catalog)
         {
-            var hasSecretValue = false;
             IReadOnlyDictionary<string, string>? secrets = null;
             if (state.Secrets.TryGetValue(p.Id, out var s) && s is not null)
-            {
                 secrets = s;
-                if (p.RequiresSecret is not null
-                    && s.TryGetValue(p.RequiresSecret, out var v)
-                    && !string.IsNullOrEmpty(v))
-                {
-                    hasSecretValue = true;
-                }
-            }
 
-            var effectiveEnabled = p.Enabled
-                && !disabled.Contains(p.Id)
-                && (p.RequiresSecret is null || hasSecretValue);
+            var effectiveEnabled = IsUserEnabled(p, state)
+                && (p.RequiresSecret is null || HasSecretValue(p, state));
 
             var resolvedQuery = SubstituteSecrets(p.QueryParams, secrets);
             var resolvedBody = SubstituteSecrets(p.BodyTemplate, secrets);
