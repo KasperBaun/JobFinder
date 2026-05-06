@@ -68,6 +68,26 @@ public sealed class ManualAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task FetchAsync_CsvFile_With_Quoted_Newlines_Parses_Correctly()
+    {
+        // A description quoted with embedded newlines must be kept as a single
+        // field, not split across records. ReadLine-based parsing used to split
+        // here and produce malformed rows.
+        File.WriteAllText(Path.Combine(_imports, "mine-multiline.csv"),
+            "title,company,location,url,description,posted_at\n" +
+            "\"Engineer\",Acme,Copenhagen,https://acme.com/1,\"Line one.\nLine two.\nLine three.\",2026-03-15\n" +
+            "\"Backend Dev\",Initech,Berlin,https://initech.com/2,\"Single line.\",2026-03-20\n");
+
+        using var http = new HttpClient();
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+
+        var results = await adapter.FetchAsync();
+        Assert.Equal(2, results.Count);
+        Assert.Equal("Line one.\nLine two.\nLine three.", results[0].Description);
+        Assert.Equal("Backend Dev", results[1].Title);
+    }
+
+    [Fact]
     public async Task FetchAsync_Missing_Url_Or_Title_Rows_Are_Skipped()
     {
         File.WriteAllText(Path.Combine(_imports, "mine-partial.json"),
