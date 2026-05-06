@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getHistory, getRun } from '../api/client'
+import { deleteHistoryRuns, getHistory, getRun } from '../api/client'
 import { ListingCard } from '../components/ListingCard'
 import { RunSummaryCard } from '../components/RunSummaryCard'
+import { Toast } from '../components/Toast'
 import { formatAbsolute, formatRelative } from '../utils/time'
 import type {
   DropReason,
@@ -15,13 +16,90 @@ import type {
 
 function HistoryListView() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({
     queryKey: ['history'],
     queryFn: getHistory,
   })
 
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
+  const headerCheckboxRef = useRef<HTMLInputElement>(null)
+
+  const visibleIds = useMemo(() => data?.runs.map(r => r.runId) ?? [], [data])
+  const allSelected = visibleIds.length > 0 && visibleIds.every(id => selected.has(id))
+  const someSelected = !allSelected && visibleIds.some(id => selected.has(id))
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected
+    }
+  }, [someSelected])
+
+  useEffect(() => {
+    if (!data) return
+    setSelected(prev => {
+      const valid = new Set(visibleIds)
+      let changed = false
+      const next = new Set<string>()
+      for (const id of prev) {
+        if (valid.has(id)) next.add(id)
+        else changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [data, visibleIds])
+
+  const deleteMutation = useMutation({
+    mutationFn: (runIds: string[]) => deleteHistoryRuns(runIds),
+    onSuccess: (res) => {
+      if (res.error) {
+        setToast({ kind: 'err', message: res.error })
+        return
+      }
+      setSelected(new Set())
+      void queryClient.invalidateQueries({ queryKey: ['history'] })
+      const skipped = res.missing.length
+      const msg = skipped > 0
+        ? `Deleted ${res.deleted} run${res.deleted === 1 ? '' : 's'} (${skipped} skipped)`
+        : `Deleted ${res.deleted} run${res.deleted === 1 ? '' : 's'}`
+      setToast({ kind: 'ok', message: msg })
+    },
+    onError: (err) => {
+      setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
+    },
+  })
+
+  function toggleRow(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (allSelected) setSelected(new Set())
+    else setSelected(new Set(visibleIds))
+  }
+
+  function onDeleteClick() {
+    if (selected.size === 0) return
+    const count = selected.size
+    const ok = window.confirm(
+      count === 1
+        ? 'Delete this run? Its marks will also be removed. This cannot be undone.'
+        : `Delete ${count} runs? Their marks will also be removed. This cannot be undone.`,
+    )
+    if (!ok) return
+    deleteMutation.mutate(Array.from(selected))
+  }
+
   return (
     <div className="page page--wide">
+      {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
+
       <header className="page__header">
         <div className="page__eyebrow">04 / history</div>
         <h1 className="page__heading">Past <em>runs</em></h1>
@@ -36,53 +114,103 @@ function HistoryListView() {
       )}
 
       {data && data.runs.length > 0 && (
-        <div className="table-wrap">
-          <table className="table table--clickable">
-            <thead>
-              <tr>
-                <th>Started</th>
-                <th>Providers</th>
-                <th>Shortlist</th>
-                <th>Top score</th>
-                <th>Good marks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.runs.map(run => {
-                const ok = run.providers.filter(p => p.status === 'ok').length
-                const failed = run.providers.filter(p => p.status === 'failed').length
-                const ratio = run.shortlistCount > 0 ? run.goodMarks / run.shortlistCount : 0
-                return (
-                  <tr key={run.runId} onClick={() => navigate(`/history/${run.runId}`)}>
-                    <td title={formatAbsolute(run.startedAt)}>
-                      <Link to={`/history/${run.runId}`} onClick={e => e.stopPropagation()}>
-                        {formatRelative(run.startedAt)}
-                      </Link>
-                    </td>
-                    <td className="tabular">
-                      <span style={{ color: 'var(--c-good)' }}>{ok}</span>
-                      <span className="subtle"> / </span>
-                      <span style={{ color: failed ? 'var(--c-bad)' : 'var(--c-text-subtle)' }}>{failed}</span>
-                    </td>
-                    <td className="tabular">{run.shortlistCount}</td>
-                    <td className="tabular mono">{run.topScore.toFixed(2)}</td>
-                    <td>
-                      <div className="marks-cell">
-                        <span>{run.goodMarks} / {run.shortlistCount}</span>
-                        <div className="progress-bar" aria-hidden="true">
-                          <div
-                            className="progress-bar__fill"
-                            style={{ width: `${Math.round(ratio * 100)}%` }}
-                          />
+        <>
+          {selected.size > 0 && (
+            <div className="selection-bar" role="region" aria-label="Selection actions">
+              <span className="selection-bar__count">{selected.size} selected</span>
+              <button
+                type="button"
+                className="btn btn--small"
+                onClick={() => setSelected(new Set())}
+                disabled={deleteMutation.isPending}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className="btn btn--small btn--danger"
+                onClick={onDeleteClick}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting…' : 'Delete selected'}
+              </button>
+            </div>
+          )}
+
+          <div className="table-wrap">
+            <table className="table table--clickable">
+              <thead>
+                <tr>
+                  <th className="table__select-cell">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      aria-label={allSelected ? 'Deselect all runs' : 'Select all runs'}
+                      checked={allSelected}
+                      onChange={toggleAll}
+                    />
+                  </th>
+                  <th>Started</th>
+                  <th>Providers</th>
+                  <th>Shortlist</th>
+                  <th>Top score</th>
+                  <th>Good marks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.runs.map(run => {
+                  const ok = run.providers.filter(p => p.status === 'ok').length
+                  const failed = run.providers.filter(p => p.status === 'failed').length
+                  const ratio = run.shortlistCount > 0 ? run.goodMarks / run.shortlistCount : 0
+                  const isSelected = selected.has(run.runId)
+                  return (
+                    <tr
+                      key={run.runId}
+                      className={isSelected ? 'table__row--selected' : undefined}
+                      onClick={() => navigate(`/history/${run.runId}`)}
+                    >
+                      <td
+                        className="table__select-cell"
+                        onClick={e => { e.stopPropagation(); toggleRow(run.runId) }}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={`Select run from ${formatAbsolute(run.startedAt)}`}
+                          checked={isSelected}
+                          onChange={() => toggleRow(run.runId)}
+                          onClick={e => e.stopPropagation()}
+                        />
+                      </td>
+                      <td title={formatAbsolute(run.startedAt)}>
+                        <Link to={`/history/${run.runId}`} onClick={e => e.stopPropagation()}>
+                          {formatRelative(run.startedAt)}
+                        </Link>
+                      </td>
+                      <td className="tabular">
+                        <span style={{ color: 'var(--c-good)' }}>{ok}</span>
+                        <span className="subtle"> / </span>
+                        <span style={{ color: failed ? 'var(--c-bad)' : 'var(--c-text-subtle)' }}>{failed}</span>
+                      </td>
+                      <td className="tabular">{run.shortlistCount}</td>
+                      <td className="tabular mono">{run.topScore.toFixed(2)}</td>
+                      <td>
+                        <div className="marks-cell">
+                          <span>{run.goodMarks} / {run.shortlistCount}</span>
+                          <div className="progress-bar" aria-hidden="true">
+                            <div
+                              className="progress-bar__fill"
+                              style={{ width: `${Math.round(ratio * 100)}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

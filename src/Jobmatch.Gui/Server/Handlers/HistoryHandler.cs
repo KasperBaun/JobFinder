@@ -53,6 +53,56 @@ public static class HistoryHandler
         }
     }
 
+    public static IResult Delete(Models.DeleteHistoryRequest? req, Jobmatch.UserContext ctx)
+    {
+        try
+        {
+            var ids = req?.RunIds;
+            if (ids is null || ids.Count == 0)
+            {
+                return Results.Ok(new Models.DeleteHistoryResponse(0, Array.Empty<string>(), "runIds is required"));
+            }
+
+            var deleted = 0;
+            var missing = new List<string>();
+            var prunedFromMarks = new List<string>();
+
+            foreach (var raw in ids)
+            {
+                var safe = SanitiseRunId(raw);
+                if (safe is null)
+                {
+                    missing.Add(raw);
+                    continue;
+                }
+
+                var path = Path.Combine(ctx.HistoryDir, $"{safe}.json");
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                    deleted++;
+                    prunedFromMarks.Add(safe);
+                }
+                else
+                {
+                    missing.Add(safe);
+                }
+            }
+
+            if (prunedFromMarks.Count > 0)
+            {
+                MarksHandler.RemoveRuns(ctx.MarksPath, prunedFromMarks);
+            }
+
+            return Results.Ok(new Models.DeleteHistoryResponse(deleted, missing));
+        }
+        catch (Exception ex)
+        {
+            GuiLog.Error($"DELETE /api/history — {ex.GetType().Name}: {ex.Message}");
+            return Results.Ok(new Models.DeleteHistoryResponse(0, Array.Empty<string>(), ex.Message));
+        }
+    }
+
     public static IResult Detail(string runId, Jobmatch.UserContext ctx)
     {
         try

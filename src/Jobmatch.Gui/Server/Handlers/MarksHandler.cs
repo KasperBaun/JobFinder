@@ -73,6 +73,20 @@ public static class MarksHandler
     public static IReadOnlyDictionary<string, Dictionary<string, string>> LoadMarks(string path)
         => LoadMarksMutable(path);
 
+    public static void RemoveRuns(string path, IEnumerable<string> runIds)
+    {
+        lock (FileLock)
+        {
+            var marks = LoadMarksMutable(path);
+            var changed = false;
+            foreach (var id in runIds)
+            {
+                if (marks.Remove(id)) changed = true;
+            }
+            if (changed) AtomicWrite(path, marks);
+        }
+    }
+
     private static Dictionary<string, Dictionary<string, string>> LoadMarksMutable(string path)
     {
         var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);

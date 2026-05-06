@@ -214,3 +214,6 @@ export type MarkRequest = {
 
 export type MarkResponse = { success: boolean; error?: string }
 export type SaveResponse = { success: boolean; error?: string }
+
+export type DeleteHistoryRequest = { runIds: string[] }
+export type DeleteHistoryResponse = { deleted: number; missing: string[]; error?: string }
