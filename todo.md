@@ -12,6 +12,17 @@ _(none)_
 
 ## Completed (recent)
 
+- **Rate limiting honoured by all HTTP adapters (R-028).** New
+  `BaseAdapter.ThrottleAsync` tracks a per-instance last-call
+  timestamp and waits before each HTTP call so the configured
+  `rate_limit_rps` is not exceeded. Wired into
+  `ApiAdapter.FetchOnePageAsync` (so paginated fetches space their
+  pages), `RssAdapter.FetchAsync` (before `FeedReader.ReadAsync`),
+  and `HtmlAdapter.FetchInternalAsync` (before `page.GotoAsync`).
+  `rate_limit_rps: 0` disables throttling. Test helpers
+  (`PaginatedGet`, `JoobleLike`) set rps=0 to keep their multi-call
+  test runs fast; one new test asserts the throttle activates
+  (3 paged calls at 10 rps elapse >= 180 ms). 130 total green.
 - **`ApiAdapter` pagination (R-027).** New `pagination:` config block
   (`param`, `start`, `step`, optional `size_param` + `size`,
   `max_pages` safety cap) loops requests until an empty page, a
@@ -169,7 +180,6 @@ _(none)_
 
 These pre-date the restructure. Still valid; will fold into the GUI work where they touch the same code paths.
 
-- **Rate limiting.** `PortalConfig.RateLimitRps` is parsed but not honoured.
 - **CSV quoted-newline support.** `ManualAdapter.ReadCsvFile` uses `StreamReader.ReadLine()`, which splits inside quoted fields that span lines. Upgrade to a stream-based parser.
 - **CancellationToken plumbing.** Adapters don't accept a CT yet — needs threading once the search handler is the orchestrator.
 - **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
