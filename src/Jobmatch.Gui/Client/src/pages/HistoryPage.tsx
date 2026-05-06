@@ -5,13 +5,17 @@ import { deleteHistoryRuns, getHistory, getRun } from '../api/client'
 import { ListingCard } from '../components/ListingCard'
 import { RunSummaryCard } from '../components/RunSummaryCard'
 import { Toast } from '../components/Toast'
-import { BreakdownBar, BreakdownDetail } from '../components/BreakdownBar'
+import { LonglistTable } from '../components/LonglistTable'
+import {
+  decodeFromHash,
+  encodeToHash,
+  type LonglistFilters,
+} from '../components/longlist/filterState'
 import { formatAbsolute, formatRelative } from '../utils/time'
 import type {
   DropReason,
   DroppedEntry,
   RunDetail,
-  ScoredEntry,
 } from '../api/types'
 
 function HistoryListView() {
@@ -453,98 +457,6 @@ function DedupeTab({ data }: { data: RunDetail }) {
 }
 
 
-type RankingSort = 'score' | 'title' | 'company'
-
-function RankingTab({ data }: { data: RunDetail }) {
-  const [sort, setSort] = useState<RankingSort>('score')
-  const [expanded, setExpanded] = useState<string | null>(null)
-
-  const ordered = useMemo(() => {
-    if (!data.scored) return []
-    const arr = [...data.scored]
-    if (sort === 'score') arr.sort((a, b) => b.score - a.score)
-    else if (sort === 'title') arr.sort((a, b) => a.title.localeCompare(b.title))
-    else arr.sort((a, b) => (a.company ?? '').localeCompare(b.company ?? ''))
-    return arr
-  }, [data.scored, sort])
-
-  if (!data.scored) {
-    return <div className="muted">No ranking data recorded for this run.</div>
-  }
-
-  return (
-    <section>
-      <div className="ranking-controls">
-        <span className="muted">sort by</span>
-        {(['score', 'title', 'company'] as RankingSort[]).map(s => (
-          <button
-            key={s}
-            type="button"
-            className={`chip ${sort === s ? 'chip--active' : ''}`}
-            onClick={() => setSort(s)}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-      <div className="table-wrap">
-        <table className="table ranking-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Company</th>
-              <th>Score</th>
-              <th>Breakdown</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ordered.map(s => (
-              <RankingRow
-                key={s.id}
-                entry={s}
-                expanded={expanded === s.id}
-                onToggle={() => setExpanded(expanded === s.id ? null : s.id)}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  )
-}
-
-function RankingRow({
-  entry,
-  expanded,
-  onToggle,
-}: {
-  entry: ScoredEntry
-  expanded: boolean
-  onToggle: () => void
-}) {
-  return (
-    <>
-      <tr onClick={onToggle} style={{ cursor: 'pointer' }}>
-        <td>
-          <a href={entry.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
-            {entry.title}
-          </a>
-        </td>
-        <td>{entry.company ?? <span className="muted">—</span>}</td>
-        <td className="tabular mono">{entry.score.toFixed(2)}</td>
-        <td><BreakdownBar b={entry.breakdown} /></td>
-      </tr>
-      {expanded && (
-        <tr className="ranking-table__expanded">
-          <td colSpan={4}>
-            <BreakdownDetail entry={entry} />
-          </td>
-        </tr>
-      )}
-    </>
-  )
-}
-
 const REASON_LABELS: Record<DropReason, string> = {
   disqualifier: 'disqualifier',
   below_min_score: 'below min score',
@@ -624,6 +536,32 @@ function DroppedRow({ entry }: { entry: DroppedEntry }) {
   )
 }
 
+function LonglistView({ data }: { data: RunDetail }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const filters = useMemo(() => {
+    const params = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash)
+    return decodeFromHash(params)
+  }, [location.hash])
+
+  const shortlistIds = useMemo(() => new Set(data.shortlist.map((m) => m.id)), [data.shortlist])
+
+  const setFilters = (next: LonglistFilters) => {
+    const params = encodeToHash(next)
+    navigate(`${location.pathname}#${params.toString()}`, { replace: true })
+  }
+
+  return (
+    <LonglistTable
+      data={data}
+      filters={filters}
+      onChange={setFilters}
+      shortlistIds={shortlistIds}
+    />
+  )
+}
+
 function RunDetailView({ runId }: { runId: string }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -655,7 +593,7 @@ function RunDetailView({ runId }: { runId: string }) {
           <ResultsToggle active={tab} onChange={setTab} data={data} />
           <AuditTabs active={tab} onChange={setTab} data={data} />
           {tab === 'shortlist' && <ShortlistTab data={data} />}
-          {tab === 'longlist'  && <RankingTab data={data} />}
+          {tab === 'longlist'  && <LonglistView data={data} />}
           {tab === 'raw'       && <RawFetchTab data={data} focusProvider={provider} />}
           {tab === 'dedupe'    && <DedupeTab data={data} />}
           {tab === 'dropped'   && <DroppedTab data={data} />}
