@@ -17,10 +17,9 @@ public static class Routes
     {
         public const string Get = "/api/providers";
         public const string GetOne = "/api/providers/{id:int}";
-        public const string Create = "/api/providers";
         public const string Update = "/api/providers/{id:int}";
-        public const string Delete = "/api/providers/{id:int}";
         public const string Test = "/api/providers/{id:int}/test";
+        public const string SetSecrets = "/api/providers/{id:int}/secrets";
     }
 
     public static class Skillset
