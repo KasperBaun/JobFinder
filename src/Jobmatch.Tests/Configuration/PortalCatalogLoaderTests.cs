@@ -117,4 +117,18 @@ public sealed class PortalCatalogLoaderTests
         Assert.All(portals, p => Assert.True(p.Id > 0, $"provider '{p.Name}' missing id"));
         Assert.Equal(portals.Count, portals.Select(p => p.Id).Distinct().Count());
     }
+
+    [Fact]
+    public void Bundled_PortalsJson_Has_GreenhouseStaticCompany()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "portals.json");
+        var portals = PortalCatalogLoader.Load(path);
+        var greenhouseWithCompany = portals.FirstOrDefault(p =>
+            p.Name.StartsWith("greenhouse-", StringComparison.Ordinal)
+            && p.Type == PortalType.Api
+            && p.StaticFields is { Count: > 0 }
+            && p.StaticFields.TryGetValue("company", out var c)
+            && !string.IsNullOrWhiteSpace(c));
+        Assert.NotNull(greenhouseWithCompany);
+    }
 }
