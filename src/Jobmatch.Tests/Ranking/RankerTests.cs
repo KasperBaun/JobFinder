@@ -197,6 +197,25 @@ public sealed class RankerTests
     }
 
     [Fact]
+    public void Rank_Adjacent_Seniority_Notes_Say_Adjacent_Not_Fits()
+    {
+        // Mid is adjacent to Senior (the user). Score gets half credit (0.5),
+        // SeniorityMatch stays true (the level is recognised), but the human
+        // notes must say "adjacent" — not "fits", which previously misled
+        // the user into thinking the role's level matched theirs exactly.
+        var listing = MakeListing("Mid-level Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow);
+        var matches = Ranker.Rank([listing], MikkelPersona(), RankingCfg());
+
+        Assert.Single(matches);
+        Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
+        Assert.Contains("adjacent", matches[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Seniority fits", matches[0].Reasoning.Notes);
+    }
+
+    [Fact]
     public void Rank_Title_Seniority_Wins_Over_Description()
     {
         // Regression guard: if the title carries a seniority cue, that wins —
