@@ -34,7 +34,6 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/providers" element={<ProvidersPage />} />
-        <Route path="/providers/new" element={<ProviderDetailPage />} />
         <Route path="/providers/:id" element={<ProviderDetailPage />} />
         <Route path="/skillset" element={<SkillsetPage />} />
         <Route path="/search" element={<SearchPage />} />
