@@ -345,6 +345,54 @@ public sealed class RankerTests
     }
 
     [Fact]
+    public void Score_Region_EU_Matches_EU_Member_State_Country_Names()
+    {
+        // A listing in "Berlin, Germany" — with no "Europe"/"EU" synonym in the
+        // string — should match an EU-region user at the Region tier, not fall
+        // through to Else. Same for Netherlands, Czech Republic, etc.
+        var pref = MikkelPersona() with { RemotePreference = RemotePreference.Onsite };
+        var w = DefaultWeights.LocationRemote;
+        var weights = LocationTierWeights.Default;
+
+        var germany = MakeListing("DE", "C# .NET Azure SQL Server",
+            location: "Berlin, Germany", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var netherlands = MakeListing("NL", "C# .NET Azure SQL Server",
+            location: "Amsterdam, Netherlands", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var czech = MakeListing("CZ", "C# .NET Azure SQL Server",
+            location: "Prague, Czech Republic", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var swiss = MakeListing("CH", "C# .NET Azure SQL Server",
+            location: "Zurich, Switzerland", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var elsewhere = MakeListing("US", "C# .NET Azure SQL Server",
+            location: "USA only", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+
+        var scored = Ranker.Score([germany, netherlands, czech, swiss, elsewhere], pref, RankingCfg());
+        double LR(string id) => scored.Single(s => s.Listing.Id == id).Breakdown.LocationRemote;
+
+        Assert.Equal(w * weights.Region, LR(germany.Id), 3);
+        Assert.Equal(w * weights.Region, LR(netherlands.Id), 3);
+        Assert.Equal(w * weights.Region, LR(czech.Id), 3);
+        Assert.Equal(w * weights.Region, LR(swiss.Id), 3);
+        Assert.Equal(w * weights.Else, LR(elsewhere.Id), 3);
+    }
+
+    [Fact]
+    public void Score_Region_EU_Member_State_Does_Not_Override_Country_Match()
+    {
+        // Regression guard: a listing in the user's own country (Mikkel.Country=Denmark)
+        // should still hit Country tier, not be downgraded to Region just because
+        // Denmark is also in the EU member-state list.
+        var pref = MikkelPersona() with { RemotePreference = RemotePreference.Onsite };
+        var w = DefaultWeights.LocationRemote;
+        var weights = LocationTierWeights.Default;
+
+        var aarhus = MakeListing("DK", "C# .NET Azure SQL Server",
+            location: "Aarhus, Denmark", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
+        var scored = Ranker.Score([aarhus], pref, RankingCfg());
+
+        Assert.Equal(w * weights.Country, scored[0].Breakdown.LocationRemote, 3);
+    }
+
+    [Fact]
     public void Score_Worldwide_Listing_Is_Top_Tier_For_Any_User()
     {
         var pref = MikkelPersona() with { RemotePreference = RemotePreference.Remote };

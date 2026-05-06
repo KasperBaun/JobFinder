@@ -12,6 +12,16 @@ _(none)_
 
 ## Completed (recent)
 
+- **Country → region mapping for cross-EU remotes.** Hardcoded EU-27
+  + EEA non-EU (Iceland, Norway, Liechtenstein) + Switzerland country
+  list in `Ranker.LocationTier`; an EU-region user now matches a
+  listing in "Berlin, Germany" / "Amsterdam, Netherlands" / "Prague,
+  Czech Republic" etc. at the Region tier (0.3) instead of falling
+  through to Else (0.1). Country tier still wins when the listing
+  matches the user's own country (regression test for Mikkel/Denmark).
+  UK intentionally excluded post-Brexit; users who want UK matches
+  declare `Country: "United Kingdom"` explicitly. Two new tests; 121
+  total green.
 - **`ApiAdapter` POST + endpoint templating extension.** First T-007
   follow-up — unblocks the `jooble` stub. New `Method` and
   `BodyTemplate` fields on `PortalConfig`; loader parses `method:` and
@@ -120,7 +130,6 @@ _(none)_
 
 These pre-date the restructure. Still valid; will fold into the GUI work where they touch the same code paths.
 
-- **Country → region mapping for cross-EU remotes.** A listing in "Germany" for an EU-region user falls to else tier (0.1) because the matcher only recognises "EU/Europe/EMEA" synonyms, not member states. Add a small hardcoded EU-country list (DE, FR, NL, SE, NO, FI, IS, IE, ES, IT, AT, BE, LU, PL, CZ, …) so Region: "EU" matches any of them. Or expose `region_countries:` in the skillset for explicit control.
 - **ApiAdapter pagination.** `ApiAdapter.FetchAsync` does a single GET. Add a `pagination:` block to `PortalConfig` (`offset_param`, `page_size`, `max_pages`) and loop with a safety cap.
 - **Rate limiting.** `PortalConfig.RateLimitRps` is parsed but not honoured. Worth wiring once pagination lands.
 - **CSV quoted-newline support.** `ManualAdapter.ReadCsvFile` uses `StreamReader.ReadLine()`, which splits inside quoted fields that span lines. Upgrade to a stream-based parser.
