@@ -245,8 +245,9 @@ portals:
       description_selector: ".summary"
       url_attribute: "href"
     notes: |
-      Requires Playwright browsers. Install once with:
-      pwsh bin/Debug/net10.0/playwright.ps1 install chromium
+      Requires Playwright browsers. The exact install command (with the
+      build-output path resolved) is logged when an html portal fails;
+      typical shape: `pwsh <bindir>/playwright.ps1 install chromium`.
 
   # ────────────────────────────────────────────────────────────────
   # T-007 — DK portal research findings (2026-05). All disabled by
@@ -395,7 +396,9 @@ portals:
       Location is rendered as a plain text node next to an icon with no
       wrapper class, so location_selector is intentionally omitted and
       listings will have null location until the markup changes. Requires
-      Playwright; install with `pwsh bin/Debug/net10.0/playwright.ps1 install chromium`.
+      Playwright browsers; the exact install command (with the build-output
+      path resolved) is logged when an html portal fails — typical shape:
+      `pwsh <bindir>/playwright.ps1 install chromium`.
       Note: link_selector ":scope" relies on Playwright accepting :scope inside
       IElementHandle.QuerySelectorAsync — verify with a smoke test before flipping
       enabled: true. If :scope doesn't resolve, extend HtmlAdapter to read

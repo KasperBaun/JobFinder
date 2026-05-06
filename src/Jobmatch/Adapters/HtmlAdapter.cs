@@ -25,18 +25,21 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
         catch (PlaywrightException ex) when (IsBrowserNotInstalled(ex))
         {
             Logger.LogWarning(
-                "portal={Portal} Playwright browsers are not installed. Run: pwsh bin/Debug/net10.0/playwright.ps1 install chromium",
-                PortalName);
+                "portal={Portal} Playwright browsers are not installed. Run: {Command}",
+                PortalName, PlaywrightInstallCommand);
             return [];
         }
         catch (FileNotFoundException ex) when (ex.Message.Contains("playwright", StringComparison.OrdinalIgnoreCase))
         {
             Logger.LogWarning(
-                "portal={Portal} Playwright runtime missing. Run: pwsh bin/Debug/net10.0/playwright.ps1 install chromium",
-                PortalName);
+                "portal={Portal} Playwright runtime missing. Run: {Command}",
+                PortalName, PlaywrightInstallCommand);
             return [];
         }
     }
+
+    public static string PlaywrightInstallCommand =>
+        $"pwsh \"{Path.Combine(AppContext.BaseDirectory, "playwright.ps1")}\" install chromium";
 
     private static bool IsBrowserNotInstalled(PlaywrightException ex)
     {

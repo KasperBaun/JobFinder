@@ -12,6 +12,14 @@ _(none)_
 
 ## Completed (recent)
 
+- **Playwright install path resolved at runtime.** `HtmlAdapter` and
+  `ConfigVerifier` no longer hardcode `bin/Debug/net10.0/playwright.ps1`
+  in their warning messages — the path is now built via
+  `Path.Combine(AppContext.BaseDirectory, "playwright.ps1")` so the
+  command logged in Release / packaged / non-Debug builds points at the
+  actual install location. Shared via `HtmlAdapter.PlaywrightInstallCommand`.
+  Notes blocks in `portals.example.yml` (`html-example`, `recruit-it`)
+  updated accordingly.
 - **`InferSeniority` now reads description as a fallback.** Title
   remains authoritative — when the title carries a seniority keyword
   (jr/junior/graduate/intern, sr/senior, lead/principal/staff,
@@ -143,7 +151,6 @@ These pre-date the restructure. Still valid; will fold into the GUI work where t
 - **Rate limiting.** `PortalConfig.RateLimitRps` is parsed but not honoured. Worth wiring once pagination lands.
 - **CSV quoted-newline support.** `ManualAdapter.ReadCsvFile` uses `StreamReader.ReadLine()`, which splits inside quoted fields that span lines. Upgrade to a stream-based parser.
 - **CancellationToken plumbing.** Adapters don't accept a CT yet — needs threading once the search handler is the orchestrator.
-- **Playwright install path hardcoded.** `HtmlAdapter` and `ConfigVerifier` reference `bin/Debug/net10.0/playwright.ps1`. Resolve via `AppContext.BaseDirectory`.
 - **`ApiAdapter.RenderTemplate` silently drops unknown template keys.** Warn or throw.
 - **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
 
