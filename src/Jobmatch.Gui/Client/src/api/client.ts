@@ -1,5 +1,4 @@
 import type {
-  CreateResponse,
   DeleteHistoryResponse,
   HistoryResponse,
   MarkRequest,
@@ -7,7 +6,6 @@ import type {
   ProviderDetail,
   ProvidersResponse,
   ProviderTestResult,
-  ProviderUpsert,
   RunDetail,
   SaveResponse,
   SearchProgressEvent,
@@ -49,24 +47,20 @@ export async function getProvider(id: number): Promise<ProviderDetail> {
   return apiFetch<ProviderDetail>(`/api/providers/${id}`)
 }
 
-export async function createProvider(req: ProviderUpsert): Promise<CreateResponse> {
-  return apiFetch<CreateResponse>('/api/providers', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-  })
-}
-
-export async function updateProvider(id: number, req: ProviderUpsert): Promise<SaveResponse> {
+export async function setProviderEnabled(id: number, enabled: boolean): Promise<SaveResponse> {
   return apiFetch<SaveResponse>(`/api/providers/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
+    body: JSON.stringify({ enabled }),
   })
 }
 
-export async function deleteProvider(id: number): Promise<SaveResponse> {
-  return apiFetch<SaveResponse>(`/api/providers/${id}`, { method: 'DELETE' })
+export async function setProviderSecrets(id: number, values: Record<string, string>): Promise<SaveResponse> {
+  return apiFetch<SaveResponse>(`/api/providers/${id}/secrets`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values }),
+  })
 }
 
 export async function testProvider(id: number): Promise<ProviderTestResult> {
