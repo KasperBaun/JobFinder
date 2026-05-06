@@ -21,7 +21,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-021** The system should accept four provider access types: public API, RSS/Atom feed, browser-rendered HTML, manual import.
 - **R-022** The system should fetch only providers explicitly configured by the user — never the open web.
 - **R-023** The system should let a user view their currently configured providers and current search criteria from the GUI.
-- **R-024** The system should ship a generic example provider list so a new user sees the expected shape.
+- **R-024** The system should ship a curated provider catalog as part of the application bundle so a new user can run a search on first launch with no setup.
 - **R-025** The system should let a portal config inject static field values (e.g. company name) into every produced listing — used by per-company ATS boards that don't carry the company in their payload.
 - **R-026** The system should support api providers that require `method: post` with a JSON request body (`body_template:`) and that embed config values as `{key}`-style placeholders in the endpoint URL (substituted from `query_params`, with the consumed key removed from the query string).
 - **R-027** The system should support paginated api providers via a `pagination:` config block (`param`, `start`, `step`, optional `size_param` + `size`, `max_pages` safety cap), incrementing the named param per request and stopping on empty page, partial page (count < `size`), or `max_pages`. Pagination params route into `body_template` for POST providers, into `query_params` for GET.
@@ -73,3 +73,8 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-082** The system should be generic — no role, country, employer, or stack hard-coded in executable code; every preference lives in user data.
 - **R-083** The system should never bypass anti-bot measures; sites that block automation are supported only via the manual-import provider type.
 - **R-084** The system should log honestly: provider name, error class, status code on failure; counts and top score on success.
+
+## Provider catalog & per-user state
+
+- **R-085** The system should expose a filterable, sortable view of every deduped listing in a run, with at least: portal, score range, posting age, primary/secondary stack hit, mark state, shortlist membership, and free-text search across title and company.
+- **R-086** The system should ship the provider catalog as part of the application bundle (read-only at runtime) and store only per-user opt-outs and provider secrets under `data/<email>/`.
