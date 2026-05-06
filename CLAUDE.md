@@ -33,6 +33,7 @@ global.json            SDK pin (.NET 10)
 - **What the product is** → [`docs/prd.md`](docs/prd.md)
 - **What the system must do** → [`docs/requirements.md`](docs/requirements.md) (one-line requirements with `R-NNN` IDs)
 - **What's in flight** → [`todo.md`](todo.md)
+- **Why each DK portal got the verdict it did** → [`docs/tasks/T-007/`](docs/tasks/T-007/) — per-portal evaluation worksheets (api / rss / html / manual / dead) + the playbook for evaluating a new one. Reference data, not a task spec — keep when adding or reconsidering portals.
 - **How the architecture should look** → read `src/Jobmatch.Gui/Server/`. The pattern (Endpoints / Handlers / Models, centralised `Routes.cs`, SSE for long-running ops) is small enough to be self-evident from the code.
 
 When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, update `todo.md`.
