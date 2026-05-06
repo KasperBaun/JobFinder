@@ -4,6 +4,18 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>Jobmatch.Gui</RootNamespace>
     <BuildGui Condition="'$(BuildGui)' == ''">false</BuildGui>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>jobfinder</ToolCommandName>
+    <PackageId>Jobfinder</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Kasper Baun</Authors>
+    <Description>Local-first job search aggregator with editorial GUI. Run `jobfinder` to launch — opens the browser to an ephemeral local server.</Description>
+    <PackageTags>jobs;search;gui;local-first</PackageTags>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\pkg</PackageOutputPath>
+    <!-- "Missing readme" — we don't ship one for a private personal-use tool. -->
+    <NoWarn>$(NoWarn);NU5048</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,16 +33,49 @@
     <EmbeddedResource Remove="Client\**" />
   </ItemGroup>
 
-  <Target Name="BuildGuiClient" BeforeTargets="Build" Condition="'$(BuildGui)' == 'true'">
+  <!--
+    Build the React client (incremental — only when source actually changed).
+    Inputs/Outputs let `dotnet watch` skip this on no-op rebuilds.
+  -->
+  <Target Name="BuildGuiClient"
+          BeforeTargets="Build;Publish"
+          Condition="'$(BuildGui)' == 'true'"
+          Inputs="Client\package.json;Client\package-lock.json;Client\src\**\*;Client\index.html;Client\vite.config.ts"
+          Outputs="Client\dist\index.html">
     <Message Importance="high" Text="Building React GUI client..." />
     <Exec Command="npm install" WorkingDirectory="Client" />
     <Exec Command="npm run build" WorkingDirectory="Client" />
+  </Target>
+
+  <!--
+    Mirror dist/ into the build's bin/.../gui (for `npm run dev`/`run`) and into
+    the publish output (for `dotnet pack` / `dotnet publish`). PackAsTool packages
+    the publish output verbatim under tools/<tfm>/any/, so a Copy there lands the
+    React assets at AppContext.BaseDirectory/gui at install time — exactly what
+    GuiServer expects.
+  -->
+  <Target Name="CopyGuiToOutput"
+          AfterTargets="BuildGuiClient"
+          Condition="'$(BuildGui)' == 'true'">
     <ItemGroup>
       <_GuiDist Include="Client\dist\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(_GuiDist)"
           DestinationFiles="@(_GuiDist->'$(OutDir)gui\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyGuiToPublish"
+          AfterTargets="ComputeFilesToPublish"
+          BeforeTargets="CopyFilesToPublishDirectory"
+          Condition="'$(BuildGui)' == 'true'">
+    <ItemGroup>
+      <_GuiDist Include="Client\dist\**\*" />
+      <ResolvedFileToPublish Include="@(_GuiDist)">
+        <RelativePath>gui\%(_GuiDist.RecursiveDir)%(_GuiDist.Filename)%(_GuiDist.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
   </Target>
 
   <Target Name="GuiBuildSkippedNotice" BeforeTargets="Build" Condition="'$(BuildGui)' != 'true'">
