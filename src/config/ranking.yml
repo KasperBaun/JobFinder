@@ -10,7 +10,7 @@ weights:
   freshness: 0.05
 
 disqualifier_penalty: 0.0
-top_n: 10
+top_n: 25
 freshness_half_life_days: 14
 min_score_to_include: 0.25
 
