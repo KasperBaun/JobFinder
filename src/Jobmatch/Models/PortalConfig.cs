@@ -17,7 +17,8 @@ public sealed record PortalConfig(
     string? Method = null,
     IReadOnlyDictionary<string, object?>? BodyTemplate = null,
     PaginationConfig? Pagination = null,
-    int Id = 0);
+    int Id = 0,
+    string? RequiresSecret = null);
 
 public sealed record PaginationConfig(
     string Param,
