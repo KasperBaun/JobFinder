@@ -1,91 +1,118 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getProviders, updateProviders } from '../api/client'
-import type { ProviderSummary, ProviderType, ProviderUpsert } from '../api/types'
-import { Toggle } from '../components/Toggle'
-import { SaveBar } from '../components/SaveBar'
+import { getProviders, testProvider, updateProvider } from '../api/client'
+import type { ProviderSummary, ProviderTestResult } from '../api/types'
 import { Toast } from '../components/Toast'
 import { formatRelative } from '../utils/time'
 
-type Row = ProviderUpsert & { lastFetchedAt?: string; lastFetchCount?: number }
+type Health = 'working' | 'failing' | 'stale' | 'untested'
 
-const TYPE_OPTIONS: ProviderType[] = ['api', 'rss', 'html', 'manual']
+type SessionTest = { kind: 'pending' } | { kind: 'done'; result: ProviderTestResult }
 
-function fromSummary(p: ProviderSummary): Row {
-  return {
-    name: p.name,
-    type: p.type,
-    enabled: p.enabled,
-    endpoint: p.endpoint ?? '',
-    rateLimitRps: p.rateLimitRps,
-    notes: p.notes ?? '',
-    lastFetchedAt: p.lastFetchedAt,
-    lastFetchCount: p.lastFetchCount,
+const STALE_DAYS = 14
+
+function classifyHealth(p: ProviderSummary, sessionTest?: SessionTest): Health {
+  if (sessionTest?.kind === 'done') {
+    return sessionTest.result.ok ? 'working' : 'failing'
   }
+  if (!p.lastFetchedAt) return 'untested'
+  const ageMs = Date.now() - new Date(p.lastFetchedAt).getTime()
+  const stale = ageMs > STALE_DAYS * 24 * 60 * 60 * 1000
+  if (stale) return 'stale'
+  return (p.lastFetchCount ?? 0) > 0 ? 'working' : 'failing'
 }
 
-function toUpsert(r: Row): ProviderUpsert {
-  return {
-    name: r.name.trim(),
-    type: r.type,
-    enabled: r.enabled,
-    endpoint: r.endpoint?.trim() || undefined,
-    rateLimitRps: r.rateLimitRps,
-    notes: r.notes?.trim() || undefined,
-  }
+const HEALTH_LABEL: Record<Health, string> = {
+  working: 'working',
+  failing: 'failing',
+  stale: 'stale',
+  untested: 'untested',
 }
 
 export function ProvidersPage() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['providers'], queryFn: getProviders })
-
-  const [rows, setRows] = useState<Row[] | null>(null)
-  const [original, setOriginal] = useState<Row[] | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
+  const [tests, setTests] = useState<Record<number, SessionTest>>({})
 
-  useEffect(() => {
-    if (data && original === null) {
-      const r = data.providers.map(fromSummary)
-      setRows(r)
-      setOriginal(r)
-    }
-  }, [data, original])
-
-  const dirty = useMemo(() => {
-    if (!rows || !original) return false
-    return JSON.stringify(rows.map(toUpsert)) !== JSON.stringify(original.map(toUpsert))
-  }, [rows, original])
-
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!rows) throw new Error('no row state')
-      const res = await updateProviders({ providers: rows.map(toUpsert) })
+  const toggle = useMutation({
+    mutationFn: async ({ p, enabled }: { p: ProviderSummary; enabled: boolean }) => {
+      const res = await updateProvider(p.id, {
+        name: p.name,
+        type: p.type,
+        enabled,
+        endpoint: p.endpoint,
+        rateLimitRps: p.rateLimitRps,
+        notes: p.notes,
+      })
       if (!res.success) throw new Error(res.error ?? 'Save failed')
-      return rows
+      return enabled
     },
-    onSuccess: (saved) => {
-      setOriginal(saved)
+    onMutate: async ({ p, enabled }) => {
+      await queryClient.cancelQueries({ queryKey: ['providers'] })
+      const prev = queryClient.getQueryData(['providers'])
+      queryClient.setQueryData(['providers'], (old: { providers: ProviderSummary[] } | undefined) =>
+        old
+          ? { providers: old.providers.map((x) => (x.id === p.id ? { ...x, enabled } : x)) }
+          : old,
+      )
+      return { prev }
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['providers'], ctx.prev)
+      setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
+    },
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['providers'] })
-      setToast({ kind: 'ok', message: 'Providers saved' })
     },
-    onError: (err) => {
+  })
+
+  const test = useMutation({
+    mutationFn: async (id: number) => {
+      const result = await testProvider(id)
+      return { id, result }
+    },
+    onMutate: (id: number) => {
+      setTests((t) => ({ ...t, [id]: { kind: 'pending' } }))
+    },
+    onSuccess: ({ id, result }) => {
+      setTests((t) => ({ ...t, [id]: { kind: 'done', result } }))
+      setToast({
+        kind: result.ok ? 'ok' : 'err',
+        message: result.ok
+          ? `${nameById(data?.providers, id)}: ${result.fetchedCount} listings · ${result.durationMs}ms`
+          : `${nameById(data?.providers, id)}: ${result.error ?? 'failed'}`,
+      })
+    },
+    onError: (err, vars) => {
+      setTests((t) => {
+        const copy = { ...t }
+        delete copy[vars]
+        return copy
+      })
       setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
     },
   })
 
-  function patchRow(idx: number, p: Partial<Row>) {
-    setRows((rs) => rs ? rs.map((r, i) => i === idx ? { ...r, ...p } : r) : rs)
-  }
-  function removeRow(idx: number) {
-    setRows((rs) => rs ? rs.filter((_, i) => i !== idx) : rs)
-  }
-  function addRow() {
-    const blank: Row = { name: '', type: 'rss', enabled: true, endpoint: '', rateLimitRps: 1.0, notes: '' }
-    setRows((rs) => rs ? [...rs, blank] : [blank])
-  }
-  function revert() {
-    if (original) setRows(original)
-  }
+  const stats = useMemo(() => {
+    if (!data) return null
+    const total = data.providers.length
+    let enabled = 0
+    let working = 0
+    let failing = 0
+    let stale = 0
+    let untested = 0
+    for (const p of data.providers) {
+      if (p.enabled) enabled++
+      const h = classifyHealth(p, tests[p.id])
+      if (h === 'working') working++
+      else if (h === 'failing') failing++
+      else if (h === 'stale') stale++
+      else untested++
+    }
+    return { total, enabled, disabled: total - enabled, working, failing, stale, untested }
+  }, [data, tests])
 
   return (
     <div className="page page--wide">
@@ -96,116 +123,141 @@ export function ProvidersPage() {
           <div className="page__eyebrow">01 / sources</div>
           <h1 className="page__heading">Job <em>portals</em></h1>
           <p className="page__lede">
-            The system fetches listings from these sources on every search. Edit, toggle, or add new ones below.
+            Where listings come from. Toggle, test, or edit any provider.
           </p>
         </div>
         <div className="cta-row" style={{ marginTop: 0 }}>
-          <button type="button" className="btn btn--secondary" onClick={addRow}>+ Add provider</button>
+          <Link to="/providers/new" className="btn btn--secondary">+ Add provider</Link>
         </div>
       </header>
 
       {isLoading && <div className="muted">Loading providers…</div>}
       {error && <div className="error-text">Failed to load providers.</div>}
 
-      {rows && (
-        <>
-          {rows.length === 0 && (
-            <div className="hint-card">
-              No providers configured yet. Click <strong>Add provider</strong> to add one.
-            </div>
-          )}
+      {stats && (
+        <div className="provider-stats">
+          <Stat label="total" value={stats.total} />
+          <Stat label="enabled" value={stats.enabled} tone={stats.enabled > 0 ? 'good' : undefined} />
+          <Stat label="disabled" value={stats.disabled} tone="muted" />
+          <span className="provider-stats__sep" aria-hidden />
+          <Stat label="working" value={stats.working} tone={stats.working > 0 ? 'good' : undefined} />
+          <Stat label="failing" value={stats.failing} tone={stats.failing > 0 ? 'bad' : undefined} />
+          <Stat label="stale" value={stats.stale} tone={stats.stale > 0 ? 'warn' : undefined} />
+          <Stat label="untested" value={stats.untested} tone="muted" />
+        </div>
+      )}
 
-          <div className="providers-list">
-            {rows.map((row, idx) => (
-              <article key={idx} className={row.enabled ? 'provider-card' : 'provider-card provider-card--disabled'}>
-                <div className="provider-card__head">
-                  <div className="provider-card__title-block">
-                    <input
-                      className="input input--narrow provider-card__name-input"
-                      value={row.name}
-                      placeholder="provider name"
-                      onChange={(e) => patchRow(idx, { name: e.target.value })}
-                      style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 500, padding: '0.4rem 0.6rem' }}
-                    />
-                    <span className="badge">{row.type}</span>
-                    {row.lastFetchedAt && (
-                      <span className="provider-card__meta">
-                        last fetched {formatRelative(row.lastFetchedAt)}
-                        {typeof row.lastFetchCount === 'number' && ` · ${row.lastFetchCount}`}
-                      </span>
+      {data && data.providers.length === 0 && (
+        <div className="hint-card">
+          No providers configured yet.{' '}
+          <Link to="/providers/new"><strong>Add the first one →</strong></Link>
+        </div>
+      )}
+
+      {data && data.providers.length > 0 && (
+        <div className="provider-grid">
+          {data.providers.map((p) => {
+            const session = tests[p.id]
+            const health = classifyHealth(p, session)
+            const testing = session?.kind === 'pending'
+            return (
+              <article
+                key={p.id}
+                className={`provider-tile${p.enabled ? '' : ' provider-tile--disabled'}`}
+              >
+                <div className="provider-tile__eyebrow">
+                  <span className="provider-tile__type">{p.type}</span>
+                  <span className="provider-tile__id">#{p.id}</span>
+                </div>
+
+                <Link to={`/providers/${p.id}`} className="provider-tile__title">
+                  {p.name}
+                </Link>
+
+                <div className={`provider-tile__health provider-tile__health--${health}`}>
+                  <span className="provider-tile__dot" aria-hidden />
+                  <span className="provider-tile__health-label">{HEALTH_LABEL[health]}</span>
+                  <span className="provider-tile__health-meta">
+                    {session?.kind === 'done' ? (
+                      session.result.ok
+                        ? `tested · ${session.result.fetchedCount} · ${session.result.durationMs}ms`
+                        : `tested · ${truncate(session.result.error ?? 'failed', 32)}`
+                    ) : p.lastFetchedAt ? (
+                      `${formatRelative(p.lastFetchedAt)}${typeof p.lastFetchCount === 'number' ? ` · ${p.lastFetchCount}` : ''}`
+                    ) : (
+                      'never run'
                     )}
-                  </div>
-                  <div className="provider-card__actions">
-                    <Toggle
-                      checked={row.enabled}
-                      onChange={(v) => patchRow(idx, { enabled: v })}
-                      label={row.enabled ? 'Enabled' : 'Disabled'}
-                      ariaLabel={`${row.name} enabled`}
-                    />
-                    <button type="button" className="btn btn--danger" onClick={() => removeRow(idx)}>
-                      Remove
-                    </button>
-                  </div>
+                  </span>
                 </div>
 
-                <div className="provider-card__body">
-                  <div className="field">
-                    <label className="field__label">Type</label>
-                    <select
-                      className="select"
-                      value={row.type}
-                      onChange={(e) => patchRow(idx, { type: e.target.value as ProviderType })}
-                    >
-                      {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label className="field__label">Rate limit (rps)</label>
-                    <input
-                      type="number"
-                      step={0.1}
-                      min={0}
-                      className="input input--mono tabular"
-                      value={row.rateLimitRps}
-                      onChange={(e) => patchRow(idx, { rateLimitRps: Number(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="field" style={{ gridColumn: '1 / -1' }}>
-                    <label className="field__label">Endpoint</label>
-                    <input
-                      className="input input--mono"
-                      value={row.endpoint ?? ''}
-                      placeholder="https://…"
-                      onChange={(e) => patchRow(idx, { endpoint: e.target.value })}
-                    />
-                  </div>
-                  <div className="field provider-card__notes-row">
-                    <label className="field__label">Notes</label>
-                    <input
-                      className="input"
-                      value={row.notes ?? ''}
-                      placeholder="optional"
-                      onChange={(e) => patchRow(idx, { notes: e.target.value })}
-                    />
-                  </div>
+                <div className="provider-tile__actions">
+                  <Link to={`/providers/${p.id}`} className="btn btn--secondary btn--sm">
+                    <PencilIcon />
+                    <span>Edit</span>
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--sm"
+                    onClick={() => test.mutate(p.id)}
+                    disabled={testing || p.type === 'manual'}
+                    title={p.type === 'manual' ? 'Manual providers have no live endpoint to test' : undefined}
+                  >
+                    {testing ? <span className="spinner" /> : 'Test'}
+                  </button>
                 </div>
+
+                <label className="provider-tile__toggle">
+                  <input
+                    type="checkbox"
+                    checked={p.enabled}
+                    onChange={(e) => toggle.mutate({ p, enabled: e.target.checked })}
+                    disabled={toggle.isPending}
+                    aria-label={`${p.name} enabled`}
+                  />
+                  <span>{p.enabled ? 'enabled' : 'disabled'}</span>
+                </label>
               </article>
-            ))}
-          </div>
-
-          <p className="field__hint" style={{ marginTop: 'var(--space-5)' }}>
-            Advanced fields (HTML selectors, query params, headers, response mapping) are preserved on save.
-          </p>
-
-          <SaveBar
-            visible={!!dirty}
-            message={dirty ? 'Unsaved changes to portals.yml' : ''}
-            saving={save.isPending}
-            onSave={() => save.mutate()}
-            onRevert={revert}
-          />
-        </>
+            )
+          })}
+        </div>
       )}
     </div>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone?: 'good' | 'bad' | 'warn' | 'muted' }) {
+  return (
+    <span className={`provider-stats__item${tone ? ` provider-stats__item--${tone}` : ''}`}>
+      <span className="provider-stats__value">{value}</span>
+      <span className="provider-stats__label">{label}</span>
+    </span>
+  )
+}
+
+function nameById(list: ProviderSummary[] | undefined, id: number): string {
+  return list?.find((p) => p.id === id)?.name ?? `#${id}`
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s
+  return s.slice(0, max - 1) + '…'
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
   )
 }

@@ -230,4 +230,120 @@ public sealed class PortalConfigLoaderTests
         var ex = Assert.Throws<ConfigException>(() => PortalConfigLoader.Parse(yaml));
         Assert.Contains("endpoint", ex.Message);
     }
+
+    [Fact]
+    public void Parse_Reads_Id_When_Present()
+    {
+        var yaml = """
+            portals:
+              - id: 7
+                name: x
+                type: manual
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+        Assert.Equal(7, portals[0].Id);
+    }
+
+    [Fact]
+    public void Parse_Defaults_Id_To_Zero_When_Missing()
+    {
+        var yaml = """
+            portals:
+              - name: x
+                type: manual
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+        Assert.Equal(0, portals[0].Id);
+    }
+
+    [Fact]
+    public void Load_Assigns_Ids_To_Portals_Without_Them_And_Persists()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, """
+                portals:
+                  - name: a
+                    type: manual
+                  - name: b
+                    type: manual
+                """);
+
+            var portals = PortalConfigLoader.Load(path);
+            Assert.Equal(1, portals[0].Id);
+            Assert.Equal(2, portals[1].Id);
+
+            var raw = File.ReadAllText(path);
+            Assert.Contains("id: 1", raw);
+            Assert.Contains("id: 2", raw);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_Is_Idempotent_For_Fully_Tagged_Files()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var original = """
+                portals:
+                  - id: 1
+                    name: a
+                    type: manual
+                  - id: 2
+                    name: b
+                    type: manual
+                """;
+            File.WriteAllText(path, original);
+            var beforeWriteTime = File.GetLastWriteTimeUtc(path);
+
+            // wait long enough that any rewrite would change the timestamp
+            Thread.Sleep(50);
+            _ = PortalConfigLoader.Load(path);
+
+            var afterWriteTime = File.GetLastWriteTimeUtc(path);
+            Assert.Equal(beforeWriteTime, afterWriteTime);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_Does_Not_Reuse_Existing_Ids_When_Filling_Gaps()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, """
+                portals:
+                  - id: 5
+                    name: a
+                    type: manual
+                  - name: b
+                    type: manual
+                  - id: 9
+                    name: c
+                    type: manual
+                  - name: d
+                    type: manual
+                """);
+
+            var portals = PortalConfigLoader.Load(path);
+            Assert.Equal(5, portals[0].Id);
+            Assert.Equal(10, portals[1].Id);
+            Assert.Equal(9, portals[2].Id);
+            Assert.Equal(11, portals[3].Id);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
 }

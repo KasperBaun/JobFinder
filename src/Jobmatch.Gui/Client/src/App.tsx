@@ -4,6 +4,7 @@ import { ServerDisconnectedOverlay } from './components/ServerDisconnectedOverla
 import { TopNav } from './components/TopNav'
 import { HomePage } from './pages/HomePage'
 import { ProvidersPage } from './pages/ProvidersPage'
+import { ProviderDetailPage } from './pages/ProviderDetailPage'
 import { SkillsetPage } from './pages/SkillsetPage'
 import { SearchPage } from './pages/SearchPage'
 import { HistoryPage } from './pages/HistoryPage'
@@ -33,6 +34,8 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/providers" element={<ProvidersPage />} />
+        <Route path="/providers/new" element={<ProviderDetailPage />} />
+        <Route path="/providers/:id" element={<ProviderDetailPage />} />
         <Route path="/skillset" element={<SkillsetPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/history" element={<HistoryPage />} />
