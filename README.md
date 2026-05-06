@@ -26,7 +26,6 @@ Everything personal lives under `data/<your-email>/` on your own machine. That f
 
 - [`docs/prd.md`](./docs/prd.md) — what this product is and who it's for.
 - [`docs/requirements.md`](./docs/requirements.md) — the one-line requirement list.
-- [`docs/mwt-tool-analysis.md`](./docs/mwt-tool-analysis.md) — the architecture pattern the desktop app follows.
 - [`todo.md`](./todo.md) — what's done, what's in flight, and what's next.
 
 ## Status

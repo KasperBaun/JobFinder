@@ -1,6 +1,6 @@
 # todo
 
-Current status of work on `jobfinder`. Per-task specs live in [`docs/tasks/`](docs/tasks/).
+Current status of work on `jobfinder`.
 
 ## In progress
 
@@ -8,7 +8,26 @@ _(none)_
 
 ## Backlog (next up)
 
-_(none)_
+- **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
+  `recruit-it` portal stub uses `:scope` as `link_selector` to target the
+  wrapping `<a>`. Verify Playwright resolves `:scope` inside
+  `IElementHandle.QuerySelectorAsync` before flipping `enabled: true`;
+  otherwise extend `HtmlAdapter` to read attributes from the matched list
+  element directly.
+- **Recruit IT location parsing.** Location renders as a plain text node
+  next to an icon with no wrapper class; `location_selector` is intentionally
+  omitted and listings will have null location until the markup changes.
+- **`jobindex-rss` / `it-jobbank-rss` dedupe warning.** Both feeds hit the
+  same Jobindex backend; enabling both wastes calls. Add a config-time hint
+  or a UX warning when both are enabled at once.
+- **`jobsearch-dk` company/location parser.** Items expose only `title` /
+  `description` / `link` — no `pubDate`, no structured company/location.
+  Add a parser that extracts company/location from the title or URL slug
+  `/{role}/{city}/{id}`.
+- **Existing-user portal migration.** First-run seeding copies
+  `portals.example.yml` once; existing `data/<email>/portals.yml` files
+  miss new portals shipped after first-run. Add a "new portals available"
+  diff/merge prompt in the GUI Providers page.
 
 ## Completed (recent)
 
@@ -144,8 +163,6 @@ _(none)_
   Seven new tests (5 adapter + 2 loader); 119 total green; 0 warnings.
 - **T-007 — Portal API research (DK general + tech).**
   Surveyed 20 DK general + tech portals for automatable feeds.
-  Per-portal worksheets under [`docs/tasks/T-007/`](docs/tasks/T-007/);
-  roll-up at [`docs/tasks/T-007/INDEX.md`](docs/tasks/T-007/INDEX.md).
   Dispatched 8 parallel research agents (Jobindex family / public
   sector / newspaper aggregators / EURES / TechJob / Careerjet finish /
   Jooble finish / 5-portal manual+dead survey). Five new viable
@@ -229,7 +246,6 @@ _(none)_
 - **Repo restructure** — `docs/`, `src/` (with tests + configs), `data/<email>/`, root `README.md`, `CLAUDE.md`, `todo.md`. Build infra moved under `src/`. Existing user state migrated to `data/tappah2510@gmail.com/`.
 - **`docs/prd.md`** — actor + responsibility PRD, no implementation detail.
 - **`docs/requirements.md`** — one-line requirement list (`R-001`..`R-084`, plus R-054/R-055).
-- **`docs/mwt-tool-analysis.md`** — analysis of the `mwt` GUI/Server pattern jobfinder adopts (GUI half only).
 
 (Anything older than the restructure lives in git history.)
 
