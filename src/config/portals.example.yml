@@ -2,9 +2,14 @@
 # Disable portals by setting `enabled: false` — no code change needed.
 
 portals:
+  # jobnet.dk's public-facing search no longer returns JSON for unauthenticated
+  # callers — the URL below now serves an HTML page. Real machine integration
+  # against STAR (Danish labour-market authority) requires certificate auth and
+  # a paid agreement (spoc@star.dk). Left here as a config skeleton; flip to
+  # `enabled: true` only if you have a working endpoint.
   - name: jobnet
     type: api
-    enabled: true
+    enabled: false
     endpoint: https://job.jobnet.dk/CV/FindWork/Search
     query_params:
       SearchString: "software engineer"
@@ -21,7 +26,41 @@ portals:
       url_template: "https://job.jobnet.dk/CV/FindWork/Details/{Id}"
       posted_at: "PostingCreated"
     rate_limit_rps: 2.0
-    notes: "Public STAR (Danish labour-market authority) API. No authentication."
+
+  - name: thehub
+    type: api
+    enabled: true
+    endpoint: https://thehub.io/api/jobs
+    query_params:
+      country_code: DK
+      limit: 100
+    response_mapping:
+      items_path: "docs"
+      id: "id"
+      title: "title"
+      company: "company.name"
+      location: "location.address"
+      description: "description"
+      url: "absoluteJobUrl"
+      posted_at: "publishedAt"
+    rate_limit_rps: 1.0
+
+  - name: remotive
+    type: api
+    enabled: true
+    endpoint: https://remotive.com/api/remote-jobs
+    query_params:
+      category: software-dev
+    response_mapping:
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      company: "company_name"
+      location: "candidate_required_location"
+      description: "description"
+      url: "url"
+      posted_at: "publication_date"
+    rate_limit_rps: 1.0
 
   - name: generic-rss-example
     type: rss

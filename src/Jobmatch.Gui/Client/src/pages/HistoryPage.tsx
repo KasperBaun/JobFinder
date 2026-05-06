@@ -15,15 +15,16 @@ function HistoryListView() {
   return (
     <div className="page page--wide">
       <header className="page__header">
-        <h1 className="page__heading">History</h1>
-        <p className="page__lede">Past searches and how they ranked.</p>
+        <div className="page__eyebrow">04 / history</div>
+        <h1 className="page__heading">Past <em>runs</em></h1>
+        <p className="page__lede">Every search you've run, with the shortlist and your marks preserved.</p>
       </header>
 
       {isLoading && <div className="muted">Loading history…</div>}
       {error && <div className="error-text">Failed to load history.</div>}
 
       {data && data.runs.length === 0 && (
-        <div className="hint-card">No runs yet. Start one from the Search page.</div>
+        <div className="hint-card">No runs yet. Start one from the <Link to="/search">Search</Link> page.</div>
       )}
 
       {data && data.runs.length > 0 && (
@@ -44,19 +45,19 @@ function HistoryListView() {
                 const failed = run.providers.filter(p => p.status === 'failed').length
                 const ratio = run.shortlistCount > 0 ? run.goodMarks / run.shortlistCount : 0
                 return (
-                  <tr
-                    key={run.runId}
-                    onClick={() => navigate(`/history/${run.runId}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
+                  <tr key={run.runId} onClick={() => navigate(`/history/${run.runId}`)}>
                     <td title={formatAbsolute(run.startedAt)}>
                       <Link to={`/history/${run.runId}`} onClick={e => e.stopPropagation()}>
                         {formatRelative(run.startedAt)}
                       </Link>
                     </td>
-                    <td>{ok} ok / {failed} failed</td>
-                    <td>{run.shortlistCount}</td>
-                    <td>{run.topScore.toFixed(2)}</td>
+                    <td className="tabular">
+                      <span style={{ color: 'var(--c-good)' }}>{ok}</span>
+                      <span className="subtle"> / </span>
+                      <span style={{ color: failed ? 'var(--c-bad)' : 'var(--c-text-subtle)' }}>{failed}</span>
+                    </td>
+                    <td className="tabular">{run.shortlistCount}</td>
+                    <td className="tabular mono">{run.topScore.toFixed(2)}</td>
                     <td>
                       <div className="marks-cell">
                         <span>{run.goodMarks} / {run.shortlistCount}</span>
@@ -88,8 +89,9 @@ function RunDetailView({ runId }: { runId: string }) {
   return (
     <div className="page page--wide">
       <header className="page__header">
-        <Link to="/history" className="back-link">← Back to history</Link>
-        <h1 className="page__heading">Run detail</h1>
+        <Link to="/history" className="back-link">← back to history</Link>
+        <div className="page__eyebrow">04 / history / detail</div>
+        <h1 className="page__heading">Run <em>detail</em></h1>
       </header>
 
       {isLoading && <div className="muted">Loading run…</div>}
@@ -99,7 +101,9 @@ function RunDetailView({ runId }: { runId: string }) {
         <>
           <RunSummaryCard run={data} />
           <section className="results">
-            <h2 className="results__heading">Shortlist ({data.shortlist.length})</h2>
+            <h2 className="results__heading">
+              Shortlist <span className="muted serif" style={{ fontStyle: 'italic' }}>({data.shortlist.length})</span>
+            </h2>
             {data.shortlist.length === 0 && (
               <div className="muted">No listings on this run's shortlist.</div>
             )}

@@ -37,10 +37,10 @@ export function ListingCard({ match, runId, mark }: Props) {
       )}
 
       <footer className="listing-card__footer">
-        <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--secondary">
-          Open listing
-        </a>
         <MarkButton runId={runId} listingId={match.id} current={mark} />
+        <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--primary">
+          Open listing →
+        </a>
       </footer>
     </article>
   )

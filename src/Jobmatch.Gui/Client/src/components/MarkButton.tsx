@@ -17,6 +17,12 @@ function nextState(value: MarkValue): MarkValue {
   return undefined
 }
 
+const TOOLTIPS: Record<'unset' | 'good' | 'bad', string> = {
+  unset: 'Rate this match. Marks teach which listings fit you and feed future ranking. Click: Good match.',
+  good:  'Marked as a Good match. Click to flip to Not a match.',
+  bad:   'Marked as Not a match. Click to clear the mark.',
+}
+
 export function MarkButton({ runId, listingId, current }: Props) {
   const [optimistic, setOptimistic] = useState<MarkValue>(current)
   const [error, setError] = useState<string | null>(null)
@@ -65,12 +71,17 @@ export function MarkButton({ runId, listingId, current }: Props) {
   const label =
     optimistic === 'good' ? 'Good match' :
     optimistic === 'bad' ? 'Not a match' :
-    'Mark'
+    'Rate match'
 
   const cls =
     optimistic === 'good' ? 'mark-button mark-button--good' :
     optimistic === 'bad' ? 'mark-button mark-button--bad' :
     'mark-button'
+
+  const tooltip =
+    optimistic === 'good' ? TOOLTIPS.good :
+    optimistic === 'bad' ? TOOLTIPS.bad :
+    TOOLTIPS.unset
 
   return (
     <div className="mark-button-wrap">
@@ -79,7 +90,8 @@ export function MarkButton({ runId, listingId, current }: Props) {
         className={cls}
         onClick={handleClick}
         disabled={mutation.isPending}
-        aria-label={`Mark listing as ${label}`}
+        aria-label={tooltip}
+        data-tooltip={tooltip}
       >
         {label}
       </button>

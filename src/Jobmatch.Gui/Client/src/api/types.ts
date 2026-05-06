@@ -4,9 +4,11 @@ export type WhoamiResponse = {
   toolVersion: string
 }
 
+export type ProviderType = 'api' | 'rss' | 'html' | 'manual'
+
 export type ProviderSummary = {
   name: string
-  type: 'api' | 'rss' | 'html' | 'manual'
+  type: ProviderType
   enabled: boolean
   baseUrl?: string
   endpoint?: string
@@ -17,6 +19,18 @@ export type ProviderSummary = {
 }
 
 export type ProvidersResponse = { providers: ProviderSummary[] }
+
+export type ProviderUpsert = {
+  name: string
+  type: ProviderType
+  enabled: boolean
+  baseUrl?: string
+  endpoint?: string
+  rateLimitRps: number
+  notes?: string
+}
+
+export type ProvidersUpdateRequest = { providers: ProviderUpsert[] }
 
 export type SkillsetResponse = {
   name: string
@@ -31,6 +45,27 @@ export type SkillsetResponse = {
   disqualifiers: string[]
   languages: string[]
   employmentTypes: string[]
+  country?: string | null
+  region?: string | null
+  metro: string[]
+}
+
+export type SkillsetUpdateRequest = {
+  name: string
+  location: string
+  experienceYears: number
+  targetRoles: string[]
+  remotePreference: string
+  seniority: string
+  primaryStack: string[]
+  secondaryStack: string[]
+  domains: string[]
+  disqualifiers: string[]
+  languages: string[]
+  employmentTypes: string[]
+  country?: string | null
+  region?: string | null
+  metro: string[]
 }
 
 export type SearchRequest = {
@@ -97,3 +132,4 @@ export type MarkRequest = {
 }
 
 export type MarkResponse = { success: boolean; error?: string }
+export type SaveResponse = { success: boolean; error?: string }
