@@ -165,6 +165,46 @@ public sealed class PortalConfigLoaderTests
     }
 
     [Fact]
+    public void Parse_Pagination_Block_Loaded()
+    {
+        var yaml = """
+            portals:
+              - name: paged
+                type: api
+                endpoint: https://example.com/jobs
+                pagination:
+                  param: page
+                  start: 1
+                  step: 1
+                  size_param: page_size
+                  size: 50
+                  max_pages: 3
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+        var p = portals[0].Pagination;
+        Assert.NotNull(p);
+        Assert.Equal("page", p!.Param);
+        Assert.Equal(1, p.Start);
+        Assert.Equal(1, p.Step);
+        Assert.Equal("page_size", p.SizeParam);
+        Assert.Equal(50, p.Size);
+        Assert.Equal(3, p.MaxPages);
+    }
+
+    [Fact]
+    public void Parse_Without_Pagination_Yields_Null()
+    {
+        var yaml = """
+            portals:
+              - name: x
+                type: api
+                endpoint: https://example.com
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+        Assert.Null(portals[0].Pagination);
+    }
+
+    [Fact]
     public void Parse_Without_Method_Yields_Null()
     {
         var yaml = """

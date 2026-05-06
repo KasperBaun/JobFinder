@@ -62,6 +62,7 @@ public static class PortalConfigLoader
         var staticFields = ReadStringDict(map, "static_fields");
         var method = map.TryGetValue("method", out var m) ? m?.ToString() : null;
         var bodyTemplate = ReadDict(map, "body_template");
+        var pagination = ReadPagination(map, name);
 
         return new PortalConfig(
             Name: name,
@@ -77,7 +78,36 @@ public static class PortalConfigLoader
             Notes: notes,
             StaticFields: staticFields,
             Method: method,
-            BodyTemplate: bodyTemplate);
+            BodyTemplate: bodyTemplate,
+            Pagination: pagination);
+    }
+
+    private static PaginationConfig? ReadPagination(IReadOnlyDictionary<string, object?> map, string portalName)
+    {
+        if (!map.TryGetValue("pagination", out var v) || v is not IDictionary<object, object?> inner) return null;
+        var p = NormaliseKeys(inner);
+        var param = RequireString(p, "param", $"portal '{portalName}'.pagination");
+        var start = ReadInt(p, "start", 1);
+        var step = ReadInt(p, "step", 1);
+        var sizeParam = p.TryGetValue("size_param", out var spv) ? spv?.ToString() : null;
+        if (string.IsNullOrWhiteSpace(sizeParam)) sizeParam = null;
+        int? size = null;
+        if (p.TryGetValue("size", out var szv) && int.TryParse(szv?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var szInt))
+        {
+            size = szInt;
+        }
+        var maxPages = ReadInt(p, "max_pages", 5);
+        if (maxPages < 1)
+        {
+            throw new ConfigException($"portal '{portalName}'.pagination: max_pages must be >= 1, got {maxPages}");
+        }
+        return new PaginationConfig(param, start, step, sizeParam, size, maxPages);
+    }
+
+    private static int ReadInt(IReadOnlyDictionary<string, object?> map, string key, int defaultValue)
+    {
+        if (!map.TryGetValue(key, out var v) || v is null) return defaultValue;
+        return int.TryParse(v.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var i) ? i : defaultValue;
     }
 
     private static HtmlSelectors? ReadHtmlSelectors(IReadOnlyDictionary<string, object?> map, string portalName, PortalType type)

@@ -18,10 +18,39 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             throw new ConfigException($"portal '{PortalName}': api adapter requires 'endpoint'");
         }
 
-        var (renderedEndpoint, remainingQueryParams) = RenderEndpointTemplate(Config.Endpoint, Config.QueryParams, PortalName);
-        var uri = BuildRequestUri(renderedEndpoint, remainingQueryParams);
-
+        var (renderedEndpoint, baseQueryParams) = RenderEndpointTemplate(Config.Endpoint, Config.QueryParams, PortalName);
         var method = ParseHttpMethod(Config.Method, PortalName);
+        var mapping = Config.ResponseMapping ?? throw new ConfigException($"portal '{PortalName}': api adapter requires 'response_mapping'");
+
+        if (Config.Pagination is null)
+        {
+            return await FetchOnePageAsync(renderedEndpoint, baseQueryParams, Config.BodyTemplate, method, mapping, ct);
+        }
+
+        var p = Config.Pagination;
+        var isPost = method == HttpMethod.Post;
+        var all = new List<Listing>();
+        var current = p.Start;
+        for (var pageIdx = 0; pageIdx < p.MaxPages; pageIdx++, current += p.Step)
+        {
+            var (qp, body) = InjectPagination(baseQueryParams, Config.BodyTemplate, isPost, p, current);
+            var pageResults = await FetchOnePageAsync(renderedEndpoint, qp, body, method, mapping, ct);
+            if (pageResults.Count == 0) break;
+            all.AddRange(pageResults);
+            if (p.Size is int sz && pageResults.Count < sz) break;
+        }
+        return all;
+    }
+
+    private async Task<IReadOnlyList<Listing>> FetchOnePageAsync(
+        Uri renderedEndpoint,
+        IReadOnlyDictionary<string, object?>? queryParams,
+        IReadOnlyDictionary<string, object?>? bodyTemplate,
+        HttpMethod method,
+        IReadOnlyDictionary<string, string> mapping,
+        CancellationToken ct)
+    {
+        var uri = BuildRequestUri(renderedEndpoint, queryParams);
         Logger.LogInformation("portal={Portal} {Method} {Uri}", PortalName, method.Method, uri);
 
         using var request = new HttpRequestMessage(method, uri);
@@ -35,9 +64,9 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
                 request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);
             }
         }
-        if (method == HttpMethod.Post && Config.BodyTemplate is not null)
+        if (method == HttpMethod.Post && bodyTemplate is not null)
         {
-            request.Content = JsonContent.Create(Config.BodyTemplate);
+            request.Content = JsonContent.Create(bodyTemplate);
         }
 
         using var response = await Http.SendAsync(request, ct);
@@ -54,7 +83,6 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var doc = await ParseJsonOrThrow(stream, PortalName, ct);
 
-        var mapping = Config.ResponseMapping ?? throw new ConfigException($"portal '{PortalName}': api adapter requires 'response_mapping'");
         var itemsPath = mapping.TryGetValue("items_path", out var ip) ? ip : null;
         var items = WalkJsonPath(doc.RootElement, itemsPath);
         if (items.ValueKind != JsonValueKind.Array)
@@ -70,6 +98,30 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             if (listing is not null) results.Add(listing);
         }
         return results;
+    }
+
+    private static (IReadOnlyDictionary<string, object?>? qp, IReadOnlyDictionary<string, object?>? body) InjectPagination(
+        IReadOnlyDictionary<string, object?>? queryParams,
+        IReadOnlyDictionary<string, object?>? bodyTemplate,
+        bool isPost,
+        PaginationConfig p,
+        int current)
+    {
+        if (isPost)
+        {
+            var newBody = bodyTemplate is null
+                ? new Dictionary<string, object?>(StringComparer.Ordinal)
+                : new Dictionary<string, object?>(bodyTemplate, StringComparer.Ordinal);
+            newBody[p.Param] = current;
+            if (p.SizeParam is not null && p.Size is int bodySize) newBody[p.SizeParam] = bodySize;
+            return (queryParams, newBody);
+        }
+        var newQp = queryParams is null
+            ? new Dictionary<string, object?>(StringComparer.Ordinal)
+            : new Dictionary<string, object?>(queryParams, StringComparer.Ordinal);
+        newQp[p.Param] = current;
+        if (p.SizeParam is not null && p.Size is int qpSize) newQp[p.SizeParam] = qpSize;
+        return (newQp, bodyTemplate);
     }
 
     private static bool LooksLikeJson(string mediaType) =>

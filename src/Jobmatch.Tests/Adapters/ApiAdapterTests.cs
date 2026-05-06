@@ -294,6 +294,105 @@ public sealed class ApiAdapterTests
         Assert.Null(handler.LastRequest!.Content);
     }
 
+    private static PortalConfig PaginatedGet() => new(
+        Name: "paged-get",
+        Type: PortalType.Api,
+        Enabled: true,
+        Endpoint: new Uri("https://example.com/api/jobs"),
+        QueryParams: new Dictionary<string, object?>
+        {
+            ["q"] = "software",
+        },
+        ResponseMapping: new Dictionary<string, string>
+        {
+            ["items_path"] = "jobs",
+            ["id"] = "id",
+            ["title"] = "title",
+            ["url"] = "link",
+        });
+
+    [Fact]
+    public async Task FetchAsync_Pagination_Stops_On_Empty_Page()
+    {
+        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var empty = """{"jobs":[]}""";
+        var handler = new ScriptedHandler(full, full, empty);
+        using var http = new HttpClient(handler);
+        var cfg = PaginatedGet() with
+        {
+            Pagination = new PaginationConfig(Param: "page", Start: 1, Step: 1, MaxPages: 10),
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Contains("page=1", handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains("page=2", handler.Requests[1].RequestUri!.ToString());
+        Assert.Contains("page=3", handler.Requests[2].RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task FetchAsync_Pagination_Stops_On_Partial_Page()
+    {
+        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"},{"id":"b","title":"B","link":"https://ex.com/b"}]}""";
+        var partial = """{"jobs":[{"id":"c","title":"C","link":"https://ex.com/c"}]}""";
+        var handler = new ScriptedHandler(full, partial);
+        using var http = new HttpClient(handler);
+        var cfg = PaginatedGet() with
+        {
+            Pagination = new PaginationConfig(Param: "page", Start: 1, Step: 1, Size: 2, MaxPages: 10),
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Equal(3, results.Count);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task FetchAsync_Pagination_Respects_MaxPages()
+    {
+        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var handler = new ScriptedHandler(full, full);
+        using var http = new HttpClient(handler);
+        var cfg = PaginatedGet() with
+        {
+            Pagination = new PaginationConfig(Param: "page", Start: 1, Step: 1, MaxPages: 2),
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task FetchAsync_Pagination_Post_Injects_Into_Body_Not_Query()
+    {
+        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var empty = """{"jobs":[]}""";
+        var handler = new ScriptedHandler(full, empty);
+        using var http = new HttpClient(handler);
+        var cfg = JoobleLike() with
+        {
+            Pagination = new PaginationConfig(Param: "page", Start: 1, Step: 1, MaxPages: 10),
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        await adapter.FetchAsync();
+
+        Assert.Equal(2, handler.Requests.Count);
+        var body0 = JsonDocument.Parse(handler.RequestBodies[0]!);
+        Assert.Equal(1, body0.RootElement.GetProperty("page").GetInt32());
+        var body1 = JsonDocument.Parse(handler.RequestBodies[1]!);
+        Assert.Equal(2, body1.RootElement.GetProperty("page").GetInt32());
+        Assert.DoesNotContain("page=", handler.Requests[0].RequestUri!.ToString());
+    }
+
     private sealed class StubHandler(string body, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
@@ -318,6 +417,35 @@ public sealed class ApiAdapterTests
             return new HttpResponseMessage(status)
             {
                 Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
+            };
+        }
+    }
+
+    private sealed class ScriptedHandler : HttpMessageHandler
+    {
+        private readonly Queue<string> _responses;
+        public List<HttpRequestMessage> Requests { get; } = [];
+        public List<string?> RequestBodies { get; } = [];
+
+        public ScriptedHandler(params string[] responses)
+        {
+            _responses = new Queue<string>(responses);
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            RequestBodies.Add(request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken));
+            if (!_responses.TryDequeue(out var body))
+            {
+                throw new InvalidOperationException(
+                    $"ScriptedHandler ran out of canned responses after {Requests.Count} call(s)");
+            }
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
         }
     }

@@ -12,6 +12,18 @@ _(none)_
 
 ## Completed (recent)
 
+- **`ApiAdapter` pagination (R-027).** New `pagination:` config block
+  (`param`, `start`, `step`, optional `size_param` + `size`,
+  `max_pages` safety cap) loops requests until an empty page, a
+  partial page (`count < size`), or `max_pages` is reached. Pagination
+  param routes into `body_template` for POST providers and
+  `query_params` for GET. `ApiAdapter.FetchAsync` refactored to call a
+  per-page helper with a one-shot `RenderEndpointTemplate` upstream
+  (so `{api_key}` substitutions happen once, not per page). New
+  `PaginationConfig` record. The shipped `careerjet-dk` and `jooble`
+  stubs now carry pagination blocks (page-based, 1-indexed,
+  `max_pages: 5` capping at 500 / 250 jobs respectively). Six new
+  tests (4 adapter + 2 loader); 129 total green.
 - **`ApiAdapter.RenderTemplate` warns on unknown keys.** A
   `url_template: "https://example.com/jobs/{Id}"` mapping against an
   item that doesn't carry `Id` used to silently substitute an empty
@@ -157,8 +169,7 @@ _(none)_
 
 These pre-date the restructure. Still valid; will fold into the GUI work where they touch the same code paths.
 
-- **ApiAdapter pagination.** `ApiAdapter.FetchAsync` does a single GET. Add a `pagination:` block to `PortalConfig` (`offset_param`, `page_size`, `max_pages`) and loop with a safety cap.
-- **Rate limiting.** `PortalConfig.RateLimitRps` is parsed but not honoured. Worth wiring once pagination lands.
+- **Rate limiting.** `PortalConfig.RateLimitRps` is parsed but not honoured.
 - **CSV quoted-newline support.** `ManualAdapter.ReadCsvFile` uses `StreamReader.ReadLine()`, which splits inside quoted fields that span lines. Upgrade to a stream-based parser.
 - **CancellationToken plumbing.** Adapters don't accept a CT yet — needs threading once the search handler is the orchestrator.
 - **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
