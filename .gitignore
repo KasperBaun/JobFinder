@@ -26,5 +26,14 @@ src/config/portals.yml
 src/Jobmatch.Gui/Client/node_modules/
 src/Jobmatch.Gui/Client/dist/
 
+# Root tooling — npm script wrapper
+node_modules/
+
+# Local NuGet output from `npm run package`
+pkg/
+
+# Scratch
+.tmp/
+
 # Playwright browsers
 .playwright/

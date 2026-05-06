@@ -18,7 +18,7 @@ public static class GuiServer
 {
     public static async Task RunAsync(Jobmatch.UserContext ctx)
     {
-        var port = FindAvailablePort();
+        var port = ResolvePort();
         var url = $"http://127.0.0.1:{port}";
         var cts = new CancellationTokenSource();
 
@@ -130,11 +130,41 @@ public static class GuiServer
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine($"\n  jobfinder GUI → {url}");
         Console.ResetColor();
-        Console.WriteLine("  Opening browser...\n");
 
-        OpenBrowser(url);
+        if (ShouldOpenBrowser())
+        {
+            Console.WriteLine("  Opening browser...\n");
+            OpenBrowser(url);
+        }
+        else
+        {
+            Console.WriteLine("  Browser launch suppressed (JOBFINDER_NO_BROWSER).\n");
+        }
 
         await ((IHost)app).RunAsync(cts.Token);
+    }
+
+    /// <summary>
+    /// Picks the listen port. Honours <c>JOBFINDER_PORT</c> when set (used by `npm run dev`
+    /// so the vite dev server can proxy <c>/api</c> to a stable address); otherwise grabs an
+    /// ephemeral free port so installed-tool launches never collide.
+    /// </summary>
+    private static int ResolvePort()
+    {
+        var env = Environment.GetEnvironmentVariable("JOBFINDER_PORT");
+        if (!string.IsNullOrWhiteSpace(env) &&
+            int.TryParse(env, out var fixedPort) &&
+            fixedPort > 0 && fixedPort < 65536)
+        {
+            return fixedPort;
+        }
+        return FindAvailablePort();
+    }
+
+    private static bool ShouldOpenBrowser()
+    {
+        var v = Environment.GetEnvironmentVariable("JOBFINDER_NO_BROWSER");
+        return string.IsNullOrEmpty(v) || v == "0" || v.Equals("false", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int FindAvailablePort()

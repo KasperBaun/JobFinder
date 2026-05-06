@@ -1,0 +1,19 @@
+{
+  "name": "jobfinder",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first job aggregator. Top-level convenience scripts that wrap dotnet + npm.",
+  "scripts": {
+    "build": "dotnet build src/Jobmatch.slnx -c Release -p:BuildGui=true",
+    "build:debug": "dotnet build src/Jobmatch.slnx -c Debug -p:BuildGui=true",
+    "dev": "node scripts/dev.mjs",
+    "dev:bundled": "dotnet watch --project src/Jobmatch.Gui run -- -p:BuildGui=true",
+    "test": "dotnet test src/Jobmatch.slnx --nologo",
+    "test:client": "npm --prefix src/Jobmatch.Gui/Client run build",
+    "package": "node scripts/package.mjs",
+    "install:tool": "node scripts/install-tool.mjs",
+    "uninstall:tool": "node scripts/uninstall-tool.mjs",
+    "refresh": "node scripts/refresh.mjs",
+    "clean": "node scripts/clean.mjs"
+  }
+}
