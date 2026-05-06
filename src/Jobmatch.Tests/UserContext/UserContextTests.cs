@@ -93,18 +93,16 @@ public sealed class UserContextTests : IDisposable
     [Fact]
     public void Resolve_FirstRun_Creates_RootDir_And_Seeds_Examples()
     {
-        // Stage example files inside AppContext.BaseDirectory/config/ so seeding has something to copy.
+        // Stage the skillset example file inside AppContext.BaseDirectory/config/ so seeding has
+        // something to copy. portals.example.yml is no longer seeded — the catalog is bundled.
         var exampleConfigDir = Path.Combine(AppContext.BaseDirectory, "config");
         Directory.CreateDirectory(exampleConfigDir);
 
         var skillsetExample = Path.Combine(exampleConfigDir, "skillset.example.md");
-        var portalsExample = Path.Combine(exampleConfigDir, "portals.example.yml");
 
-        // Files should already exist via Jobmatch.csproj content-copy; if not, materialise them.
+        // File should already exist via Jobmatch.csproj content-copy; if not, materialise it.
         if (!File.Exists(skillsetExample))
             File.WriteAllText(skillsetExample, "# example skillset\n");
-        if (!File.Exists(portalsExample))
-            File.WriteAllText(portalsExample, "portals: []\n");
 
         var ctx = JobmatchUserContext.Resolve(
             emailOverride: "newcomer@example.com",
@@ -113,7 +111,7 @@ public sealed class UserContextTests : IDisposable
 
         Assert.True(Directory.Exists(ctx.RootDir));
         Assert.True(File.Exists(ctx.SkillsetPath));
-        Assert.True(File.Exists(ctx.PortalsPath));
+        Assert.False(File.Exists(ctx.PortalsPath), "portals.yml must not be seeded — catalog is now bundled");
         Assert.True(Directory.Exists(ctx.ImportsDir));
         Assert.True(Directory.Exists(ctx.RawDir));
         Assert.True(Directory.Exists(ctx.HistoryDir));

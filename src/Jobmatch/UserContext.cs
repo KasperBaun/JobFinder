@@ -4,8 +4,8 @@ namespace Jobmatch;
 
 /// <summary>
 /// Resolves the active user (by email) and the on-disk paths derived from <c>data/&lt;email&gt;/</c>.
-/// On first run for a user, seeds the user's data directory with example skillset and portals
-/// templates copied from <c>{AppContext.BaseDirectory}/config/</c>.
+/// On first run for a user, seeds the user's data directory with an example skillset template
+/// copied from <c>{AppContext.BaseDirectory}/config/</c>.
 /// </summary>
 public sealed class UserContext
 {
@@ -23,6 +23,7 @@ public sealed class UserContext
     public required string HistoryDir { get; init; }
     public required string MarksPath { get; init; }
     public required string ExamplesDir { get; init; }
+    public required string ProviderStatePath { get; init; }
 
     /// <summary>
     /// Resolves the active <see cref="UserContext"/> by determining the email, building the on-disk
@@ -87,6 +88,7 @@ public sealed class UserContext
             HistoryDir = historyDir,
             MarksPath = Path.Combine(rootDir, "marks.json"),
             ExamplesDir = examplesDir,
+            ProviderStatePath = Path.Combine(rootDir, "provider-state.json"),
         };
     }
 
@@ -153,34 +155,11 @@ public sealed class UserContext
     {
         var examplesDir = Path.Combine(AppContext.BaseDirectory, "config");
         var skillsetExample = Path.Combine(examplesDir, "skillset.example.md");
-        var portalsExample = Path.Combine(examplesDir, "portals.example.yml");
-
-        var seededSkillset = false;
-        var seededPortals = false;
 
         if (File.Exists(skillsetExample))
         {
             File.Copy(skillsetExample, Path.Combine(rootDir, "skillset.md"), overwrite: false);
-            seededSkillset = true;
-        }
-
-        if (File.Exists(portalsExample))
-        {
-            File.Copy(portalsExample, Path.Combine(rootDir, "portals.yml"), overwrite: false);
-            seededPortals = true;
-        }
-
-        if (seededSkillset && seededPortals)
-        {
-            Console.WriteLine($"[first-run] seeded {rootDir}/skillset.md and portals.yml from examples");
-        }
-        else if (seededSkillset)
-        {
             Console.WriteLine($"[first-run] seeded {rootDir}/skillset.md from examples");
-        }
-        else if (seededPortals)
-        {
-            Console.WriteLine($"[first-run] seeded {rootDir}/portals.yml from examples");
         }
     }
 }

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Jobmatch.Configuration;
+using Jobmatch.Models;
 using Jobmatch.Search;
 using JobmatchUserContext = Jobmatch.UserContext;
 
@@ -77,15 +79,17 @@ public sealed class SearchServiceTests : IDisposable
         require_primary_stack_hit: false
         """;
 
-    private JobmatchUserContext CreateContext(string email, string portalsYaml, string? rankingYaml = null)
+    private (JobmatchUserContext Ctx, IReadOnlyList<PortalConfig> Portals) CreateContext(
+        string email, string portalsYaml, string? rankingYaml = null)
     {
         var ctx = JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
         File.WriteAllText(ctx.SkillsetPath, MinimalSkillset);
-        File.WriteAllText(ctx.PortalsPath, portalsYaml);
         // Always use a local ranking.yml so we don't depend on AppContext.BaseDirectory being writable.
         File.WriteAllText(Path.Combine(ctx.RootDir, "ranking.yml"), rankingYaml ?? MinimalRanking);
         // Re-resolve so RankingPath now points at the user-local file.
-        return JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
+        ctx = JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
+        var portals = PortalConfigLoader.Parse(portalsYaml);
+        return (ctx, portals);
     }
 
     private static async Task<List<SearchProgressEvent>> Drain(IAsyncEnumerable<SearchProgressEvent> stream)
@@ -105,10 +109,10 @@ public sealed class SearchServiceTests : IDisposable
                 enabled: false
                 endpoint: https://job.jobnet.dk/CV/FindWork/Search
             """;
-        var ctx = CreateContext("empty@example.com", portals);
+        var (ctx, portalList) = CreateContext("empty@example.com", portals);
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.Equal(4, events.Count);
         var started = Assert.IsType<StartedEvent>(events[0]);
@@ -132,7 +136,7 @@ public sealed class SearchServiceTests : IDisposable
                 type: manual
                 enabled: true
             """;
-        var ctx = CreateContext("manual@example.com", portals);
+        var (ctx, portalList) = CreateContext("manual@example.com", portals);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-2026-04-20.json"),
             """
             [
@@ -148,7 +152,7 @@ public sealed class SearchServiceTests : IDisposable
             """);
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.IsType<StartedEvent>(events[0]);
         var running = Assert.IsType<ProviderRunningEvent>(events[1]);
@@ -189,7 +193,7 @@ public sealed class SearchServiceTests : IDisposable
                   title: "title"
                   url_template: "http://x/{id}"
             """;
-        var ctx = CreateContext("mixed@example.com", portals);
+        var (ctx, portalList) = CreateContext("mixed@example.com", portals);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-x.json"),
             """
             [
@@ -205,7 +209,7 @@ public sealed class SearchServiceTests : IDisposable
             """);
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         var started = Assert.IsType<StartedEvent>(events[0]);
         Assert.Equal(2, started.Total);
@@ -228,7 +232,7 @@ public sealed class SearchServiceTests : IDisposable
                 type: manual
                 enabled: true
             """;
-        var ctx = CreateContext("history@example.com", portals);
+        var (ctx, portalList) = CreateContext("history@example.com", portals);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
             """
             [
@@ -237,7 +241,7 @@ public sealed class SearchServiceTests : IDisposable
             """);
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
         var historyFile = Path.Combine(ctx.HistoryDir, $"{complete.RunId}.json");
@@ -259,7 +263,7 @@ public sealed class SearchServiceTests : IDisposable
                 type: manual
                 enabled: true
             """;
-        var ctx = CreateContext("marks-untouched@example.com", portals);
+        var (ctx, portalList) = CreateContext("marks-untouched@example.com", portals);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
             """
             [
@@ -268,7 +272,7 @@ public sealed class SearchServiceTests : IDisposable
             """);
 
         var service = new SearchService(ctx);
-        await Drain(service.RunAsync(new SearchRequest()));
+        await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.False(File.Exists(ctx.MarksPath), "search should not create marks.json");
     }
@@ -329,7 +333,7 @@ public sealed class SearchServiceTests : IDisposable
                 type: manual
                 enabled: true
             """;
-        var ctx = CreateContext("transparency@example.com", portals, rankingYaml: ranking);
+        var (ctx, portalList) = CreateContext("transparency@example.com", portals, rankingYaml: ranking);
         File.WriteAllText(ctx.SkillsetPath, skillset);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
             """
@@ -362,7 +366,7 @@ public sealed class SearchServiceTests : IDisposable
             """);
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
         var historyJson = File.ReadAllText(Path.Combine(ctx.HistoryDir, $"{complete.RunId}.json"));
@@ -422,7 +426,7 @@ public sealed class SearchServiceTests : IDisposable
                 type: manual
                 enabled: true
             """;
-        var ctx = CreateContext("beyond@example.com", portals, rankingYaml: ranking);
+        var (ctx, portalList) = CreateContext("beyond@example.com", portals, rankingYaml: ranking);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
             """
             [
@@ -432,7 +436,7 @@ public sealed class SearchServiceTests : IDisposable
             """);
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
         var detail = JsonSerializer.Deserialize<RunDetail>(
@@ -463,14 +467,14 @@ public sealed class SearchServiceTests : IDisposable
                 type: manual
                 enabled: true
             """;
-        var ctx = CreateContext("filter@example.com", portals);
+        var (ctx, portalList) = CreateContext("filter@example.com", portals);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
             """[ { "title": "X", "url": "https://x.com/1" } ]""");
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "other-1.json"),
             """[ { "title": "Y", "url": "https://y.com/1" } ]""");
 
         var service = new SearchService(ctx);
-        var events = await Drain(service.RunAsync(new SearchRequest(Providers: ["mine"])));
+        var events = await Drain(service.RunAsync(new SearchRequest(Providers: ["mine"]), portalList));
 
         var started = Assert.IsType<StartedEvent>(events[0]);
         Assert.Equal(1, started.Total);
