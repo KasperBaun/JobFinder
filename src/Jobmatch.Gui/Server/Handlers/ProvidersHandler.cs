@@ -52,11 +52,8 @@ public static class ProvidersHandler
             lastByProvider.TryGetValue(match.Name, out var last);
             var recent = LoadRecentRuns(ctx.HistoryDir, match.Name, take: 5);
 
-            var enabled = match.Enabled && !state.Disabled.Contains(match.Id);
-            var hasSecret = match.RequiresSecret is not null
-                && state.Secrets.TryGetValue(match.Id, out var secrets)
-                && secrets.TryGetValue(match.RequiresSecret, out var v)
-                && !string.IsNullOrEmpty(v);
+            var enabled = ProviderStateMerger.IsUserEnabled(match, state);
+            var hasSecret = ProviderStateMerger.HasSecretValue(match, state);
 
             return Results.Ok(new ProviderDetail(
                 Id: match.Id,
@@ -207,11 +204,8 @@ public static class ProvidersHandler
         ProviderState state,
         IReadOnlyDictionary<string, LastFetch> lastByProvider)
     {
-        var enabled = catalogPortal.Enabled && !state.Disabled.Contains(catalogPortal.Id);
-        var hasSecret = catalogPortal.RequiresSecret is not null
-            && state.Secrets.TryGetValue(catalogPortal.Id, out var secrets)
-            && secrets.TryGetValue(catalogPortal.RequiresSecret, out var v)
-            && !string.IsNullOrEmpty(v);
+        var enabled = ProviderStateMerger.IsUserEnabled(catalogPortal, state);
+        var hasSecret = ProviderStateMerger.HasSecretValue(catalogPortal, state);
         lastByProvider.TryGetValue(catalogPortal.Name, out var last);
         return new ProviderSummary(
             Id: catalogPortal.Id,
