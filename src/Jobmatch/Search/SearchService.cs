@@ -237,7 +237,9 @@ public sealed class SearchService
         PostedAt: m.Listing.PostedAt,
         Portal: m.Listing.Portal,
         Score: m.Score,
-        Breakdown: m.Breakdown);
+        Breakdown: m.Breakdown,
+        PrimaryStackHits: m.Reasoning.PrimaryStackHits,
+        SecondaryStackHits: m.Reasoning.SecondaryStackHits);
 
     private static DroppedEntry BuildDroppedEntry(Match m, string reason, string? context) => new(
         Id: m.Listing.Id,

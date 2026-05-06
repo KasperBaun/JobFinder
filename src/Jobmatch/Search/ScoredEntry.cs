@@ -16,4 +16,6 @@ public sealed record ScoredEntry(
     DateTimeOffset? PostedAt,
     string Portal,
     double Score,
-    ScoreBreakdown Breakdown);
+    ScoreBreakdown Breakdown,
+    IReadOnlyList<string> PrimaryStackHits,
+    IReadOnlyList<string> SecondaryStackHits);

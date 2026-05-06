@@ -450,6 +450,43 @@ public sealed class SearchServiceTests : IDisposable
         Assert.Contains("rank 2 of 2", beyond[0].Context);
     }
 
+    [Fact]
+    public async Task History_ScoredEntries_CarryStackHits()
+    {
+        const string portals = """
+            portals:
+              - name: stack-test
+                type: manual
+                enabled: true
+            """;
+        var (ctx, portalList) = CreateContext("stack-hits@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "stack-test-1.json"),
+            """
+            [
+              {
+                "title": "Senior Python Engineer",
+                "company": "Acme",
+                "location": "Remote",
+                "url": "https://acme.com/jobs/1",
+                "description": "We use Python and Kubernetes",
+                "posted_at": "2026-05-01T09:00:00Z"
+              }
+            ]
+            """);
+
+        var svc = new SearchService(ctx);
+        var events = await Drain(svc.RunAsync(new SearchRequest(), portalList));
+        var complete = Assert.IsType<CompleteEvent>(events[^1]);
+
+        var historyFile = Path.Combine(ctx.HistoryDir, $"{complete.RunId}.json");
+        using var doc = JsonDocument.Parse(File.ReadAllText(historyFile));
+        var scored = doc.RootElement.GetProperty("scored")[0];
+        var primary = scored.GetProperty("primaryStackHits").EnumerateArray().Select(e => e.GetString()).ToArray();
+        var secondary = scored.GetProperty("secondaryStackHits").EnumerateArray().Select(e => e.GetString()).ToArray();
+        Assert.Contains("Python", primary);
+        Assert.Contains("Kubernetes", secondary);
+    }
+
     private static readonly JsonSerializerOptions HistoryReadOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
