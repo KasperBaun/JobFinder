@@ -20,11 +20,17 @@ public static class Ranker
         foreach (var listing in listings)
         {
             var corpus = $"{listing.Title}\n{listing.Description}";
+            // Disqualifiers match title + company only — description matching produced too
+            // many false positives ("Lead a team of junior-to-senior engineers" zeroed real
+            // senior roles; "no relocation required" matched the disqualifier "relocation
+            // required"). Title catches role-intent terms (Junior, Intern, Trainee); company
+            // catches employer/marketplace blacklists (Lemon.io). See R-041.
+            var disqualifierCorpus = $"{listing.Title}\n{listing.Company ?? string.Empty}";
 
             var primaryHits = HitsOf(primaryRegexes, corpus);
             var secondaryHits = HitsOf(secondaryRegexes, corpus);
             var domainHits = HitsOf(domainRegexes, corpus);
-            var disqualifierHits = HitsOf(disqualifierRegexes, corpus);
+            var disqualifierHits = HitsOf(disqualifierRegexes, disqualifierCorpus);
 
             var primaryFraction = Fraction(primaryHits.Count, skillset.PrimaryStack.Count);
             var secondaryFraction = Fraction(secondaryHits.Count, skillset.SecondaryStack.Count);

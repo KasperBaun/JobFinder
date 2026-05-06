@@ -39,7 +39,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## Ranking
 
 - **R-040** The system should rank listings using user-controlled weights across primary stack, secondary stack, seniority, location/remote, domain, and freshness.
-- **R-041** The system should let a user declare deal-breaker keywords that zero a listing's score.
+- **R-041** The system should let a user declare deal-breaker keywords that match the listing's title or company name (description excluded — too many false positives like "junior-to-senior team" zeroing real senior roles) and zero its score on hit.
 - **R-042** The system should explain every ranked match: which signals fired, which didn't, and a one-line note — never invented reasoning.
 - **R-043** The system should never invent a positive signal; when a signal can't be evaluated (missing field), it should say so.
 - **R-044** The system should record a per-component score breakdown (weighted contribution of primary stack, secondary stack, seniority, location/remote, domain, freshness, and disqualifier penalty) for every ranked listing.

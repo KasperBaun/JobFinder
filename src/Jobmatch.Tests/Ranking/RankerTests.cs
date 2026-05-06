@@ -87,8 +87,8 @@ public sealed class RankerTests
     public void Rank_Disqualifier_Hit_Zeroes_Score()
     {
         var listing = MakeListing(
-            "Senior .NET Engineer",
-            "We need C#, .NET, Azure — this is an unpaid internship.",
+            "Senior .NET Engineer — unpaid internship",
+            "We need C#, .NET, Azure.",
             remote: RemoteMode.Remote,
             postedAt: DateTimeOffset.UtcNow);
 
@@ -96,6 +96,66 @@ public sealed class RankerTests
         Assert.Single(matches);
         Assert.Equal(0.0, matches[0].Score);
         Assert.Contains("unpaid", matches[0].Reasoning.DisqualifierHits);
+    }
+
+    [Fact]
+    public void Rank_Disqualifier_In_Description_Does_Not_Fire()
+    {
+        // R-041 scope: title + company only. Senior listings often mention
+        // "junior-to-senior team" or "we mentor juniors" in description —
+        // those must not zero a senior role just because the user
+        // disqualified "junior" (which is a seniority filter, not a
+        // company-culture filter).
+        var listing = MakeListing(
+            "Senior Software Engineer",
+            "You'll lead a team of junior-to-senior engineers and mentor juniors. C# .NET Azure SQL Server.",
+            location: "Copenhagen",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow);
+        var skillset = MikkelPersona() with { Disqualifiers = ["junior", "intern"] };
+
+        var matches = Ranker.Rank([listing], skillset, RankingCfg(minScore: 0.0));
+
+        Assert.Single(matches);
+        Assert.True(matches[0].Score > 0, $"description-only disqualifier word must not fire; got score={matches[0].Score:0.000}");
+        Assert.Empty(matches[0].Reasoning.DisqualifierHits);
+    }
+
+    [Fact]
+    public void Rank_Disqualifier_In_Title_Fires()
+    {
+        var listing = MakeListing(
+            "Junior Software Engineer",
+            "C# .NET Azure SQL Server.",
+            remote: RemoteMode.Remote,
+            postedAt: DateTimeOffset.UtcNow);
+        var skillset = MikkelPersona() with { Disqualifiers = ["junior"] };
+
+        var matches = Ranker.Rank([listing], skillset, RankingCfg(minScore: 0.0));
+
+        Assert.Single(matches);
+        Assert.Equal(0.0, matches[0].Score);
+        Assert.Contains("junior", matches[0].Reasoning.DisqualifierHits);
+    }
+
+    [Fact]
+    public void Rank_Disqualifier_In_Company_Fires()
+    {
+        // Users blacklist specific employers / agencies via the company field
+        // (e.g. Lemon.io — a freelance marketplace whose listings namedrop
+        // every keyword and pollute the shortlist).
+        var listing = MakeListing(
+            "Senior Engineer",
+            "C# .NET Azure SQL Server.",
+            remote: RemoteMode.Remote,
+            postedAt: DateTimeOffset.UtcNow) with { Company = "Lemon.io" };
+        var skillset = MikkelPersona() with { Disqualifiers = ["Lemon.io"] };
+
+        var matches = Ranker.Rank([listing], skillset, RankingCfg(minScore: 0.0));
+
+        Assert.Single(matches);
+        Assert.Equal(0.0, matches[0].Score);
+        Assert.Contains("Lemon.io", matches[0].Reasoning.DisqualifierHits);
     }
 
     [Fact]
@@ -315,8 +375,8 @@ public sealed class RankerTests
     [Fact]
     public void Score_Disqualified_Listing_Retains_DisqualifierHits()
     {
-        var listing = MakeListing("Senior .NET Engineer",
-            "C# .NET Azure SQL Server unpaid internship.",
+        var listing = MakeListing("Senior .NET Engineer (unpaid internship)",
+            "C# .NET Azure SQL Server.",
             remote: RemoteMode.Remote);
         var scored = Ranker.Score([listing], MikkelPersona(), RankingCfg());
         Assert.Single(scored);
@@ -598,8 +658,8 @@ public sealed class RankerTests
     public void ScoreBreakdown_DisqualifierPenalty_Is_Negative_When_Triggered()
     {
         var listing = MakeListing(
-            "Senior .NET Engineer",
-            "We use C#, .NET, Azure. This is unpaid.",
+            "Senior .NET Engineer (unpaid)",
+            "We use C#, .NET, Azure.",
             location: "Copenhagen, Denmark",
             remote: RemoteMode.Hybrid,
             postedAt: DateTimeOffset.UtcNow);
