@@ -6,23 +6,24 @@ using Jobmatch.Gui.Server.Models;
 using Jobmatch.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using YamlDotNet.Serialization;
 
 namespace Jobmatch.Gui.Server.Handlers;
 
 public static class ProvidersHandler
 {
-    private static readonly object FileLock = new();
-    private static readonly IDeserializer Deserializer = new DeserializerBuilder().Build();
-    private static readonly ISerializer Serializer = new SerializerBuilder().Build();
+    private static IReadOnlyList<PortalConfig> LoadMerged(Jobmatch.UserContext ctx)
+    {
+        var catalog = PortalCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "portals.json"));
+        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        return ProviderStateMerger.Merge(catalog, state);
+    }
 
     public static IResult GetList(Jobmatch.UserContext ctx)
     {
         try
         {
-            var portals = PortalConfigLoader.Load(ctx.PortalsPath);
+            var portals = LoadMerged(ctx);
             var lastByProvider = LoadLastFetchByProvider(ctx.HistoryDir);
-
             var summaries = portals.Select(p => MakeSummary(p, lastByProvider)).ToList();
             return Results.Ok(new ProvidersResponse(summaries));
         }
@@ -36,7 +37,7 @@ public static class ProvidersHandler
     {
         try
         {
-            var portals = PortalConfigLoader.Load(ctx.PortalsPath);
+            var portals = LoadMerged(ctx);
             var match = portals.FirstOrDefault(p => p.Id == id);
             if (match is null) return Results.NotFound();
 
@@ -62,65 +63,25 @@ public static class ProvidersHandler
         }
     }
 
-    public static IResult Create(ProviderUpsert? req, Jobmatch.UserContext ctx)
-    {
-        if (req is null) return Results.BadRequest(new SaveResponse(false, "request body is required"));
-
-        try
-        {
-            int newId = 0;
-            SaveMutated(ctx, entries =>
-            {
-                var existingIds = entries.OfType<IDictionary<object, object?>>()
-                    .Select(d => d.TryGetValue("id", out var v) && int.TryParse(v?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var i) ? i : 0)
-                    .DefaultIfEmpty(0)
-                    .Max();
-                newId = existingIds + 1;
-
-                var node = new Dictionary<object, object?>();
-                ApplyUpsert(node, req, newId);
-                entries.Add(node);
-            });
-
-            return Results.Ok(new CreateResponse(true, newId));
-        }
-        catch (ConfigException ex)
-        {
-            return Results.Ok(new CreateResponse(false, 0, ex.Message));
-        }
-        catch (Exception ex)
-        {
-            GuiLog.Error($"POST /api/providers — {ex.GetType().Name}: {ex.Message}");
-            return Results.Ok(new CreateResponse(false, 0, ex.Message));
-        }
-    }
-
+    // Only req.Enabled is read; all other fields are ignored — the catalog is read-only.
     public static IResult Update(int id, ProviderUpsert? req, Jobmatch.UserContext ctx)
     {
         if (req is null) return Results.BadRequest(new SaveResponse(false, "request body is required"));
 
         try
         {
-            var found = false;
-            SaveMutated(ctx, entries =>
-            {
-                for (var i = 0; i < entries.Count; i++)
-                {
-                    if (entries[i] is not IDictionary<object, object?> map) continue;
-                    if (!TryGetId(map, out var entryId) || entryId != id) continue;
+            var catalog = PortalCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "portals.json"));
+            var portal = catalog.FirstOrDefault(p => p.Id == id);
+            if (portal is null) return Results.NotFound();
 
-                    ApplyUpsert(map, req, id);
-                    found = true;
-                    return;
-                }
-            });
+            var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+            var disabled = state.Disabled.ToHashSet();
+            if (req.Enabled ?? true) disabled.Remove(id);
+            else disabled.Add(id);
 
-            if (!found) return Results.NotFound();
+            var nextState = new ProviderState(disabled.OrderBy(i => i).ToArray(), state.Secrets);
+            ProviderStateLoader.Save(ctx.ProviderStatePath, nextState);
             return Results.Ok(new SaveResponse(true));
-        }
-        catch (ConfigException ex)
-        {
-            return Results.Ok(new SaveResponse(false, ex.Message));
         }
         catch (Exception ex)
         {
@@ -129,38 +90,11 @@ public static class ProvidersHandler
         }
     }
 
-    public static IResult Delete(int id, Jobmatch.UserContext ctx)
-    {
-        try
-        {
-            var removed = false;
-            SaveMutated(ctx, entries =>
-            {
-                for (var i = 0; i < entries.Count; i++)
-                {
-                    if (entries[i] is not IDictionary<object, object?> map) continue;
-                    if (!TryGetId(map, out var entryId) || entryId != id) continue;
-                    entries.RemoveAt(i);
-                    removed = true;
-                    return;
-                }
-            });
-
-            if (!removed) return Results.NotFound();
-            return Results.Ok(new SaveResponse(true));
-        }
-        catch (Exception ex)
-        {
-            GuiLog.Error($"DELETE /api/providers/{id} — {ex.GetType().Name}: {ex.Message}");
-            return Results.Ok(new SaveResponse(false, ex.Message));
-        }
-    }
-
     public static async Task<IResult> Test(int id, Jobmatch.UserContext ctx, CancellationToken ct)
     {
         try
         {
-            var portals = PortalConfigLoader.Load(ctx.PortalsPath);
+            var portals = LoadMerged(ctx);
             var portal = portals.FirstOrDefault(p => p.Id == id);
             if (portal is null) return Results.NotFound();
 
@@ -227,90 +161,6 @@ public static class ProvidersHandler
             Notes: p.Notes,
             LastFetchedAt: last?.FetchedAt,
             LastFetchCount: last?.FetchedCount);
-    }
-
-    private static void SaveMutated(Jobmatch.UserContext ctx, Action<List<object?>> mutate)
-    {
-        lock (FileLock)
-        {
-            var yaml = File.Exists(ctx.PortalsPath)
-                ? File.ReadAllText(ctx.PortalsPath)
-                : "portals: []\n";
-
-            Dictionary<object, object?>? root = null;
-            if (!string.IsNullOrWhiteSpace(yaml))
-            {
-                try { root = Deserializer.Deserialize<Dictionary<object, object?>>(yaml); }
-                catch { root = null; }
-            }
-            root ??= new Dictionary<object, object?>();
-
-            if (!root.TryGetValue("portals", out var entriesObj) || entriesObj is not List<object?> entries)
-            {
-                entries = entriesObj is IEnumerable<object?> seq ? new List<object?>(seq) : new List<object?>();
-                root["portals"] = entries;
-            }
-
-            mutate(entries);
-
-            var output = Serializer.Serialize(root);
-            var parsed = PortalConfigLoader.Parse(output);
-            ProviderListValidator.AssertNoDuplicates(parsed);
-
-            AtomicWriteText(ctx.PortalsPath, output);
-        }
-    }
-
-    private static void ApplyUpsert(IDictionary<object, object?> node, ProviderUpsert req, int id)
-    {
-        var name = (req.Name ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(name))
-            throw new ConfigException("provider name must not be empty");
-
-        var type = (req.Type ?? string.Empty).Trim().ToLowerInvariant();
-        if (string.IsNullOrEmpty(type) || !Enum.TryParse<PortalType>(type, ignoreCase: true, out _))
-            throw new ConfigException($"provider '{name}': type must be one of [api, rss, html, manual], got '{req.Type}'");
-
-        var enabled = req.Enabled ?? true;
-        var rate = req.RateLimitRps ?? 1.0;
-        if (rate < 0) throw new ConfigException($"provider '{name}': rateLimitRps must be >= 0");
-
-        var endpoint = NullIfBlank(req.Endpoint);
-        if (endpoint is not null && !Uri.TryCreate(endpoint, UriKind.Absolute, out _))
-            throw new ConfigException($"provider '{name}': endpoint must be an absolute URL");
-
-        node["id"] = id;
-        node["name"] = name;
-        node["type"] = type;
-        node["enabled"] = enabled;
-        SetOrRemove(node, "endpoint", endpoint);
-        node["rate_limit_rps"] = rate;
-        SetOrRemove(node, "notes", NullIfBlank(req.Notes));
-    }
-
-    private static bool TryGetId(IDictionary<object, object?> map, out int id)
-    {
-        id = 0;
-        if (!map.TryGetValue("id", out var v) || v is null) return false;
-        return int.TryParse(v.ToString(), System.Globalization.CultureInfo.InvariantCulture, out id);
-    }
-
-    private static void SetOrRemove(IDictionary<object, object?> node, string key, string? value)
-    {
-        if (value is null) node.Remove(key);
-        else node[key] = value;
-    }
-
-    private static string? NullIfBlank(string? s) =>
-        string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-
-    private static void AtomicWriteText(string path, string content)
-    {
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        var temp = path + ".tmp";
-        File.WriteAllText(temp, content);
-        File.Move(temp, path, overwrite: true);
     }
 
     private sealed record LastFetch(DateTimeOffset FetchedAt, int? FetchedCount);
