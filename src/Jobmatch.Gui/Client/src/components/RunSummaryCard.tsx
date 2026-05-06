@@ -8,33 +8,48 @@ interface Props {
 export function RunSummaryCard({ run }: Props) {
   const ok = run.providers.filter(p => p.status === 'ok').length
   const failed = run.providers.filter(p => p.status === 'failed').length
+
   return (
-    <div className="run-summary-card">
-      <div className="run-summary-card__header">
-        <h2 className="run-summary-card__title">Run {run.runId}</h2>
+    <div className="run-stat-bar">
+      <div className="run-stat-bar__lead">
+        <h2 className="run-stat-bar__id">Run {run.runId}</h2>
         <time
-          className="run-summary-card__time"
+          className="run-stat-bar__time"
           title={formatAbsolute(run.startedAt)}
           dateTime={run.startedAt}
         >
           {formatRelative(run.startedAt)}
         </time>
       </div>
-      <dl className="definition-list">
-        <dt>Providers</dt>
-        <dd>{ok} ok / {failed} failed</dd>
-        <dt>Fetched</dt>
-        <dd>{run.fetchedCount}</dd>
-        <dt>After dedupe</dt>
-        <dd>{run.dedupedCount}</dd>
-        <dt>Ranked</dt>
-        <dd>{run.rankedCount}</dd>
-        <dt>Shortlist</dt>
-        <dd>{run.shortlistCount}</dd>
-        <dt>Top score</dt>
-        <dd>{run.topScore.toFixed(2)}</dd>
-        <dt>Good marks</dt>
-        <dd>{run.goodMarks} / {run.shortlistCount}</dd>
+
+      <dl className="run-stat-bar__metrics">
+        <div className={`stat${failed > 0 ? ' stat--bad' : ''}`}>
+          <dt>Providers</dt>
+          <dd>
+            <span className="stat__num">{ok}</span> ok
+            {failed > 0 && <> · <span className="stat__num">{failed}</span> failed</>}
+          </dd>
+        </div>
+        <div className="stat">
+          <dt>Fetched</dt>
+          <dd><span className="stat__num">{run.fetchedCount}</span></dd>
+        </div>
+        <div className="stat">
+          <dt>Deduped</dt>
+          <dd><span className="stat__num">{run.dedupedCount}</span></dd>
+        </div>
+        <div className="stat">
+          <dt>Shortlist</dt>
+          <dd><span className="stat__num">{run.shortlistCount}</span></dd>
+        </div>
+        <div className="stat">
+          <dt>Top score</dt>
+          <dd><span className="stat__num">{run.topScore.toFixed(2)}</span></dd>
+        </div>
+        <div className="stat">
+          <dt>Marked</dt>
+          <dd><span className="stat__num">{run.goodMarks}</span> / {run.shortlistCount}</dd>
+        </div>
       </dl>
     </div>
   )

@@ -28,6 +28,9 @@
   --c-slate-200:     #DCE3F0;
   --c-slate-100:     #E8EDF6;
 
+  /* generic border alias — used widely in components.css */
+  --c-border:        var(--c-slate-200);
+
   /* text — every reference is a navy or slate, never #000 */
   --c-text-strong:   var(--c-navy-900);
   --c-text:          var(--c-navy-700);
