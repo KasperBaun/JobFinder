@@ -12,6 +12,15 @@ _(none)_
 
 ## Completed (recent)
 
+- **`InferSeniority` now reads description as a fallback.** Title
+  remains authoritative — when the title carries a seniority keyword
+  (jr/junior/graduate/intern, sr/senior, lead/principal/staff,
+  mid/intermediate) the description is ignored. When the title is
+  silent ("Software Engineer"), the matcher scans the description
+  using the same regex set, so a listing with "We're hiring a senior
+  backend engineer..." now scores at full seniority weight instead
+  of falling to the 0.5 "not stated" half-credit. Two new tests; 123
+  total green.
 - **Country → region mapping for cross-EU remotes.** Hardcoded EU-27
   + EEA non-EU (Iceland, Norway, Liechtenstein) + Switzerland country
   list in `Ranker.LocationTier`; an EU-region user now matches a
@@ -147,4 +156,3 @@ These pre-date the restructure. Still valid; will fold into the GUI work where t
 ## Bugs deferred
 
 - `ScoreSeniority` adjacent case returns `(0.5, true)` — reasoning says "Seniority fits" for half-credit adjacent matches. Cleanest fix is a tri-state on `MatchReasoning`.
-- `InferSeniority` looks only at the title, not the description.
