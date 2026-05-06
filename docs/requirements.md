@@ -31,6 +31,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-032** The system should persist raw per-provider results so a run can be re-examined or re-ranked without re-fetching.
 - **R-033** The system should write a human-readable top-N report alongside the machine-readable ranked output.
 - **R-034** The system should let the user cap the shortlist by minimum score and by N.
+- **R-035** The system should expose, per run, every dropped listing and the explicit reason it was dropped (disqualifier match, score below threshold, beyond top-N, above max age, missing required primary stack).
 
 ## Ranking
 
@@ -38,6 +39,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-041** The system should let a user declare deal-breaker keywords that zero a listing's score.
 - **R-042** The system should explain every ranked match: which signals fired, which didn't, and a one-line note — never invented reasoning.
 - **R-043** The system should never invent a positive signal; when a signal can't be evaluated (missing field), it should say so.
+- **R-044** The system should record a per-component score breakdown (weighted contribution of primary stack, secondary stack, seniority, location/remote, domain, freshness, and disqualifier penalty) for every ranked listing.
 
 ## History & feedback
 

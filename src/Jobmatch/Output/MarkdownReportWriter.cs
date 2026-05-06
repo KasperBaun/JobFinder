@@ -64,9 +64,9 @@ public static class MarkdownReportWriter
                 sb.Append('<').Append(l.Url).Append('>').Append('\n').Append('\n');
 
                 sb.Append("| signal | score |\n| --- | --- |\n");
-                foreach (var kvp in match.Breakdown.OrderByDescending(kv => kv.Value))
+                foreach (var (label, value) in match.Breakdown.EnumerateComponents().OrderByDescending(c => c.Value))
                 {
-                    sb.Append(CultureInfo.InvariantCulture, $"| {kvp.Key} | {kvp.Value:0.00} |\n");
+                    sb.Append(CultureInfo.InvariantCulture, $"| {label} | {value:0.00} |\n");
                 }
                 sb.Append('\n');
 

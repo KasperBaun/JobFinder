@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Jobmatch.Search;
 using JobmatchUserContext = Jobmatch.UserContext;
 
@@ -271,6 +272,184 @@ public sealed class SearchServiceTests : IDisposable
 
         Assert.False(File.Exists(ctx.MarksPath), "search should not create marks.json");
     }
+
+    [Fact]
+    public async Task RunAsync_Persists_Transparency_Sections_With_Correct_Drop_Reasons()
+    {
+        // Skillset with explicit disqualifier so we can trigger that reason.
+        const string skillset = """
+            ---
+            name: Test User
+            location: Copenhagen, Denmark
+            experience_years: 5
+            target_roles:
+              - Software Engineer
+            remote_preference: remote
+            seniority: mid
+            languages:
+              - English
+            employment_types:
+              - full-time
+            ---
+
+            ## Primary stack
+            - Python
+            - TypeScript
+
+            ## Secondary stack
+            - Kubernetes
+
+            ## Domains
+
+            ## Disqualifiers
+            - unpaid
+            """;
+
+        // min_score 0.10 lets a strong match through but rejects weak hits.
+        // disqualifier_penalty 0.0 zeroes anything with a disqualifier word.
+        const string ranking = """
+            weights:
+              primary_stack: 0.6
+              secondary_stack: 0.1
+              seniority: 0.1
+              location_remote: 0.1
+              domain: 0.05
+              freshness: 0.05
+
+            disqualifier_penalty: 0.0
+            top_n: 10
+            freshness_half_life_days: 14
+            min_score_to_include: 0.25
+            require_primary_stack_hit: false
+            """;
+
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+            """;
+        var ctx = CreateContext("transparency@example.com", portals, rankingYaml: ranking);
+        File.WriteAllText(ctx.SkillsetPath, skillset);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
+            """
+            [
+              {
+                "title": "Senior Python Engineer",
+                "company": "Acme",
+                "location": "Copenhagen",
+                "url": "https://acme.com/jobs/strong",
+                "description": "Python and TypeScript stack.",
+                "posted_at": "2026-05-01T09:00:00Z"
+              },
+              {
+                "title": "Marketing Manager",
+                "company": "Brandly",
+                "location": "Copenhagen",
+                "url": "https://brandly.com/jobs/m",
+                "description": "Run our paid campaigns. No technical work.",
+                "posted_at": "2026-05-01T09:00:00Z"
+              },
+              {
+                "title": "Python Developer",
+                "company": "Volunteer Co",
+                "location": "Copenhagen",
+                "url": "https://volunteer.com/jobs/x",
+                "description": "Python stack — this is unpaid.",
+                "posted_at": "2026-05-01T09:00:00Z"
+              }
+            ]
+            """);
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var complete = Assert.IsType<CompleteEvent>(events[^1]);
+
+        var historyJson = File.ReadAllText(Path.Combine(ctx.HistoryDir, $"{complete.RunId}.json"));
+        var detail = JsonSerializer.Deserialize<RunDetail>(historyJson, HistoryReadOptions);
+
+        Assert.NotNull(detail);
+        Assert.NotNull(detail!.Raw);
+        Assert.NotNull(detail.Scored);
+        Assert.NotNull(detail.Dropped);
+
+        // Raw section: one provider with three listings.
+        Assert.Single(detail.Raw!);
+        Assert.Equal("mine", detail.Raw[0].Provider);
+        Assert.Equal(3, detail.Raw[0].Listings.Count);
+
+        // Scored section: all three deduped listings get a breakdown.
+        Assert.Equal(3, detail.Scored!.Count);
+        Assert.All(detail.Scored, s => Assert.NotNull(s.Breakdown));
+
+        // Shortlist gets the strong Python match.
+        Assert.Single(detail.Shortlist);
+        Assert.Equal("Senior Python Engineer", detail.Shortlist[0].Title);
+
+        // Dropped section: marketing role below threshold; volunteer role hit disqualifier.
+        Assert.Equal(2, detail.Dropped!.Count);
+        var droppedByReason = detail.Dropped.GroupBy(d => d.Reason).ToDictionary(g => g.Key, g => g.ToList());
+        Assert.Single(droppedByReason["disqualifier"]);
+        Assert.Equal("Python Developer", droppedByReason["disqualifier"][0].Title);
+        Assert.Single(droppedByReason["below_min_score"]);
+        Assert.Equal("Marketing Manager", droppedByReason["below_min_score"][0].Title);
+        Assert.Contains("unpaid", droppedByReason["disqualifier"][0].Context);
+    }
+
+    [Fact]
+    public async Task RunAsync_BeyondTopN_Records_Dropped_Reason()
+    {
+        // top_n=1 with two strong-scoring matches — the lower-scored one gets a beyond_top_n drop.
+        const string ranking = """
+            weights:
+              primary_stack: 0.7
+              secondary_stack: 0.1
+              seniority: 0.1
+              location_remote: 0.05
+              domain: 0.025
+              freshness: 0.025
+
+            disqualifier_penalty: 0.0
+            top_n: 1
+            freshness_half_life_days: 14
+            min_score_to_include: 0.0
+            require_primary_stack_hit: false
+            """;
+
+        const string portals = """
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+            """;
+        var ctx = CreateContext("beyond@example.com", portals, rankingYaml: ranking);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
+            """
+            [
+              { "title": "Strong Python Role", "url": "https://x.com/1", "description": "Python TypeScript.", "location": "Copenhagen" },
+              { "title": "Decent Python Role", "url": "https://x.com/2", "description": "Python.", "location": "Copenhagen" }
+            ]
+            """);
+
+        var service = new SearchService(ctx);
+        var events = await Drain(service.RunAsync(new SearchRequest()));
+        var complete = Assert.IsType<CompleteEvent>(events[^1]);
+
+        var detail = JsonSerializer.Deserialize<RunDetail>(
+            File.ReadAllText(Path.Combine(ctx.HistoryDir, $"{complete.RunId}.json")),
+            HistoryReadOptions);
+        Assert.NotNull(detail);
+
+        Assert.Single(detail!.Shortlist);
+        var beyond = detail.Dropped!.Where(d => d.Reason == "beyond_top_n").ToList();
+        Assert.Single(beyond);
+        Assert.Contains("rank 2 of 2", beyond[0].Context);
+    }
+
+    private static readonly JsonSerializerOptions HistoryReadOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 
     [Fact]
     public async Task RunAsync_Provider_Filter_Limits_Run_To_Named_Portals()

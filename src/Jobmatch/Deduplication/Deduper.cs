@@ -7,24 +7,41 @@ public static class Deduper
 {
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
 
-    public static IReadOnlyList<Listing> Deduplicate(IEnumerable<Listing> listings)
+    public static DedupeResult Deduplicate(IEnumerable<Listing> listings)
     {
-        var seenUrls = new HashSet<string>(StringComparer.Ordinal);
-        var seenTitleCompanyLocation = new HashSet<string>(StringComparer.Ordinal);
-        var result = new List<Listing>();
+        var byUrl = new Dictionary<string, string>(StringComparer.Ordinal);
+        var byTcl = new Dictionary<string, string>(StringComparer.Ordinal);
+        var mergedInto = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var deduped = new List<Listing>();
 
         foreach (var listing in listings)
         {
             var urlKey = NormaliseUrl(listing.Url);
-            if (!seenUrls.Add(urlKey)) continue;
+            if (byUrl.TryGetValue(urlKey, out var canonicalByUrl))
+            {
+                mergedInto[canonicalByUrl].Add(listing.Id);
+                continue;
+            }
 
             var tclKey = $"{Normalise(listing.Title)}|{Normalise(listing.Company ?? string.Empty)}|{Normalise(listing.Location ?? string.Empty)}";
-            if (!seenTitleCompanyLocation.Add(tclKey)) continue;
+            if (byTcl.TryGetValue(tclKey, out var canonicalByTcl))
+            {
+                mergedInto[canonicalByTcl].Add(listing.Id);
+                continue;
+            }
 
-            result.Add(listing);
+            byUrl[urlKey] = listing.Id;
+            byTcl[tclKey] = listing.Id;
+            mergedInto[listing.Id] = [];
+            deduped.Add(listing);
         }
 
-        return result;
+        var merges = mergedInto
+            .Where(kvp => kvp.Value.Count > 0)
+            .Select(kvp => new DedupeGroup(kvp.Key, kvp.Value))
+            .ToList();
+
+        return new DedupeResult(deduped, merges);
     }
 
     public static string NormaliseUrl(Uri url)

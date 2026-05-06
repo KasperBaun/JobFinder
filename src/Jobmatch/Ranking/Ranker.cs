@@ -35,22 +35,29 @@ public static class Ranker
             var freshnessScore = ScoreFreshness(listing.PostedAt, ranking.FreshnessHalfLifeDays);
 
             var w = ranking.Weights;
-            var weighted = new Dictionary<string, double>(StringComparer.Ordinal)
-            {
-                ["primary_stack"] = primaryFraction * w.PrimaryStack,
-                ["secondary_stack"] = secondaryFraction * w.SecondaryStack,
-                ["seniority"] = seniorityScore * w.Seniority,
-                ["location_remote"] = locationRemoteScore * w.LocationRemote,
-                ["domain"] = domainFraction * w.Domain,
-                ["freshness"] = freshnessScore * w.Freshness,
-            };
+            var primaryContribution = primaryFraction * w.PrimaryStack;
+            var secondaryContribution = secondaryFraction * w.SecondaryStack;
+            var seniorityContribution = seniorityScore * w.Seniority;
+            var locationContribution = locationRemoteScore * w.LocationRemote;
+            var domainContribution = domainFraction * w.Domain;
+            var freshnessContribution = freshnessScore * w.Freshness;
 
-            var score = weighted.Values.Sum();
-            if (disqualifierHits.Count > 0)
-            {
-                score *= ranking.DisqualifierPenalty;
-            }
-            score = Math.Clamp(score, 0.0, 1.0);
+            var preBenchmark = primaryContribution + secondaryContribution + seniorityContribution
+                + locationContribution + domainContribution + freshnessContribution;
+            var postPenalty = disqualifierHits.Count > 0
+                ? preBenchmark * ranking.DisqualifierPenalty
+                : preBenchmark;
+            var disqualifierDelta = postPenalty - preBenchmark;
+            var score = Math.Clamp(postPenalty, 0.0, 1.0);
+
+            var breakdown = new ScoreBreakdown(
+                PrimaryStack: primaryContribution,
+                SecondaryStack: secondaryContribution,
+                Seniority: seniorityContribution,
+                LocationRemote: locationContribution,
+                Domain: domainContribution,
+                Freshness: freshnessContribution,
+                DisqualifierPenalty: disqualifierDelta);
 
             var ageDays = AgeInDays(listing.PostedAt);
             var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, locationMatch, remoteMatch, disqualifierHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
@@ -58,7 +65,7 @@ public static class Ranker
             matches.Add(new Match(
                 Listing: listing,
                 Score: score,
-                Breakdown: weighted,
+                Breakdown: breakdown,
                 Reasoning: new MatchReasoning(
                     PrimaryStackHits: primaryHits,
                     SecondaryStackHits: secondaryHits,
