@@ -69,6 +69,37 @@ public sealed class ApiAdapterTests
     }
 
     [Fact]
+    public async Task FetchAsync_StripsHtml_Inserting_Boundary_Whitespace_Between_Adjacent_Tags()
+    {
+        // Real-world failure: thehub returns descriptions like
+        // "<p>...erfaring med</p><ul><li>TypeScript, Node.js og React</li><li>API-udvikling...</li></ul>".
+        // Without inserting whitespace at tag boundaries, the stripped text becomes
+        // "...erfaring medTypeScript, Node.js og ReactAPI-udvikling..." — and the
+        // word-boundary regex used by Ranker silently misses TypeScript / React.
+        const string payload = """
+            {
+              "JobPositionPostings": [
+                {
+                  "Id": "1",
+                  "Title": "Role",
+                  "Description": "<p>experience with</p><ul><li>TypeScript, Node.js and React</li><li>API design</li></ul>"
+                }
+              ]
+            }
+            """;
+        using var http = new HttpClient(new StubHandler(payload));
+        var adapter = new ApiAdapter(JobnetLike(), http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+        Assert.Single(results);
+        var desc = results[0].Description;
+        Assert.Contains("TypeScript", desc);
+        Assert.Contains("React", desc);
+        Assert.DoesNotContain("withTypeScript", desc, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReactAPI", desc, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task FetchAsync_Missing_Optional_Fields_Are_Null_Not_Error()
     {
         const string payload = """

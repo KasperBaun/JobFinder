@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
 
@@ -40,18 +41,34 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
         return sb.ToString();
     }
 
+    private static readonly Regex WhitespaceRun = new(@"\s+", RegexOptions.Compiled);
+
     protected static string StripHtml(string? input)
     {
         if (string.IsNullOrEmpty(input)) return string.Empty;
+        // Replace each tag with a single space so `<p>foo</p><ul><li>bar</li></ul>` becomes
+        // `foo bar`, not `foobar`. Without this the keyword regex (which uses word boundaries)
+        // misses tokens that sit at the seam between adjacent block elements.
         var sb = new StringBuilder(input.Length);
         var inside = false;
         foreach (var ch in input)
         {
-            if (ch == '<') inside = true;
-            else if (ch == '>') inside = false;
-            else if (!inside) sb.Append(ch);
+            if (ch == '<')
+            {
+                if (!inside) sb.Append(' ');
+                inside = true;
+            }
+            else if (ch == '>')
+            {
+                inside = false;
+            }
+            else if (!inside)
+            {
+                sb.Append(ch);
+            }
         }
-        return System.Net.WebUtility.HtmlDecode(sb.ToString()).Trim();
+        var decoded = System.Net.WebUtility.HtmlDecode(sb.ToString());
+        return WhitespaceRun.Replace(decoded, " ").Trim();
     }
 
     protected static RemoteMode InferRemoteMode(string text)
