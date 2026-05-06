@@ -16,6 +16,8 @@ export type ProviderSummary = {
   notes?: string
   lastFetchedAt?: string
   lastFetchCount?: number
+  requiresSecret?: string
+  hasSecret: boolean
 }
 
 export type ProvidersResponse = { providers: ProviderSummary[] }
@@ -32,14 +34,9 @@ export type ProviderDetail = ProviderSummary & {
   recentRuns: ProviderRecentRun[]
 }
 
-export type ProviderUpsert = {
-  name: string
-  type: ProviderType
-  enabled: boolean
-  endpoint?: string
-  rateLimitRps: number
-  notes?: string
-}
+export type ProviderEnabledUpdate = { enabled: boolean }
+
+export type SetSecretsRequest = { values: Record<string, string> }
 
 export type ProviderTestResult = {
   ok: boolean
@@ -179,6 +176,8 @@ export type ScoredEntry = {
   portal: string
   score: number
   breakdown: ScoreBreakdown
+  primaryStackHits: string[]
+  secondaryStackHits: string[]
 }
 
 export type DropReason =
