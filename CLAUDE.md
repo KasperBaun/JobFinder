@@ -5,10 +5,10 @@ Working notes for agents (Claude Code, sub-agents) operating in this repo.
 ## Repo shape (read this first)
 
 ```
-docs/                  prd.md, requirements.md, mwt-tool-analysis.md, tasks/, implementation-plan.md
+docs/                  prd.md, requirements.md
 src/                   ALL source, tests, configs, build infra
   Jobmatch/            class library — models, parsing, adapters, ranking, dedupe, output, verification
-  Jobmatch.Gui/        (planned) Kestrel + React 19 SPA — see docs/mwt-tool-analysis.md
+  Jobmatch.Gui/        Kestrel + React 19 SPA
   Jobmatch.Tests/      xUnit tests
   config/              committed example/default configs (skillset.example.md, portals.example.yml, ranking.yml)
   Directory.Build.props
@@ -21,10 +21,10 @@ data/                  GITIGNORED — per-user state under data/<email>/
     raw/, imports/
     all_listings.json, ranked_listings.json, top_jobs.md
     examples/                 user-curated seed listings (liked / disliked archetypes)
-    history/<run-id>.json     (planned)
-    marks.json                (planned)
+    history/<run-id>.json
+    marks.json
 README.md              business-level intro
-todo.md                ongoing/completed/backlog — references docs/tasks/
+todo.md                ongoing/completed/backlog
 global.json            SDK pin (.NET 10)
 ```
 
@@ -32,10 +32,10 @@ global.json            SDK pin (.NET 10)
 
 - **What the product is** → [`docs/prd.md`](docs/prd.md)
 - **What the system must do** → [`docs/requirements.md`](docs/requirements.md) (one-line requirements with `R-NNN` IDs)
-- **How the architecture should look** → [`docs/mwt-tool-analysis.md`](docs/mwt-tool-analysis.md) (mirrors the `mwt` GUI/Server pattern, GUI half only)
-- **What's in flight** → [`todo.md`](todo.md) and [`docs/tasks/`](docs/tasks/)
+- **What's in flight** → [`todo.md`](todo.md)
+- **How the architecture should look** → read `src/Jobmatch.Gui/Server/`. The pattern (Endpoints / Handlers / Models, centralised `Routes.cs`, SSE for long-running ops) is small enough to be self-evident from the code.
 
-When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, update `todo.md` *and* the matching task spec.
+When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, update `todo.md`.
 
 ## Code conventions
 
@@ -56,7 +56,7 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 
 - Single binary. The published assembly is `Jobmatch.Gui` and launching it starts an ephemeral Kestrel server, opens the default browser, and serves the React SPA. There is no separate CLI; headless operation is not part of v1.
 - The `Jobmatch/` library is the single backbone. The GUI handlers are the only callers.
-- The GUI follows `mwt`'s layout: `Server/Endpoints/`, `Server/Handlers/`, `Server/Models/`, centralised `Routes.cs`, `/api/ping` heartbeat, `/api/shutdown`, SSE for long-running operations, Vite + React 19 + React Query.
+- The GUI layout: `Server/Endpoints/`, `Server/Handlers/`, `Server/Models/`, centralised `Routes.cs`, `/api/ping` heartbeat, `/api/shutdown`, SSE for long-running operations, Vite + React 19 + React Query.
 
 ## Things to avoid
 
@@ -64,11 +64,11 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 - **No anti-bot bypassing.** Sites that block automation are supported only via the `manual` provider type.
 - **No background daemons or schedulers.** This is an on-demand tool.
 - **No telemetry or external state.** Everything is local.
-- **No `Store<ProjectState>` reducer pattern from `mwt`.** Jobfinder is stateless per call — sharing through the `Jobmatch/` library + DTO contracts is enough.
+- **No global state store / reducer pattern.** Jobfinder is stateless per call — sharing through the `Jobmatch/` library + DTO contracts is enough.
 - **No re-introduction of a CLI without product approval.** The CLI was removed when the GUI became the contract; revisit only with explicit user direction.
 
 ## When in doubt
 
 - Re-read [`docs/prd.md`](docs/prd.md) for principle.
 - Re-read [`docs/requirements.md`](docs/requirements.md) for the contract.
-- Re-read [`docs/mwt-tool-analysis.md`](docs/mwt-tool-analysis.md) for the architecture pattern.
+- Read `src/Jobmatch.Gui/Server/` for the architecture pattern.
