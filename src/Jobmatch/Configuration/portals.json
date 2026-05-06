@@ -1,0 +1,386 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "id": 1,
+      "name": "greenhouse-pleo",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/pleo/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Pleo"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 2,
+      "name": "greenhouse-trustpilot",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/trustpilot/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Trustpilot"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 3,
+      "name": "greenhouse-unity",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/unity3d/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Unity"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 4,
+      "name": "greenhouse-wolt",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/wolt/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Wolt"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 5,
+      "name": "greenhouse-adyen",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/adyen/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Adyen"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 6,
+      "name": "thehub",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://thehub.io/api/jobs",
+      "queryParams": {
+        "country_code": "DK",
+        "limit": 100
+      },
+      "responseMapping": {
+        "items_path": "docs",
+        "id": "id",
+        "title": "title",
+        "company": "company.name",
+        "location": "location.address",
+        "description": "description",
+        "url": "absoluteJobUrl",
+        "posted_at": "publishedAt"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 7,
+      "name": "remotive",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://remotive.com/api/remote-jobs",
+      "queryParams": {
+        "category": "software-dev"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "company": "company_name",
+        "location": "candidate_required_location",
+        "description": "description",
+        "url": "url",
+        "posted_at": "publication_date"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 8,
+      "name": "adzuna-dk",
+      "type": "api",
+      "enabled": false,
+      "endpoint": "https://api.adzuna.com/v1/api/jobs/dk/search/1",
+      "queryParams": {
+        "app_id": "YOUR_APP_ID",
+        "app_key": "YOUR_APP_KEY",
+        "what": "software",
+        "results_per_page": 50,
+        "content-type": "application/json"
+      },
+      "responseMapping": {
+        "items_path": "results",
+        "id": "id",
+        "title": "title",
+        "company": "company.display_name",
+        "location": "location.display_name",
+        "description": "description",
+        "url": "redirect_url",
+        "posted_at": "created"
+      },
+      "rateLimitRps": 1.0,
+      "notes": "Adzuna DK — general-purpose Danish job aggregator (free tier). Register at https://developer.adzuna.com to get app_id and app_key, paste them into queryParams above, then flip enabled: true. Free tier: ~250 calls/day."
+    },
+    {
+      "id": 9,
+      "name": "jobnet",
+      "type": "api",
+      "enabled": false,
+      "endpoint": "https://job.jobnet.dk/CV/FindWork/Search",
+      "queryParams": {
+        "SearchString": "software engineer",
+        "Country": "Danmark",
+        "Offset": 0,
+        "SortValue": "CreationDate"
+      },
+      "responseMapping": {
+        "items_path": "JobPositionPostings",
+        "id": "Id",
+        "title": "Title",
+        "company": "HiringOrgName",
+        "location": "WorkPlaceCity",
+        "description": "Description",
+        "url_template": "https://job.jobnet.dk/CV/FindWork/Details/{Id}",
+        "posted_at": "PostingCreated"
+      },
+      "rateLimitRps": 2.0,
+      "notes": "jobnet.dk's public-facing search no longer returns JSON for unauthenticated callers. Real machine integration against STAR requires certificate auth and a paid agreement (spoc@star.dk). Left here as a config skeleton; flip to enabled: true only if you have a working endpoint."
+    },
+    {
+      "id": 10,
+      "name": "jobindex",
+      "type": "manual",
+      "enabled": false,
+      "notes": "jobindex.dk has no public API and automation may violate its ToS. To include listings, export or copy results from the browser and drop a CSV or JSON file at data/imports/jobindex-*.csv with columns: title, company, location, url, description, posted_at."
+    },
+    {
+      "id": 11,
+      "name": "linkedin",
+      "type": "manual",
+      "enabled": false,
+      "notes": "LinkedIn requires a logged-in session. Use job alerts or a manual export."
+    },
+    {
+      "id": 12,
+      "name": "generic-rss-example",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://example.com/jobs.rss"
+    },
+    {
+      "id": 13,
+      "name": "html-example",
+      "type": "html",
+      "enabled": false,
+      "endpoint": "https://example.com/careers",
+      "html": {
+        "listSelector": ".job-card",
+        "titleSelector": ".job-title",
+        "linkSelector": "a.job-link",
+        "companySelector": ".company",
+        "locationSelector": ".location",
+        "descriptionSelector": ".summary",
+        "urlAttribute": "href"
+      },
+      "notes": "Requires AngleSharp. The exact selectors above are placeholders — update for the target site."
+    },
+    {
+      "id": 14,
+      "name": "jobindex-rss",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": {
+        "q": "software engineer"
+      },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex.dk public RSS feed (undocumented but stable as of 2026-05). Returns latest postings; q= accepts space-separated keywords matched as OR-of-words. Items expose title, link, pubDate, and a short description; full body requires fetching the link. The same backend powers it-jobbank.dk/jobsoegning.rss and ofir.dk (which now 301-redirects to jobindex.dk). Run only one of jobindex-rss / it-jobbank-rss as enabled to avoid heavy duplicates. Keep rateLimitRps low; this feed is unadvertised and ToS does not bless automation."
+    },
+    {
+      "id": 15,
+      "name": "it-jobbank-rss",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://www.it-jobbank.dk/jobsoegning.rss",
+      "queryParams": {
+        "q": "developer"
+      },
+      "rateLimitRps": 0.5,
+      "notes": "IT-jobbank.dk public RSS feed (undocumented but stable as of 2026-05). Same Jobindex backend as jobindex-rss, but pre-scoped to IT-only inventory. q= accepts space-separated keywords matched as OR-of-words. Heavy overlap with jobindex-rss — enable one or the other, not both. Keep rateLimitRps low; this feed is unadvertised and ToS does not bless automation."
+    },
+    {
+      "id": 16,
+      "name": "jobsearch-dk",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://www.jobsearch.dk/feed/job-annoncer",
+      "rateLimitRps": 1.0,
+      "notes": "Jobsearch.dk — open RSS 2.0 feed, ~100 newest postings, no auth. Items expose title / description / link only (no pubDate, no company/location fields). Same backend as Jobzonen.dk. Enable jobsearch-dk or jobzonen, not both — they produce the same listing pool. jobsearch-dk is the canonical pick."
+    },
+    {
+      "id": 17,
+      "name": "careerjet-dk",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://search.api.careerjet.net/v4/query",
+      "queryParams": {
+        "affid": "YOUR_AFFID",
+        "user_ip": "8.8.8.8",
+        "user_agent": "Mozilla/5.0",
+        "url": "https://example.com/jobs",
+        "locale_code": "da_DK",
+        "keywords": "software",
+        "location": "Copenhagen",
+        "sort": "date"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "url",
+        "title": "title",
+        "company": "company",
+        "location": "locations",
+        "description": "description",
+        "url": "url",
+        "posted_at": "date"
+      },
+      "pagination": {
+        "param": "page",
+        "start": 1,
+        "step": 1,
+        "sizeParam": "page_size",
+        "size": 100,
+        "maxPages": 5
+      },
+      "rateLimitRps": 1.0,
+      "requiresSecret": "affid",
+      "notes": "Careerjet DK — Danish coverage of the global Careerjet aggregator (free tier). Register at https://www.careerjet.com/partners/api to get an affid, paste it into queryParams above, then flip enabled: true. There is no per-job id in the response, so url is used as the dedupe key. Pagination is page-based and 1-indexed; maxPages: 5 caps fetches at 500 jobs total."
+    },
+    {
+      "id": 18,
+      "name": "jooble",
+      "type": "api",
+      "enabled": true,
+      "method": "post",
+      "endpoint": "https://jooble.org/api/{api_key}",
+      "queryParams": {
+        "api_key": "YOUR_API_KEY"
+      },
+      "bodyTemplate": {
+        "keywords": "software engineer",
+        "location": "Denmark",
+        "radius": 0,
+        "SearchMode": 0
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "company": "company",
+        "location": "location",
+        "description": "snippet",
+        "url": "link",
+        "posted_at": "updated"
+      },
+      "pagination": {
+        "param": "page",
+        "start": 1,
+        "step": 1,
+        "sizeParam": "ResultOnPage",
+        "size": 50,
+        "maxPages": 5
+      },
+      "rateLimitRps": 1.0,
+      "requiresSecret": "api_key",
+      "notes": "Jooble.org — global aggregator with Danish coverage (free tier). Register at https://jooble.org/api/about to obtain an api_key, paste it into queryParams.api_key (it gets substituted into {api_key} in the endpoint path), then flip enabled: true. Pagination is page-based and 1-indexed; maxPages: 5 caps fetches at 250 jobs total. The page param is injected into bodyTemplate per request since this is a POST endpoint."
+    },
+    {
+      "id": 19,
+      "name": "recruit-it",
+      "type": "html",
+      "enabled": false,
+      "endpoint": "https://recruit-it.dk/ledige-stillinger-danmark",
+      "html": {
+        "listSelector": "a:has(> div.ledige-stillinger-box)",
+        "titleSelector": ".ls-title",
+        "linkSelector": ":scope",
+        "descriptionSelector": ".ls-description",
+        "urlAttribute": "href"
+      },
+      "staticFields": {
+        "company": "Recruit IT (agency)"
+      },
+      "notes": "Small Danish IT recruitment agency (~tens of roles). The hiring company is embedded in the title (e.g. 'IT-chef til 3F') rather than a separate field, so staticFields.company stamps the agency name. Location is rendered as a plain text node next to an icon with no wrapper class, so locationSelector is intentionally omitted. Note: linkSelector ':scope' relies on AngleSharp accepting :scope — verify with a smoke test before flipping enabled: true."
+    },
+    {
+      "id": 20,
+      "name": "stepstone-dk",
+      "type": "manual",
+      "enabled": false,
+      "notes": "stepstone.dk has no public RSS or consumer-facing API as of 2026-05. api.stepstone.com is a partner job-distribution system for ATS vendors, not for consuming listings, and requires a business contract. To include Stepstone.dk listings, export results from the browser and drop a CSV/JSON at data/imports/stepstone-*.csv with columns: title, company, location, url, description, posted_at."
+    }
+  ]
+}

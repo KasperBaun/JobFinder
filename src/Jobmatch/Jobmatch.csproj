@@ -8,8 +8,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\config\*.example.*" CopyToOutputDirectory="PreserveNewest" Link="config\%(Filename)%(Extension)" />
     <None Include="..\config\ranking.yml" CopyToOutputDirectory="PreserveNewest" Link="config\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Configuration/portals.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>portals.json</TargetPath>
+    </None>
   </ItemGroup>
 
 </Project>
