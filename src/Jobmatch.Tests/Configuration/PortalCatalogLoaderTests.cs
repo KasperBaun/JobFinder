@@ -106,4 +106,15 @@ public sealed class PortalCatalogLoaderTests
             """;
         Assert.Throws<ConfigException>(() => PortalCatalogLoader.Parse(json));
     }
+
+    [Fact]
+    public void Bundled_PortalsJson_Parses()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "portals.json");
+        Assert.True(File.Exists(path), $"missing: {path}");
+        var portals = PortalCatalogLoader.Load(path);
+        Assert.NotEmpty(portals);
+        Assert.All(portals, p => Assert.True(p.Id > 0, $"provider '{p.Name}' missing id"));
+        Assert.Equal(portals.Count, portals.Select(p => p.Id).Distinct().Count());
+    }
 }

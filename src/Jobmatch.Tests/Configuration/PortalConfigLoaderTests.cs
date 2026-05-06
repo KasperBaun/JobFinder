@@ -123,25 +123,6 @@ public sealed class PortalConfigLoaderTests
     }
 
     [Fact]
-    public void Load_Shipped_Example_File_Parses()
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, "config", "portals.example.yml");
-        Assert.True(File.Exists(path), $"expected example file at {path}");
-
-        var portals = PortalConfigLoader.Load(path);
-        Assert.NotEmpty(portals);
-
-        var greenhouse = portals.Where(p => p.Name.StartsWith("greenhouse-", StringComparison.Ordinal)).ToList();
-        Assert.NotEmpty(greenhouse);
-        Assert.All(greenhouse, p =>
-        {
-            Assert.Equal(PortalType.Api, p.Type);
-            Assert.NotNull(p.StaticFields);
-            Assert.True(p.StaticFields!.ContainsKey("company"));
-        });
-    }
-
-    [Fact]
     public void Parse_Method_And_BodyTemplate_Are_Loaded()
     {
         var yaml = """
