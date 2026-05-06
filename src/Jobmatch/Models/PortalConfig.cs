@@ -16,4 +16,13 @@ public sealed record PortalConfig(
     string? Notes = null,
     IReadOnlyDictionary<string, string>? StaticFields = null,
     string? Method = null,
-    IReadOnlyDictionary<string, object?>? BodyTemplate = null);
+    IReadOnlyDictionary<string, object?>? BodyTemplate = null,
+    PaginationConfig? Pagination = null);
+
+public sealed record PaginationConfig(
+    string Param,
+    int Start = 1,
+    int Step = 1,
+    string? SizeParam = null,
+    int? Size = null,
+    int MaxPages = 5);

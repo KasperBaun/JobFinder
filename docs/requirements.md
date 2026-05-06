@@ -24,6 +24,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-024** The system should ship a generic example provider list so a new user sees the expected shape.
 - **R-025** The system should let a portal config inject static field values (e.g. company name) into every produced listing — used by per-company ATS boards that don't carry the company in their payload.
 - **R-026** The system should support api providers that require `method: post` with a JSON request body (`body_template:`) and that embed config values as `{key}`-style placeholders in the endpoint URL (substituted from `query_params`, with the consumed key removed from the query string).
+- **R-027** The system should support paginated api providers via a `pagination:` config block (`param`, `start`, `step`, optional `size_param` + `size`, `max_pages` safety cap), incrementing the named param per request and stopping on empty page, partial page (count < `size`), or `max_pages`. Pagination params route into `body_template` for POST providers, into `query_params` for GET.
 
 ## Running a search
 
