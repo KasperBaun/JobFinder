@@ -12,6 +12,17 @@ _(none)_
 
 ## Completed (recent)
 
+- **Removed unused `PortalConfig.BaseUrl`.** The field was parsed
+  from `base_url:` YAML, round-tripped through the GUI editor, and
+  never read by any adapter — pure dead surface area. Dropped from
+  `PortalConfig`, `PortalConfigLoader`, the GUI's `ProviderSummary` /
+  `ProviderUpsert` DTOs, the `ProvidersHandler` Get/Put paths
+  (including the absolute-URL validation), the TypeScript
+  `ProviderSummary` / `ProviderUpsert` shapes, and the editor field
+  in `ProvidersPage.tsx`. Existing user YAMLs that happen to carry
+  `base_url:` survive — the loader now ignores it; the GUI's
+  preserve-unknown-keys round-trip leaves it alone in the file.
+  Frontend bundle 321 KB JS / 98 KB gzipped; 132 tests still green.
 - **`ScoreSeniority` adjacent reasoning text fixed.** Previously a
   Mid-level listing for a Senior user got `Seniority: 0.5` (half
   credit) AND `SeniorityMatch: true`, with reasoning text "Seniority
@@ -198,7 +209,6 @@ _(none)_
 
 These pre-date the restructure. Still valid; will fold into the GUI work where they touch the same code paths.
 
-- **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
 
 ## Nice-to-haves
 

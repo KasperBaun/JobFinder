@@ -10,7 +10,6 @@ export type ProviderSummary = {
   name: string
   type: ProviderType
   enabled: boolean
-  baseUrl?: string
   endpoint?: string
   rateLimitRps: number
   notes?: string
@@ -24,7 +23,6 @@ export type ProviderUpsert = {
   name: string
   type: ProviderType
   enabled: boolean
-  baseUrl?: string
   endpoint?: string
   rateLimitRps: number
   notes?: string

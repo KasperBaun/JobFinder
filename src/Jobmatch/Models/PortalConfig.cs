@@ -6,7 +6,6 @@ public sealed record PortalConfig(
     string Name,
     PortalType Type,
     bool Enabled = true,
-    Uri? BaseUrl = null,
     Uri? Endpoint = null,
     IReadOnlyDictionary<string, object?>? QueryParams = null,
     IReadOnlyDictionary<string, string>? Headers = null,
