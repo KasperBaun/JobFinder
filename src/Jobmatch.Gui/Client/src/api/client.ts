@@ -1,5 +1,6 @@
 import type {
   CreateResponse,
+  DeleteHistoryResponse,
   HistoryResponse,
   MarkRequest,
   MarkResponse,
@@ -90,6 +91,14 @@ export async function getHistory(): Promise<HistoryResponse> {
 
 export async function getRun(runId: string): Promise<RunDetail> {
   return apiFetch<RunDetail>(`/api/history/${encodeURIComponent(runId)}`)
+}
+
+export async function deleteHistoryRuns(runIds: string[]): Promise<DeleteHistoryResponse> {
+  return apiFetch<DeleteHistoryResponse>('/api/history/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ runIds }),
+  })
 }
 
 export async function setMark(req: MarkRequest): Promise<MarkResponse> {

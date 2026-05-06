@@ -38,6 +38,7 @@ public static class Routes
     {
         public const string List = "/api/history";
         public const string Detail = "/api/history/{runId}";
+        public const string Delete = "/api/history/delete";
     }
 
     public static class Marks
