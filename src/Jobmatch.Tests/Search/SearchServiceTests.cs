@@ -351,11 +351,11 @@ public sealed class SearchServiceTests : IDisposable
                 "posted_at": "2026-05-01T09:00:00Z"
               },
               {
-                "title": "Python Developer",
+                "title": "Unpaid Python Developer",
                 "company": "Volunteer Co",
                 "location": "Copenhagen",
                 "url": "https://volunteer.com/jobs/x",
-                "description": "Python stack — this is unpaid.",
+                "description": "Python stack — volunteer-friendly role.",
                 "posted_at": "2026-05-01T09:00:00Z"
               }
             ]
@@ -390,7 +390,7 @@ public sealed class SearchServiceTests : IDisposable
         Assert.Equal(2, detail.Dropped!.Count);
         var droppedByReason = detail.Dropped.GroupBy(d => d.Reason).ToDictionary(g => g.Key, g => g.ToList());
         Assert.Single(droppedByReason["disqualifier"]);
-        Assert.Equal("Python Developer", droppedByReason["disqualifier"][0].Title);
+        Assert.Equal("Unpaid Python Developer", droppedByReason["disqualifier"][0].Title);
         Assert.Single(droppedByReason["below_min_score"]);
         Assert.Equal("Marketing Manager", droppedByReason["below_min_score"][0].Title);
         Assert.Contains("unpaid", droppedByReason["disqualifier"][0].Context);
