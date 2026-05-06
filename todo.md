@@ -12,6 +12,13 @@ _(none)_
 
 ## Completed (recent)
 
+- **`ManualAdapter` CSV: quoted newlines preserved.** `ReadCsvFile`
+  used `StreamReader.ReadLine` which split inside quoted fields that
+  span lines, producing malformed rows. Replaced with a stream-based
+  parser (`CsvRow.ParseCsvRecords`) that walks the whole file and
+  honours `\n` / `\r\n` inside quotes as part of the field. New test
+  exercises a 3-line description quoted across newlines; doubled-quote
+  escaping (`""` → `"`) preserved. 131 total green.
 - **Rate limiting honoured by all HTTP adapters (R-028).** New
   `BaseAdapter.ThrottleAsync` tracks a per-instance last-call
   timestamp and waits before each HTTP call so the configured
@@ -180,8 +187,6 @@ _(none)_
 
 These pre-date the restructure. Still valid; will fold into the GUI work where they touch the same code paths.
 
-- **CSV quoted-newline support.** `ManualAdapter.ReadCsvFile` uses `StreamReader.ReadLine()`, which splits inside quoted fields that span lines. Upgrade to a stream-based parser.
-- **CancellationToken plumbing.** Adapters don't accept a CT yet — needs threading once the search handler is the orchestrator.
 - **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
 
 ## Nice-to-haves

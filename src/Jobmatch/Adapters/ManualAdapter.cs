@@ -68,17 +68,15 @@ public sealed class ManualAdapter(PortalConfig config, HttpClient http, ILogger 
 
     private IEnumerable<Listing> ReadCsvFile(string path)
     {
-        using var reader = new StreamReader(path);
-        var headerLine = reader.ReadLine();
-        if (headerLine is null) yield break;
+        var content = File.ReadAllText(path);
+        using var enumerator = CsvRow.ParseCsvRecords(content).GetEnumerator();
+        if (!enumerator.MoveNext()) yield break;
 
-        var headers = CsvRow.Parse(headerLine).Select(h => h.Trim().ToLowerInvariant()).ToArray();
-
-        string? line;
-        while ((line = reader.ReadLine()) is not null)
+        var headers = enumerator.Current.Select(h => h.Trim().ToLowerInvariant()).ToArray();
+        while (enumerator.MoveNext())
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            var values = CsvRow.Parse(line);
+            var values = enumerator.Current;
+            if (values.Count == 1 && string.IsNullOrEmpty(values[0])) continue;
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < headers.Length && i < values.Count; i++)
             {
@@ -136,52 +134,61 @@ public sealed class ManualAdapter(PortalConfig config, HttpClient http, ILogger 
 
 internal static class CsvRow
 {
-    public static IReadOnlyList<string> Parse(string line)
+    // Parses CSV content as a sequence of records. Honors quoted fields that
+    // span multiple lines (\n or \r\n inside quotes is part of the field).
+    // Doubled quotes ("") inside a quoted field decode to a literal ".
+    public static IEnumerable<List<string>> ParseCsvRecords(string content)
     {
-        var result = new List<string>();
-        var sb = new System.Text.StringBuilder();
+        var record = new List<string>();
+        var field = new System.Text.StringBuilder();
         var inQuotes = false;
 
-        for (var i = 0; i < line.Length; i++)
+        for (var i = 0; i < content.Length; i++)
         {
-            var ch = line[i];
+            var ch = content[i];
             if (inQuotes)
             {
-                if (ch == '"')
+                if (ch == '"' && i + 1 < content.Length && content[i + 1] == '"')
                 {
-                    if (i + 1 < line.Length && line[i + 1] == '"')
-                    {
-                        sb.Append('"');
-                        i++;
-                    }
-                    else
-                    {
-                        inQuotes = false;
-                    }
+                    field.Append('"');
+                    i++;
+                }
+                else if (ch == '"')
+                {
+                    inQuotes = false;
                 }
                 else
                 {
-                    sb.Append(ch);
+                    field.Append(ch);
                 }
+            }
+            else if (ch == '"' && field.Length == 0)
+            {
+                inQuotes = true;
+            }
+            else if (ch == ',')
+            {
+                record.Add(field.ToString());
+                field.Clear();
+            }
+            else if (ch == '\n' || ch == '\r')
+            {
+                if (ch == '\r' && i + 1 < content.Length && content[i + 1] == '\n') i++;
+                record.Add(field.ToString());
+                field.Clear();
+                yield return record;
+                record = new List<string>();
             }
             else
             {
-                if (ch == ',')
-                {
-                    result.Add(sb.ToString());
-                    sb.Clear();
-                }
-                else if (ch == '"' && sb.Length == 0)
-                {
-                    inQuotes = true;
-                }
-                else
-                {
-                    sb.Append(ch);
-                }
+                field.Append(ch);
             }
         }
-        result.Add(sb.ToString());
-        return result;
+
+        if (field.Length > 0 || record.Count > 0)
+        {
+            record.Add(field.ToString());
+            yield return record;
+        }
     }
 }
