@@ -80,14 +80,14 @@ public sealed class MarkdownReportWriterTests : IDisposable
     }
 
     [Fact]
-    public void WriteMatches_Title_Is_Not_SpectreMarkupEscaped()
+    public void WriteMatches_Title_Brackets_Are_Preserved_Literally()
     {
         var path = Path.Combine(_dir, "top_jobs.md");
         MarkdownReportWriter.WriteMatches([MakeMatch(0.5)], path, title: "Top matches for [Test] User");
 
         var content = File.ReadAllText(path);
 
-        // The title must appear literally; Spectre markup escaping ("[[" / "]]") would corrupt markdown.
+        // Brackets in the title must round-trip as-is — never doubled to "[[Test]]" by any escape logic.
         Assert.Contains("# Top matches for [Test] User", content);
         Assert.DoesNotContain("[[Test]]", content);
     }
