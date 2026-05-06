@@ -9,7 +9,7 @@
 // React HMR is instant; C# changes hot-reload (or restart) the server, vite reconnects.
 import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
-import { findFreePort, waitForPort, openBrowser, killTree } from './dev-utils.mjs'
+import { findFreePort, waitForPort, waitForPortFree, openBrowser, killTree, killDescendantsOnWindows, postShutdown } from './dev-utils.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 
@@ -43,11 +43,24 @@ function start(label, cmd, args) {
 }
 
 let shuttingDown = false
-function cleanup() {
+async function cleanup() {
   if (shuttingDown) return
   shuttingDown = true
+
+  // Order matters on Windows. `dotnet watch` treats a force-killed app as a
+  // crash and respawns it before our taskkill walk reaches watch itself —
+  // the new instance is then orphaned, holds bin\Debug\Jobmatch.Gui.dll, and
+  // breaks the next `npm run dev` build with an MSB3026 file-lock error.
+  // Asking the host to exit cleanly (exit code 0) tells watch to stop, not
+  // restart. We then wait for the port to actually drain before force-killing
+  // the watch tree, and finally sweep any orphan descendants as a safety net.
+  await postShutdown(apiPort, 1500)
+  await waitForPortFree(apiPort, { timeoutMs: 4000 })
+
   for (const { child } of children) killTree(child.pid)
-  setTimeout(() => process.exit(0), 200)
+  killDescendantsOnWindows(process.pid)
+
+  process.exit(0)
 }
 process.on('SIGINT',  cleanup)
 process.on('SIGTERM', cleanup)
