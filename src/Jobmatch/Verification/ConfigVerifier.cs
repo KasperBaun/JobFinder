@@ -202,8 +202,8 @@ public sealed class ConfigVerifier
             {
                 return new VerificationCheck("HTML adapter available", VerificationStatus.Pass, "no html portals enabled");
             }
-            return new VerificationCheck("HTML adapter available", VerificationStatus.Warn,
-                $"{htmlEnabled.Count} html portal(s) enabled — ensure Playwright browsers are installed: {HtmlAdapter.PlaywrightInstallCommand}");
+            return new VerificationCheck("HTML adapter available", VerificationStatus.Pass,
+                $"{htmlEnabled.Count} html portal(s) enabled — using AngleSharp (no extra runtime needed)");
         }
         catch (ConfigException)
         {

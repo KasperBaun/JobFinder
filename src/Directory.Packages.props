@@ -15,8 +15,8 @@
     <!-- Phase 3+ (pinned now, referenced when needed) -->
     <PackageVersion Include="CodeHollow.FeedReader" Version="1.2.6" />
 
-    <!-- Phase 5 -->
-    <PackageVersion Include="Microsoft.Playwright" Version="1.59.0" />
+    <!-- HTML scraping for type=html portals — pure parser, no browser runtime -->
+    <PackageVersion Include="AngleSharp" Version="1.3.0" />
 
     <!-- Test -->
     <PackageVersion Include="xunit" Version="2.9.3" />
