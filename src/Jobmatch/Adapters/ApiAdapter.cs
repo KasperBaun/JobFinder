@@ -50,6 +50,7 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         IReadOnlyDictionary<string, string> mapping,
         CancellationToken ct)
     {
+        await ThrottleAsync(ct);
         var uri = BuildRequestUri(renderedEndpoint, queryParams);
         Logger.LogInformation("portal={Portal} {Method} {Uri}", PortalName, method.Method, uri);
 

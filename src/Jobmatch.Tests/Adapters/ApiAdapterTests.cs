@@ -207,7 +207,8 @@ public sealed class ApiAdapterTests
             ["id"] = "id",
             ["title"] = "title",
             ["url"] = "link",
-        });
+        },
+        RateLimitRps: 0);
 
     [Fact]
     public async Task FetchAsync_Post_Sends_Json_Body_From_BodyTemplate()
@@ -309,7 +310,8 @@ public sealed class ApiAdapterTests
             ["id"] = "id",
             ["title"] = "title",
             ["url"] = "link",
-        });
+        },
+        RateLimitRps: 0);
 
     [Fact]
     public async Task FetchAsync_Pagination_Stops_On_Empty_Page()
@@ -368,6 +370,28 @@ public sealed class ApiAdapterTests
 
         Assert.Equal(2, results.Count);
         Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task FetchAsync_Honours_RateLimitRps_Across_Pages()
+    {
+        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var empty = """{"jobs":[]}""";
+        var handler = new ScriptedHandler(full, full, empty);
+        using var http = new HttpClient(handler);
+        var cfg = PaginatedGet() with
+        {
+            Pagination = new PaginationConfig(Param: "page", Start: 1, Step: 1, MaxPages: 10),
+            RateLimitRps = 10.0,
+        };
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await adapter.FetchAsync();
+        sw.Stop();
+
+        Assert.True(sw.ElapsedMilliseconds >= 180,
+            $"expected >= 180ms (2 intervals at 10 rps), got {sw.ElapsedMilliseconds}ms");
     }
 
     [Fact]

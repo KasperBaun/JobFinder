@@ -14,6 +14,7 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
             throw new ConfigException($"portal '{PortalName}': rss adapter requires 'endpoint'");
         }
 
+        await ThrottleAsync(ct);
         var feed = await FeedReader.ReadAsync(Config.Endpoint.ToString(), cancellationToken: ct);
         var listings = new List<Listing>();
 

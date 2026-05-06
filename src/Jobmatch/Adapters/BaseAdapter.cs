@@ -16,6 +16,21 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
 
     public abstract Task<IReadOnlyList<Listing>> FetchAsync(CancellationToken ct = default);
 
+    private DateTimeOffset _lastCallAt = DateTimeOffset.MinValue;
+
+    protected async Task ThrottleAsync(CancellationToken ct)
+    {
+        var rps = Config.RateLimitRps;
+        if (rps <= 0) return;
+        var minIntervalMs = 1000.0 / rps;
+        var elapsed = (DateTimeOffset.UtcNow - _lastCallAt).TotalMilliseconds;
+        if (elapsed < minIntervalMs)
+        {
+            await Task.Delay((int)Math.Ceiling(minIntervalMs - elapsed), ct);
+        }
+        _lastCallAt = DateTimeOffset.UtcNow;
+    }
+
     protected static string StableId(string portal, string sourceOrUrl)
     {
         var input = $"{portal}:{sourceOrUrl}";

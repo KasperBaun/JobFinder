@@ -56,6 +56,7 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
         var context = await browser.NewContextAsync();
         var page = await context.NewPageAsync();
 
+        await ThrottleAsync(ct);
         await page.GotoAsync(Config.Endpoint!.ToString(), new PageGotoOptions { Timeout = 30000, WaitUntil = WaitUntilState.DOMContentLoaded });
 
         var html = Config.Html!;
