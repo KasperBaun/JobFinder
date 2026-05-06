@@ -16,11 +16,13 @@ public static class Routes
     public static class Providers
     {
         public const string Get = "/api/providers";
+        public const string Put = "/api/providers";
     }
 
     public static class Skillset
     {
         public const string Get = "/api/skillset";
+        public const string Put = "/api/skillset";
     }
 
     public static class Search

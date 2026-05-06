@@ -32,8 +32,16 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         using var response = await Http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+        if (contentType is not null && !LooksLikeJson(contentType))
+        {
+            throw new ConfigException(
+                $"portal '{PortalName}': endpoint returned '{contentType}', expected JSON. " +
+                "The portal's API likely changed, requires authentication, or is the wrong URL.");
+        }
+
         using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        using var doc = await ParseJsonOrThrow(stream, PortalName, ct);
 
         var mapping = Config.ResponseMapping ?? throw new ConfigException($"portal '{PortalName}': api adapter requires 'response_mapping'");
         var itemsPath = mapping.TryGetValue("items_path", out var ip) ? ip : null;
@@ -51,6 +59,24 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             if (listing is not null) results.Add(listing);
         }
         return results;
+    }
+
+    private static bool LooksLikeJson(string mediaType) =>
+        mediaType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
+        mediaType.StartsWith("text/plain", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task<JsonDocument> ParseJsonOrThrow(Stream stream, string portalName, CancellationToken ct)
+    {
+        try
+        {
+            return await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigException(
+                $"portal '{portalName}': response was not valid JSON ({ex.Message}). " +
+                "The endpoint may have changed or be returning an HTML/error page.", ex);
+        }
     }
 
     private static Uri BuildRequestUri(Uri endpoint, IReadOnlyDictionary<string, object?>? queryParams)

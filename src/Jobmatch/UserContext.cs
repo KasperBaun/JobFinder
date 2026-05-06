@@ -43,7 +43,7 @@ public sealed class UserContext
                 + "explicit override, environment variable JOBFINDER_USER, and `git config user.email`. "
                 + "Set one of these and try again.");
 
-        var root = repoRoot ?? Directory.GetCurrentDirectory();
+        var root = repoRoot ?? FindRepoRoot(Directory.GetCurrentDirectory());
         var rootDir = Path.Combine(root, "data", email);
 
         var firstRun = !Directory.Exists(rootDir);
@@ -88,6 +88,21 @@ public sealed class UserContext
             MarksPath = Path.Combine(rootDir, "marks.json"),
             ExamplesDir = examplesDir,
         };
+    }
+
+    private static string FindRepoRoot(string startDir)
+    {
+        var dir = new DirectoryInfo(startDir);
+        while (dir is not null)
+        {
+            var gitPath = Path.Combine(dir.FullName, ".git");
+            if (Directory.Exists(gitPath) || File.Exists(gitPath))
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+        return startDir;
     }
 
     private static string? ResolveEmail(string? emailOverride)

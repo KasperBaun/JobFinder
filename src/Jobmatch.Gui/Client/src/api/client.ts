@@ -3,10 +3,13 @@ import type {
   MarkRequest,
   MarkResponse,
   ProvidersResponse,
+  ProvidersUpdateRequest,
   RunDetail,
+  SaveResponse,
   SearchProgressEvent,
   SearchRequest,
   SkillsetResponse,
+  SkillsetUpdateRequest,
   WhoamiResponse,
 } from './types'
 
@@ -38,8 +41,24 @@ export async function getProviders(): Promise<ProvidersResponse> {
   return apiFetch<ProvidersResponse>('/api/providers')
 }
 
+export async function updateProviders(req: ProvidersUpdateRequest): Promise<SaveResponse> {
+  return apiFetch<SaveResponse>('/api/providers', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+}
+
 export async function getSkillset(): Promise<SkillsetResponse> {
   return apiFetch<SkillsetResponse>('/api/skillset')
+}
+
+export async function updateSkillset(req: SkillsetUpdateRequest): Promise<SaveResponse> {
+  return apiFetch<SaveResponse>('/api/skillset', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
 }
 
 export async function getHistory(): Promise<HistoryResponse> {

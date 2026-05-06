@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { shutdown } from '../api/client'
 
 const links: { to: string; label: string; end?: boolean }[] = [
-  { to: '/', label: 'Home', end: true },
+  { to: '/', label: 'Dashboard', end: true },
   { to: '/providers', label: 'Providers' },
   { to: '/skillset', label: 'Skillset' },
   { to: '/search', label: 'Search' },
@@ -17,7 +17,7 @@ export function TopNav() {
     try {
       await shutdown()
     } catch {
-      // server may close before responding; that's expected
+      // server may close before responding; expected
     }
     navigate('/closed')
   }
@@ -25,7 +25,11 @@ export function TopNav() {
   return (
     <nav className="top-nav">
       <div className="top-nav__inner">
-        <div className="top-nav__brand">jobfinder</div>
+        <NavLink to="/" className="top-nav__brand" end>
+          <span className="top-nav__brand-mark" />
+          jobfinder
+          <span className="top-nav__brand-tag">v1</span>
+        </NavLink>
         <ul className="top-nav__links">
           {links.map(link => (
             <li key={link.to}>
@@ -41,8 +45,19 @@ export function TopNav() {
             </li>
           ))}
         </ul>
-        <button type="button" className="btn btn--secondary top-nav__quit" onClick={handleQuit}>
-          Quit
+        <button
+          type="button"
+          className="top-nav__quit"
+          onClick={handleQuit}
+          aria-label="Stop the jobfinder app"
+          data-tooltip="Stop the jobfinder app"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+               stroke="currentColor" strokeWidth="2"
+               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+            <line x1="12" y1="2" x2="12" y2="12" />
+          </svg>
         </button>
       </div>
     </nav>

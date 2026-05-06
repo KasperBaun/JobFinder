@@ -12,3 +12,14 @@ public sealed record ProviderSummary(
     int? LastFetchCount);
 
 public sealed record ProvidersResponse(IReadOnlyList<ProviderSummary> Providers);
+
+public sealed record ProviderUpsert(
+    string? Name,
+    string? Type,
+    bool? Enabled,
+    string? BaseUrl,
+    string? Endpoint,
+    double? RateLimitRps,
+    string? Notes);
+
+public sealed record ProvidersUpdateRequest(IReadOnlyList<ProviderUpsert>? Providers);

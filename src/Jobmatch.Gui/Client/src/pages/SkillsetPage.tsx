@@ -1,92 +1,228 @@
-import { useQuery } from '@tanstack/react-query'
-import { getSkillset } from '../api/client'
-import type { ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getSkillset, updateSkillset } from '../api/client'
+import type { SkillsetResponse, SkillsetUpdateRequest } from '../api/types'
+import { TagInput } from '../components/TagInput'
+import { SaveBar } from '../components/SaveBar'
+import { Toast } from '../components/Toast'
 
-interface PillRowProps {
-  items: string[]
-  variant?: 'primary' | 'secondary' | 'warning'
-  empty?: string
+type Form = SkillsetUpdateRequest
+
+const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote', 'any'] as const
+const SENIORITY_OPTIONS = ['junior', 'mid', 'senior', 'lead', 'any'] as const
+
+function toForm(s: SkillsetResponse): Form {
+  return {
+    name: s.name,
+    location: s.location,
+    experienceYears: s.experienceYears,
+    targetRoles: [...s.targetRoles],
+    remotePreference: s.remotePreference,
+    seniority: s.seniority,
+    primaryStack: [...s.primaryStack],
+    secondaryStack: [...s.secondaryStack],
+    domains: [...s.domains],
+    disqualifiers: [...s.disqualifiers],
+    languages: [...s.languages],
+    employmentTypes: [...s.employmentTypes],
+    country: s.country ?? '',
+    region: s.region ?? '',
+    metro: [...s.metro],
+  }
 }
 
-function PillRow({ items, variant, empty = '—' }: PillRowProps) {
-  if (!items.length) return <span className="muted">{empty}</span>
-  const cls = variant ? `pill pill--${variant}` : 'pill'
-  return (
-    <div className="pill-row">
-      {items.map(item => <span key={item} className={cls}>{item}</span>)}
-    </div>
-  )
-}
-
-interface SectionProps {
-  title: string
-  children: ReactNode
-}
-
-function Section({ title, children }: SectionProps) {
-  return (
-    <section className="card">
-      <h2 className="card__heading">{title}</h2>
-      {children}
-    </section>
-  )
+function isDirty(a: Form, b: Form): boolean {
+  return JSON.stringify(a) !== JSON.stringify(b)
 }
 
 export function SkillsetPage() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['skillset'],
-    queryFn: getSkillset,
+  const queryClient = useQueryClient()
+  const { data, isLoading, error } = useQuery({ queryKey: ['skillset'], queryFn: getSkillset })
+
+  const [form, setForm] = useState<Form | null>(null)
+  const [original, setOriginal] = useState<Form | null>(null)
+  const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
+
+  useEffect(() => {
+    if (data && original === null) {
+      const f = toForm(data)
+      setForm(f)
+      setOriginal(f)
+    }
+  }, [data, original])
+
+  const dirty = useMemo(
+    () => form && original ? isDirty(form, original) : false,
+    [form, original],
+  )
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!form) throw new Error('no form state')
+      const res = await updateSkillset(form)
+      if (!res.success) throw new Error(res.error ?? 'Save failed')
+      return form
+    },
+    onSuccess: (saved) => {
+      setOriginal(saved)
+      void queryClient.invalidateQueries({ queryKey: ['skillset'] })
+      setToast({ kind: 'ok', message: 'Skillset saved' })
+    },
+    onError: (err) => {
+      setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
+    },
   })
+
+  function patch(p: Partial<Form>) {
+    setForm((f) => f ? { ...f, ...p } : f)
+  }
+
+  function revert() {
+    if (original) setForm(original)
+  }
 
   return (
     <div className="page page--wide">
+      {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
+
       <header className="page__header">
-        <h1 className="page__heading">Search criteria</h1>
-        <p className="page__lede">The active skillset used to score listings.</p>
+        <div className="page__eyebrow">02 / criteria</div>
+        <h1 className="page__heading">Search <em>criteria</em></h1>
+        <p className="page__lede">
+          Edit the skillset that scores every listing. Saved straight to <code>skillset.md</code>.
+        </p>
       </header>
 
       {isLoading && <div className="muted">Loading skillset…</div>}
       {error && <div className="error-text">Failed to load skillset.</div>}
 
-      {data && (
-        <div className="card-stack">
-          <Section title="Identity">
-            <dl className="definition-list">
-              <dt>Name</dt><dd>{data.name || '—'}</dd>
-              <dt>Location</dt><dd>{data.location || '—'}</dd>
-              <dt>Experience</dt><dd>{data.experienceYears} years</dd>
-              <dt>Languages</dt><dd><PillRow items={data.languages} /></dd>
-            </dl>
-          </Section>
+      {form && (
+        <>
+          <div className="card-stack">
+            <section className="card">
+              <h2 className="card__title">Identity</h2>
+              <div className="field-grid">
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-name">Name</label>
+                  <input id="sk-name" className="input" value={form.name}
+                    onChange={(e) => patch({ name: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-location">Location</label>
+                  <input id="sk-location" className="input" value={form.location}
+                    onChange={(e) => patch({ location: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-country">Country</label>
+                  <input id="sk-country" className="input" value={form.country ?? ''} placeholder="optional"
+                    onChange={(e) => patch({ country: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-region">Region</label>
+                  <input id="sk-region" className="input" value={form.region ?? ''} placeholder="optional"
+                    onChange={(e) => patch({ region: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-exp">Years of experience</label>
+                  <input id="sk-exp" type="number" min={0} className="input input--narrow input--mono tabular"
+                    value={form.experienceYears}
+                    onChange={(e) => patch({ experienceYears: Number(e.target.value) || 0 })} />
+                </div>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="field__label">Languages</label>
+                  <TagInput values={form.languages}
+                    onChange={(v) => patch({ languages: v })}
+                    placeholder="e.g. en, da" ariaLabel="Languages" />
+                </div>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="field__label">Metro areas</label>
+                  <TagInput values={form.metro}
+                    onChange={(v) => patch({ metro: v })}
+                    placeholder="optional — e.g. Copenhagen, Aarhus" ariaLabel="Metro areas" />
+                </div>
+              </div>
+            </section>
 
-          <Section title="Roles">
-            <dl className="definition-list">
-              <dt>Target roles</dt><dd><PillRow items={data.targetRoles} /></dd>
-              <dt>Seniority</dt><dd>{data.seniority || '—'}</dd>
-              <dt>Remote</dt><dd>{data.remotePreference || '—'}</dd>
-              <dt>Employment</dt><dd><PillRow items={data.employmentTypes} /></dd>
-            </dl>
-          </Section>
+            <section className="card">
+              <h2 className="card__title">Roles &amp; preferences</h2>
+              <div className="field-grid">
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-seniority">Seniority</label>
+                  <select id="sk-seniority" className="select"
+                    value={form.seniority}
+                    onChange={(e) => patch({ seniority: e.target.value })}>
+                    {SENIORITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="sk-remote">Remote preference</label>
+                  <select id="sk-remote" className="select"
+                    value={form.remotePreference}
+                    onChange={(e) => patch({ remotePreference: e.target.value })}>
+                    {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="field__label">Target roles</label>
+                  <TagInput values={form.targetRoles}
+                    onChange={(v) => patch({ targetRoles: v })}
+                    placeholder="e.g. Senior Backend Engineer" ariaLabel="Target roles" />
+                </div>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="field__label">Employment types</label>
+                  <TagInput values={form.employmentTypes}
+                    onChange={(v) => patch({ employmentTypes: v })}
+                    placeholder="e.g. full-time, contract" ariaLabel="Employment types" />
+                </div>
+              </div>
+            </section>
 
-          <Section title="Tech">
-            <dl className="definition-list">
-              <dt>Primary stack</dt><dd><PillRow items={data.primaryStack} variant="primary" /></dd>
-              <dt>Secondary stack</dt><dd><PillRow items={data.secondaryStack} variant="secondary" /></dd>
-            </dl>
-          </Section>
+            <section className="card">
+              <h2 className="card__title">Tech</h2>
+              <div className="field-grid">
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="field__label">Primary stack — <span className="subtle">must-haves; multiple matches → high score</span></label>
+                  <TagInput variant="primary"
+                    values={form.primaryStack}
+                    onChange={(v) => patch({ primaryStack: v })}
+                    placeholder="e.g. C#, .NET, Postgres" ariaLabel="Primary stack" />
+                </div>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="field__label">Secondary stack — <span className="subtle">nice-to-haves; small score bumps</span></label>
+                  <TagInput
+                    values={form.secondaryStack}
+                    onChange={(v) => patch({ secondaryStack: v })}
+                    placeholder="e.g. Docker, Kubernetes" ariaLabel="Secondary stack" />
+                </div>
+              </div>
+            </section>
 
-          <Section title="Domains">
-            <PillRow items={data.domains} />
-          </Section>
+            <section className="card">
+              <h2 className="card__title">Domains</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Industries and problem spaces you target.</p>
+              <TagInput values={form.domains}
+                onChange={(v) => patch({ domains: v })}
+                placeholder="e.g. fintech, b2b saas" ariaLabel="Domains" />
+            </section>
 
-          <Section title="Disqualifiers">
-            <PillRow items={data.disqualifiers} variant="warning" empty="None set" />
-          </Section>
+            <section className="card">
+              <h2 className="card__title">Disqualifiers</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>A listing matching any of these drops to score 0.</p>
+              <TagInput variant="warning"
+                values={form.disqualifiers}
+                onChange={(v) => patch({ disqualifiers: v })}
+                placeholder="e.g. on-site only, agency" ariaLabel="Disqualifiers" />
+            </section>
+          </div>
 
-          <p className="footnote">
-            To edit, modify your <code>skillset.md</code>. The system reads it on every search.
-          </p>
-        </div>
+          <SaveBar
+            visible={!!dirty}
+            message={dirty ? 'Unsaved changes to skillset.md' : ''}
+            saving={save.isPending}
+            onSave={() => save.mutate()}
+            onRevert={revert}
+          />
+        </>
       )}
     </div>
   )

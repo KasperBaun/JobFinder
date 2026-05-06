@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getProviders } from '../api/client'
+import { getHistory, getProviders } from '../api/client'
 import { useSearchStream } from '../hooks/useSearchStream'
 import { ListingCard } from '../components/ListingCard'
+import { formatRelative } from '../utils/time'
 import type { SearchProgressEvent, SearchRequest } from '../api/types'
 
 type ProviderRowState = {
@@ -41,7 +43,9 @@ function reduceProgress(events: SearchProgressEvent[], initialNames: string[]): 
 
 export function SearchPage() {
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
+  const historyQuery = useQuery({ queryKey: ['history'], queryFn: getHistory })
   const stream = useSearchStream()
+  const lastRun = historyQuery.data?.runs[0]
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [topN, setTopN] = useState<string>('')
   const [minScore, setMinScore] = useState<string>('')
@@ -78,8 +82,12 @@ export function SearchPage() {
   return (
     <div className="page page--wide">
       <header className="page__header">
-        <h1 className="page__heading">Run a search</h1>
-        <p className="page__lede">Fetch the latest listings from your enabled providers.</p>
+        <div className="page__eyebrow">03 / search</div>
+        <h1 className="page__heading">Run a <em>search</em></h1>
+        <p className="page__lede">
+          Fetches the latest listings from your enabled providers, dedupes, ranks against your skillset,
+          and writes a shortlist to <code>top-jobs.md</code>.
+        </p>
       </header>
 
       <div className="search-controls">
@@ -106,57 +114,72 @@ export function SearchPage() {
       </div>
 
       {advancedOpen && (
-        <div className="card advanced-panel">
-          <div className="form-row">
-            <label htmlFor="topN">Top N</label>
-            <input
-              id="topN"
-              type="number"
-              placeholder="from ranking.yml"
-              value={topN}
-              onChange={e => setTopN(e.target.value)}
-              min={1}
-            />
-          </div>
-          <div className="form-row">
-            <label htmlFor="minScore">Min score</label>
-            <input
-              id="minScore"
-              type="number"
-              placeholder="from ranking.yml"
-              value={minScore}
-              onChange={e => setMinScore(e.target.value)}
-              min={0}
-              max={1}
-              step={0.01}
-            />
-          </div>
-          <div className="form-row form-row--column">
-            <label>Providers</label>
-            <div className="chip-group">
-              {providersQuery.data?.providers.map(p => {
-                const active = effectiveProviders.includes(p.name)
-                return (
-                  <button
-                    key={p.name}
-                    type="button"
-                    className={active ? 'chip chip--active' : 'chip'}
-                    onClick={() => toggleProvider(p.name)}
-                    disabled={!p.enabled && !active}
-                    title={p.enabled ? '' : 'Disabled in portals.yml'}
-                  >
-                    {p.name}
-                  </button>
-                )
-              })}
+        <section className="card advanced-panel">
+          <div className="field-grid">
+            <div className="field">
+              <label className="field__label" htmlFor="topN">Top N</label>
+              <input
+                id="topN"
+                type="number"
+                className="input input--narrow input--mono tabular"
+                placeholder="from ranking.yml"
+                value={topN}
+                onChange={e => setTopN(e.target.value)}
+                min={1}
+              />
+            </div>
+            <div className="field">
+              <label className="field__label" htmlFor="minScore">Min score</label>
+              <input
+                id="minScore"
+                type="number"
+                className="input input--narrow input--mono tabular"
+                placeholder="from ranking.yml"
+                value={minScore}
+                onChange={e => setMinScore(e.target.value)}
+                min={0}
+                max={1}
+                step={0.01}
+              />
+            </div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label className="field__label">Providers</label>
+              <div className="chip-group">
+                {providersQuery.data?.providers.map(p => {
+                  const active = effectiveProviders.includes(p.name)
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      className={active ? 'chip chip--active' : 'chip'}
+                      onClick={() => toggleProvider(p.name)}
+                      disabled={!p.enabled && !active}
+                      title={p.enabled ? '' : 'Disabled in portals.yml'}
+                    >
+                      {p.name}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {stream.status === 'idle' && (
         <div className="hint-card">
-          No search yet. Click "Run a search" to fetch the latest listings.
+          {lastRun ? (
+            <>
+              Last run was <strong>{formatRelative(lastRun.startedAt)}</strong> —{' '}
+              <span className="tabular">{lastRun.shortlistCount}</span> shortlisted, top score{' '}
+              <span className="tabular mono">{lastRun.topScore.toFixed(2)}</span>.
+              <br />
+              Click <strong>Run a search</strong> for a fresh batch, or{' '}
+              <Link to={`/history/${lastRun.runId}`}>view that run</Link>.
+            </>
+          ) : (
+            <>Ready when you are. Click <strong>Run a search</strong> to fetch listings from your enabled providers.</>
+          )}
         </div>
       )}
 
@@ -166,6 +189,7 @@ export function SearchPage() {
           <ul className="progress-list">
             {progress.rows.map(row => (
               <li key={row.name} className={`progress-row progress-row--${row.status}`}>
+                <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
                 <span className="progress-row__name">{row.name}</span>
                 <span className="progress-row__status">
                   {row.status === 'pending' && 'pending'}
@@ -177,12 +201,14 @@ export function SearchPage() {
             ))}
             {progress.dedupe !== undefined && (
               <li className="progress-row progress-row--info">
+                <span className="progress-row__icon">·</span>
                 <span className="progress-row__name">dedupe</span>
                 <span className="progress-row__status">{progress.dedupe} after merge</span>
               </li>
             )}
             {progress.rank !== undefined && (
               <li className="progress-row progress-row--info">
+                <span className="progress-row__icon">·</span>
                 <span className="progress-row__name">rank</span>
                 <span className="progress-row__status">
                   {progress.rank.rankedCount} ranked · top {progress.rank.topScore.toFixed(2)}
@@ -199,7 +225,7 @@ export function SearchPage() {
       {stream.status === 'complete' && stream.runId && (
         <section className="results">
           <h2 className="results__heading">
-            Shortlist ({stream.shortlist.length})
+            Shortlist <span className="muted serif" style={{ fontStyle: 'italic' }}>({stream.shortlist.length})</span>
           </h2>
           {stream.shortlist.length === 0 && (
             <div className="muted">No matches met the threshold.</div>

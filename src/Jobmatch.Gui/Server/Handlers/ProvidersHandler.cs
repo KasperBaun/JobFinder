@@ -3,11 +3,16 @@ using Jobmatch.Configuration;
 using Jobmatch.Gui.Server.Models;
 using Jobmatch.Models;
 using Microsoft.AspNetCore.Http;
+using YamlDotNet.Serialization;
 
 namespace Jobmatch.Gui.Server.Handlers;
 
 public static class ProvidersHandler
 {
+    private static readonly object FileLock = new();
+    private static readonly IDeserializer Deserializer = new DeserializerBuilder().Build();
+    private static readonly ISerializer Serializer = new SerializerBuilder().Build();
+
     public static IResult Get(Jobmatch.UserContext ctx)
     {
         try
@@ -38,12 +43,141 @@ public static class ProvidersHandler
         }
     }
 
+    public static IResult Put(ProvidersUpdateRequest? req, Jobmatch.UserContext ctx)
+    {
+        if (req?.Providers is null)
+        {
+            return Results.Ok(new SaveResponse(false, "providers list is required"));
+        }
+        try
+        {
+            lock (FileLock)
+            {
+                var raw = File.Exists(ctx.PortalsPath)
+                    ? File.ReadAllText(ctx.PortalsPath)
+                    : string.Empty;
+
+                var existingByName = ParseExistingByName(raw);
+                var newList = BuildPortalsList(req.Providers, existingByName);
+
+                var output = SerializePortals(newList);
+                _ = PortalConfigLoader.Parse(output);
+                AtomicWriteText(ctx.PortalsPath, output);
+            }
+            GuiLog.Action($"saved portals.yml ({req.Providers.Count} providers)");
+            return Results.Ok(new SaveResponse(true));
+        }
+        catch (Exception ex)
+        {
+            GuiLog.Error($"PUT /api/providers — {ex.GetType().Name}: {ex.Message}");
+            if (ex.InnerException is { } inner)
+                GuiLog.Error($"    inner — {inner.GetType().Name}: {inner.Message}");
+            return Results.Ok(new SaveResponse(false, ex.Message));
+        }
+    }
+
+    private static Dictionary<string, Dictionary<object, object?>> ParseExistingByName(string yaml)
+    {
+        var result = new Dictionary<string, Dictionary<object, object?>>(StringComparer.Ordinal);
+        if (string.IsNullOrWhiteSpace(yaml)) return result;
+
+        Dictionary<object, object?>? root;
+        try
+        {
+            root = Deserializer.Deserialize<Dictionary<object, object?>>(yaml);
+        }
+        catch
+        {
+            return result;
+        }
+        if (root is null) return result;
+        if (!root.TryGetValue("portals", out var raw) || raw is not IEnumerable<object?> entries) return result;
+
+        foreach (var entry in entries)
+        {
+            if (entry is not IDictionary<object, object?> map) continue;
+            var name = map.TryGetValue("name", out var n) ? n?.ToString() : null;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                result[name] = new Dictionary<object, object?>(map);
+            }
+        }
+        return result;
+    }
+
+    private static List<Dictionary<object, object?>> BuildPortalsList(
+        IReadOnlyList<ProviderUpsert> incoming,
+        IReadOnlyDictionary<string, Dictionary<object, object?>> existingByName)
+    {
+        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var list = new List<Dictionary<object, object?>>();
+
+        foreach (var p in incoming)
+        {
+            var name = p.Name?.Trim();
+            if (string.IsNullOrEmpty(name)) throw new ConfigException("provider name must not be empty");
+            if (!seenNames.Add(name)) throw new ConfigException($"duplicate provider name '{name}'");
+
+            var type = p.Type?.Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(type) || !Enum.TryParse<PortalType>(type, ignoreCase: true, out _))
+            {
+                throw new ConfigException($"provider '{name}': type must be one of [api, rss, html, manual], got '{p.Type}'");
+            }
+
+            var enabled = p.Enabled ?? true;
+            var rateLimit = p.RateLimitRps ?? 1.0;
+            if (rateLimit < 0) throw new ConfigException($"provider '{name}': rateLimitRps must be >= 0");
+
+            var baseUrl = NullIfBlank(p.BaseUrl);
+            if (baseUrl is not null && !Uri.TryCreate(baseUrl, UriKind.Absolute, out _))
+                throw new ConfigException($"provider '{name}': baseUrl must be an absolute URL");
+            var endpoint = NullIfBlank(p.Endpoint);
+            if (endpoint is not null && !Uri.TryCreate(endpoint, UriKind.Absolute, out _))
+                throw new ConfigException($"provider '{name}': endpoint must be an absolute URL");
+
+            var node = existingByName.TryGetValue(name, out var prior)
+                ? new Dictionary<object, object?>(prior)
+                : new Dictionary<object, object?>();
+
+            node["name"] = name;
+            node["type"] = type;
+            node["enabled"] = enabled;
+            SetOrRemove(node, "base_url", baseUrl);
+            SetOrRemove(node, "endpoint", endpoint);
+            node["rate_limit_rps"] = rateLimit;
+            SetOrRemove(node, "notes", NullIfBlank(p.Notes));
+
+            list.Add(node);
+        }
+        return list;
+    }
+
+    private static void SetOrRemove(IDictionary<object, object?> node, string key, string? value)
+    {
+        if (value is null) node.Remove(key);
+        else node[key] = value;
+    }
+
+    private static string SerializePortals(List<Dictionary<object, object?>> list)
+    {
+        var root = new Dictionary<object, object?> { ["portals"] = list };
+        return Serializer.Serialize(root);
+    }
+
+    private static string? NullIfBlank(string? s) =>
+        string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    private static void AtomicWriteText(string path, string content)
+    {
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        var temp = path + ".tmp";
+        File.WriteAllText(temp, content);
+        File.Move(temp, path, overwrite: true);
+    }
+
     private sealed record LastFetch(DateTimeOffset FetchedAt, int? FetchedCount);
 
-    /// <summary>
-    /// Walks the history directory newest-first and returns the most recent per-provider entry
-    /// across all runs. Tolerates malformed/missing files — never throws.
-    /// </summary>
     private static Dictionary<string, LastFetch> LoadLastFetchByProvider(string historyDir)
     {
         var result = new Dictionary<string, LastFetch>(StringComparer.OrdinalIgnoreCase);
@@ -96,7 +230,6 @@ public static class ProvidersHandler
             }
             catch
             {
-                // Skip malformed history files; they shouldn't break the providers list.
             }
         }
 
