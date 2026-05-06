@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getProviders, testProvider, updateProvider } from '../api/client'
+import { getProviders, setProviderEnabled, testProvider } from '../api/client'
 import type { ProviderSummary, ProviderTestResult } from '../api/types'
 import { Toast } from '../components/Toast'
 import { formatRelative } from '../utils/time'
@@ -38,14 +38,7 @@ export function ProvidersPage() {
 
   const toggle = useMutation({
     mutationFn: async ({ p, enabled }: { p: ProviderSummary; enabled: boolean }) => {
-      const res = await updateProvider(p.id, {
-        name: p.name,
-        type: p.type,
-        enabled,
-        endpoint: p.endpoint,
-        rateLimitRps: p.rateLimitRps,
-        notes: p.notes,
-      })
+      const res = await setProviderEnabled(p.id, enabled)
       if (!res.success) throw new Error(res.error ?? 'Save failed')
       return enabled
     },
@@ -126,9 +119,6 @@ export function ProvidersPage() {
             Where listings come from. Toggle, test, or edit any provider.
           </p>
         </div>
-        <div className="cta-row" style={{ marginTop: 0 }}>
-          <Link to="/providers/new" className="btn btn--secondary">+ Add provider</Link>
-        </div>
       </header>
 
       {isLoading && <div className="muted">Loading providers…</div>}
@@ -149,8 +139,7 @@ export function ProvidersPage() {
 
       {data && data.providers.length === 0 && (
         <div className="hint-card">
-          No providers configured yet.{' '}
-          <Link to="/providers/new"><strong>Add the first one →</strong></Link>
+          No providers configured yet.
         </div>
       )}
 
@@ -190,11 +179,13 @@ export function ProvidersPage() {
                   </span>
                 </div>
 
-                <div className="provider-tile__actions">
-                  <Link to={`/providers/${p.id}`} className="btn btn--secondary btn--sm">
-                    <PencilIcon />
-                    <span>Edit</span>
+                {p.requiresSecret && !p.hasSecret && (
+                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`${p.name} needs ${p.requiresSecret}`}>
+                    needs {p.requiresSecret} →
                   </Link>
+                )}
+
+                <div className="provider-tile__actions">
                   <button
                     type="button"
                     className="btn btn--primary btn--sm"
@@ -241,23 +232,4 @@ function nameById(list: ProviderSummary[] | undefined, id: number): string {
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s
   return s.slice(0, max - 1) + '…'
-}
-
-function PencilIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-    </svg>
-  )
 }
