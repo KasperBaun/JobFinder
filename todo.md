@@ -12,6 +12,25 @@ _(none)_
 
 ## Completed (recent)
 
+- **Production-readiness pass: backend testable headless, three quality
+  fixes shipped.** Drove the existing Kestrel `/api/search` SSE endpoint
+  with `curl` (no React UI involved) to iterate on real output for the
+  active user. Three fixes: (1) `BaseAdapter.StripHtml` now inserts a
+  space at each tag boundary so `<p>experience with</p><ul><li>TypeScript`
+  no longer collapses to `experience withTypeScript` — silently broke
+  word-boundary keyword matching for every thehub listing (0/15 ranked
+  before, ~3/15 ranked after). (2) `Ranker` disqualifiers now scope to
+  title + company only, not description — `Lead a team of
+  junior-to-senior engineers` no longer zeroes real Senior roles, and
+  users can blacklist marketplaces by company name (e.g. `Lemon.io`).
+  R-041 updated. (3) Default `top_n` bumped 10 → 25 so the long tail of
+  Senior matches stops being dropped to `beyond_top_n` after coverage
+  scales. 137 tests green (was 132); commits `0e7f2e7`, `dc58089`,
+  `9cae83f`. T-007 stubs migrated into the active user's portals.yml
+  (gitignored, not committed): 5 Greenhouse boards + `it-jobbank-rss` +
+  `jobsearch-dk` enabled, taking enabled provider count 2 → 9 and
+  fetched listings 38 → 897 per run.
+
 - **`top_jobs.md` carries YAML frontmatter for downstream tooling.**
   Each generated `top_jobs.md` now opens with a small `---` block
   carrying `generated_at`, `match_count`, and `top_score` so static-
