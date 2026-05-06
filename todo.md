@@ -8,15 +8,41 @@ _(none)_
 
 ## Backlog (next up)
 
-- **[T-006 — Search transparency (raw / dedupe / scored / dropped)](docs/tasks/T-006-search-transparency.md).**
-  Drill-down on every run so the user can audit *what was fetched*,
-  *what got merged*, *what was scored*, and *what got dropped and
-  why*. Adds a per-component `ScoreBreakdown` to `Ranker`, a richer
-  `RunDetail` JSON, and four new tabs on the History detail page.
-  Also makes the post-search progress rows link to the right tab.
+- **[T-007 — Portal API research (DK general + tech)](docs/tasks/T-007-portal-api-research.md).**
+  For each portal in the supplied DK general + tech ranking
+  (Jobindex, Jobnet, LinkedIn, Indeed, Ofir, Stepstone, Jobzonen,
+  Careerjet, Jooble, Jobsearch, The Hub, Monster, Workindenmark,
+  Jobbank, EURES; IT-jobbank, TechJob, Recruit IT, DevJobsScanner,
+  Stack Overflow / GitHub Jobs), determine whether an automatable
+  feed (API / RSS) exists. Output: a *Findings* table in the task
+  spec + disabled stub blocks in `portals.example.yml` for every
+  portal with a viable endpoint, mirroring the `adzuna-dk` pattern.
+  No new adapter types; no anti-bot bypass.
 
 ## Completed (recent)
 
+- **T-006 — Search transparency (raw / dedupe / scored / dropped).**
+  Every run now records four extra sections in `RunDetail`: raw
+  fetched listings per provider, dedupe merge groups, the full
+  scored list with per-component breakdown, and dropped listings
+  with explicit reasons (`disqualifier`, `below_min_score`,
+  `beyond_top_n`, `above_max_age`, `missing_required_primary`).
+  Library: new `ScoreBreakdown` record (weighted contributions of
+  primary/secondary/seniority/location/domain/freshness, plus a
+  `DisqualifierPenalty` delta that's ≤ 0 when triggered);
+  `Deduper` returns `DedupeResult { Deduped, Merges }`; `SearchService`
+  accumulates raw-by-provider + classifies each non-shortlisted
+  match (now also applies `max_age_days` and
+  `require_primary_stack_hit` to align with the `Ranker.Filter`
+  contract). Server: no new endpoints — `GET /api/history/{runId}`
+  flows through the extended `RunDetail` automatically. Client:
+  `RunDetailView` grows a tab strip (Shortlist / Raw fetch / Dedupe /
+  Full ranking / Dropped); URL-hash-driven so each tab is
+  bookmarkable; component bar visualises the per-signal score split;
+  reason chips filter the Dropped table. Search page progress rows
+  become deep-links into the matching tab once a run completes.
+  R-035 + R-044 added; R-032 (raw persistence) finally fulfilled.
+  112 tests green. Bundle 322 KB JS / 98 KB gzipped.
 - **T-005 — Copenhagen-relevant provider seed.**
   Added `StaticFields` to `PortalConfig` (parsed from a `static_fields:`
   YAML block) and a tiny overlay in `BaseAdapter.BuildListing` —
