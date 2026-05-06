@@ -91,6 +91,57 @@ public sealed class PortalConfigLoaderTests
     }
 
     [Fact]
+    public void Parse_StaticFields_Are_Loaded()
+    {
+        var yaml = """
+            portals:
+              - name: pleo
+                type: api
+                endpoint: https://boards-api.greenhouse.io/v1/boards/pleo/jobs
+                static_fields:
+                  company: "Pleo"
+                  location: "Copenhagen"
+            """;
+
+        var portals = PortalConfigLoader.Parse(yaml);
+
+        Assert.NotNull(portals[0].StaticFields);
+        Assert.Equal("Pleo", portals[0].StaticFields!["company"]);
+        Assert.Equal("Copenhagen", portals[0].StaticFields!["location"]);
+    }
+
+    [Fact]
+    public void Parse_Without_StaticFields_Block_Yields_Null()
+    {
+        var yaml = """
+            portals:
+              - name: x
+                type: manual
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+        Assert.Null(portals[0].StaticFields);
+    }
+
+    [Fact]
+    public void Load_Shipped_Example_File_Parses()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "config", "portals.example.yml");
+        Assert.True(File.Exists(path), $"expected example file at {path}");
+
+        var portals = PortalConfigLoader.Load(path);
+        Assert.NotEmpty(portals);
+
+        var greenhouse = portals.Where(p => p.Name.StartsWith("greenhouse-", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(greenhouse);
+        Assert.All(greenhouse, p =>
+        {
+            Assert.Equal(PortalType.Api, p.Type);
+            Assert.NotNull(p.StaticFields);
+            Assert.True(p.StaticFields!.ContainsKey("company"));
+        });
+    }
+
+    [Fact]
     public void Parse_Invalid_Url_Throws()
     {
         var yaml = """

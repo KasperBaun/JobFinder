@@ -121,6 +121,60 @@ public sealed class ApiAdapterTests
     }
 
     [Fact]
+    public async Task FetchAsync_StaticFields_Override_Empty_Mapped_Company()
+    {
+        const string payload = """
+            {
+              "JobPositionPostings": [
+                { "Id": "1", "Title": "Role", "Description": "..." }
+              ]
+            }
+            """;
+        var cfg = JobnetLike() with
+        {
+            StaticFields = new Dictionary<string, string> { ["company"] = "Pleo" },
+        };
+        using var http = new HttpClient(new StubHandler(payload));
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+        Assert.Single(results);
+        Assert.Equal("Pleo", results[0].Company);
+    }
+
+    [Fact]
+    public async Task FetchAsync_StaticFields_Override_NonEmpty_Mapped_Company()
+    {
+        // Static field always wins when non-empty — even over a mapped value.
+        // This is the documented precedence: a per-company board may legitimately
+        // need to override a generic "company" the upstream payload happens to carry.
+        var cfg = JobnetLike() with
+        {
+            StaticFields = new Dictionary<string, string> { ["company"] = "Pleo" },
+        };
+        using var http = new HttpClient(new StubHandler(HappyPathPayload));
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+        Assert.Equal(2, results.Count);
+        Assert.All(results, r => Assert.Equal("Pleo", r.Company));
+    }
+
+    [Fact]
+    public async Task FetchAsync_StaticFields_Empty_Value_Does_Not_Override()
+    {
+        var cfg = JobnetLike() with
+        {
+            StaticFields = new Dictionary<string, string> { ["company"] = "   " },
+        };
+        using var http = new HttpClient(new StubHandler(HappyPathPayload));
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+        Assert.Equal("Contoso", results[0].Company);
+    }
+
+    [Fact]
     public async Task FetchAsync_Http_Error_Throws()
     {
         using var http = new HttpClient(new StubHandler("oops", HttpStatusCode.InternalServerError));

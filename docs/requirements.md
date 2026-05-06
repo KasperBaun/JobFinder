@@ -22,6 +22,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-022** The system should fetch only providers explicitly configured by the user — never the open web.
 - **R-023** The system should let a user view their currently configured providers and current search criteria from the GUI.
 - **R-024** The system should ship a generic example provider list so a new user sees the expected shape.
+- **R-025** The system should let a portal config inject static field values (e.g. company name) into every produced listing — used by per-company ATS boards that don't carry the company in their payload.
 
 ## Running a search
 
