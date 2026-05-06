@@ -4,14 +4,44 @@ Current status of work on `jobfinder`. Per-task specs live in [`docs/tasks/`](do
 
 ## In progress
 
-_(none — T-003 landed; next is whatever comes after a real-world test of the GUI)_
+_(none)_
 
 ## Backlog (next up)
 
-_(empty — see Pending engine improvements + Nice-to-haves below for smaller items)_
+- **[T-005 — Copenhagen-relevant provider seed](docs/tasks/T-005-copenhagen-providers.md).**
+  Replace the generic seed with Greenhouse / Lever ATS feeds for
+  ~10–20 Copenhagen tech employers + Adzuna DK. Smallest backend
+  change: add `static_fields:` overlay to `PortalConfig` so per-company
+  boards stamp their company name onto every listing. Goal: a fresh
+  `dotnet run` produces a search that actually represents the user's
+  market.
+- **[T-006 — Search transparency (raw / dedupe / scored / dropped)](docs/tasks/T-006-search-transparency.md).**
+  Drill-down on every run so the user can audit *what was fetched*,
+  *what got merged*, *what was scored*, and *what got dropped and
+  why*. Adds a per-component `ScoreBreakdown` to `Ranker`, a richer
+  `RunDetail` JSON, and four new tabs on the History detail page.
+  Also makes the post-search progress rows link to the right tab.
 
 ## Completed (recent)
 
+- **GUI v2 — editable Skillset/Providers + navy editorial redesign.**
+  (commit `42f1d44`, no T-NNN — feedback iteration on T-003.)
+  `PUT /api/skillset` and `PUT /api/providers` with structured editors,
+  dirty tracking, save bar, toast feedback. Providers round-trips
+  `portals.yml` so unknown sub-blocks (`html`, `query_params`,
+  `headers`, `response_mapping`) survive a save. New design system:
+  navy/white/grey palette, all text in deep navy (never black),
+  Fraunces display + IBM Plex Sans/Mono, hairline borders, navy
+  top-edge accent on cards via `border-top` so it follows the radius.
+  Action color unified to navy-800 (matches the score badge). New
+  shared components: `TagInput`, `Toggle`, `SaveBar`, `Toast`,
+  `[data-tooltip]` CSS pattern. `UserContext` now anchors
+  `data/<email>/` to the repo root by walking up to the nearest
+  `.git` (fixes `dotnet run --project src/Jobmatch.Gui` creating a
+  stray data dir). `ApiAdapter` detects HTML responses and surfaces
+  a clear error instead of *"'<' is an invalid start of a value"*.
+  `portals.example.yml`: `jobnet` ships disabled, `thehub` and
+  `remotive` seeded enabled.
 - **T-003 — GUI feature pages.** Providers, Skillset, Search (SSE), History (list + detail), Marks. New `Jobmatch/Search/SearchService` orchestrates the load → fetch → dedupe → rank → write → persist-history pipeline and yields polymorphic progress events. Five endpoint groups + handlers + DTOs; client gains TopNav, dashboard HomePage, four feature pages, MarkButton (optimistic with rollback), useSearchStream. 99 tests green; bundle 296 KB JS / 92 KB gzipped.
 - **T-002 — GUI scaffold.** `Jobmatch.Gui` (Kestrel slim host, ephemeral port, `/api/ping` + `/api/shutdown`, SPA fallback, browser auto-launch). `Jobmatch/UserContext` (typed paths under `data/<email>/`, three-source email resolution, first-run example seeding, ranking-override fallback). React 19 + Vite 6 + react-query + react-router-dom client. `BuildGuiClient` MSBuild target gated on `-p:BuildGui=true`. 7 UserContext tests added.
 - **Spectre + Jobmatch.Cli removed** — GUI is the only entry point. Deleted `src/Jobmatch.Cli/`, `Spectre.*` package pins, dependent tests (`CliSmokeTests`, `ListingsIntegrationTests`), and `.claude/commands/`. Build green at 86 tests.
