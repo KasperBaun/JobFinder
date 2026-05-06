@@ -223,7 +223,7 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         };
     }
 
-    private static string RenderTemplate(string template, JsonElement item)
+    private string RenderTemplate(string template, JsonElement item)
     {
         var result = template;
         var start = result.IndexOf('{');
@@ -232,14 +232,23 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             var end = result.IndexOf('}', start);
             if (end < 0) break;
             var key = result.Substring(start + 1, end - start - 1);
-            var value = item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var prop)
-                ? prop.ValueKind switch
+            string value;
+            if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var prop))
+            {
+                value = prop.ValueKind switch
                 {
                     JsonValueKind.String => prop.GetString() ?? string.Empty,
                     JsonValueKind.Number => prop.ToString(),
                     _ => string.Empty,
-                }
-                : string.Empty;
+                };
+            }
+            else
+            {
+                Logger.LogWarning(
+                    "portal={Portal} url_template references '{{{Key}}}' which is not in this item; the produced URL will be malformed and the listing will be dropped",
+                    PortalName, key);
+                value = string.Empty;
+            }
             result = string.Concat(result.AsSpan(0, start), value, result.AsSpan(end + 1));
             start = result.IndexOf('{', start + value.Length);
         }

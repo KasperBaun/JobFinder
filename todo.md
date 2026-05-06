@@ -12,6 +12,16 @@ _(none)_
 
 ## Completed (recent)
 
+- **`ApiAdapter.RenderTemplate` warns on unknown keys.** A
+  `url_template: "https://example.com/jobs/{Id}"` mapping against an
+  item that doesn't carry `Id` used to silently substitute an empty
+  string, produce a malformed URL, and drop the listing — no signal to
+  the user about why coverage was low. Now logs a warning per item
+  with portal + missing key, e.g. `portal=jobnet url_template
+  references '{Id}' which is not in this item; the produced URL will
+  be malformed and the listing will be dropped`. Drop behaviour
+  preserved (one bad item doesn't kill the run). Method moved from
+  `static` to instance so it can use `Logger`.
 - **Playwright install path resolved at runtime.** `HtmlAdapter` and
   `ConfigVerifier` no longer hardcode `bin/Debug/net10.0/playwright.ps1`
   in their warning messages — the path is now built via
@@ -151,7 +161,6 @@ These pre-date the restructure. Still valid; will fold into the GUI work where t
 - **Rate limiting.** `PortalConfig.RateLimitRps` is parsed but not honoured. Worth wiring once pagination lands.
 - **CSV quoted-newline support.** `ManualAdapter.ReadCsvFile` uses `StreamReader.ReadLine()`, which splits inside quoted fields that span lines. Upgrade to a stream-based parser.
 - **CancellationToken plumbing.** Adapters don't accept a CT yet — needs threading once the search handler is the orchestrator.
-- **`ApiAdapter.RenderTemplate` silently drops unknown template keys.** Warn or throw.
 - **Remove unused `PortalConfig.BaseUrl`.** Parsed and stored, never read.
 
 ## Nice-to-haves
