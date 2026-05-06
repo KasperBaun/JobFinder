@@ -9,6 +9,7 @@ interface Props {
   runId: string
   listingId: string
   current: MarkValue
+  compact?: boolean
 }
 
 function nextState(value: MarkValue): MarkValue {
@@ -23,7 +24,7 @@ const TOOLTIPS: Record<'unset' | 'good' | 'bad', string> = {
   bad:   'Marked as Not a match. Click to clear the mark.',
 }
 
-export function MarkButton({ runId, listingId, current }: Props) {
+export function MarkButton({ runId, listingId, current, compact }: Props) {
   const [optimistic, setOptimistic] = useState<MarkValue>(current)
   const [error, setError] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -74,9 +75,9 @@ export function MarkButton({ runId, listingId, current }: Props) {
     'Rate match'
 
   const cls =
-    optimistic === 'good' ? 'mark-button mark-button--good' :
-    optimistic === 'bad' ? 'mark-button mark-button--bad' :
-    'mark-button'
+    optimistic === 'good' ? `mark-button mark-button--good${compact ? ' mark-button--compact' : ''}` :
+    optimistic === 'bad' ? `mark-button mark-button--bad${compact ? ' mark-button--compact' : ''}` :
+    `mark-button${compact ? ' mark-button--compact' : ''}`
 
   const tooltip =
     optimistic === 'good' ? TOOLTIPS.good :
