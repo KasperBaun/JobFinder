@@ -35,11 +35,14 @@ public sealed class MarkdownReportWriterTests : IDisposable
             FetchedAt: DateTimeOffset.UtcNow,
             Raw: JsonDocument.Parse("{}").RootElement.Clone());
 
-        var breakdown = new Dictionary<string, double>
-        {
-            ["primary_stack"] = 0.08,
-            ["freshness"] = 0.5,
-        };
+        var breakdown = new ScoreBreakdown(
+            PrimaryStack: 0.08,
+            SecondaryStack: 0.0,
+            Seniority: 0.0,
+            LocationRemote: 0.0,
+            Domain: 0.0,
+            Freshness: 0.5,
+            DisqualifierPenalty: 0.0);
         var reasoning = new MatchReasoning(
             PrimaryStackHits: ["x"],
             SecondaryStackHits: [],

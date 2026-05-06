@@ -118,8 +118,8 @@ public sealed class RankerTests
         var staleMatch = matches.Single(m => m.Listing.Id == stale.Id);
 
         Assert.True(freshMatch.Score > staleMatch.Score);
-        Assert.True(freshMatch.Breakdown["freshness"] > staleMatch.Breakdown["freshness"]);
-        Assert.True(staleMatch.Breakdown["freshness"] < 0.001);
+        Assert.True(freshMatch.Breakdown.Freshness > staleMatch.Breakdown.Freshness);
+        Assert.True(staleMatch.Breakdown.Freshness < 0.001);
     }
 
     [Fact]
@@ -145,8 +145,8 @@ public sealed class RankerTests
         var listing = MakeListing("Software Engineer", "C# and .NET and Azure and SQL Server.", postedAt: DateTimeOffset.UtcNow, remote: RemoteMode.Remote);
 
         var matches = Ranker.Rank([listing], skillset, RankingCfg());
-        Assert.True(matches[0].Breakdown["seniority"] >= DefaultWeights.Seniority - 0.0001,
-            $"expected full seniority credit, got {matches[0].Breakdown["seniority"]:0.000}");
+        Assert.True(matches[0].Breakdown.Seniority >= DefaultWeights.Seniority - 0.0001,
+            $"expected full seniority credit, got {matches[0].Breakdown.Seniority:0.000}");
         // User asked Seniority.Any — the reasoning must say "fits", not "not stated".
         Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
     }
@@ -284,8 +284,8 @@ public sealed class RankerTests
             remote: RemoteMode.Remote, postedAt: DateTimeOffset.UtcNow);
 
         var scored = Ranker.Score([euOpen, usOnly], skillset, RankingCfg());
-        var euLR = scored.Single(s => s.Listing.Title == "Eng A").Breakdown["location_remote"];
-        var usLR = scored.Single(s => s.Listing.Title == "Eng B").Breakdown["location_remote"];
+        var euLR = scored.Single(s => s.Listing.Title == "Eng A").Breakdown.LocationRemote;
+        var usLR = scored.Single(s => s.Listing.Title == "Eng B").Breakdown.LocationRemote;
 
         Assert.True(euLR > usLR,
             $"EU-open should beat US-only on location_remote: euLR={euLR:0.000}, usLR={usLR:0.000}");
@@ -314,7 +314,7 @@ public sealed class RankerTests
             location: "USA only", remote: RemoteMode.Onsite, postedAt: DateTimeOffset.UtcNow);
 
         var scored = Ranker.Score([city, metro, country, region, elsewhere], pref, RankingCfg());
-        double LR(string id) => scored.Single(s => s.Listing.Id == id).Breakdown["location_remote"];
+        double LR(string id) => scored.Single(s => s.Listing.Id == id).Breakdown.LocationRemote;
 
         // Strictly descending tiers.
         Assert.True(LR(city.Id) > LR(metro.Id), $"city ({LR(city.Id):0.000}) should beat metro ({LR(metro.Id):0.000})");
@@ -341,7 +341,7 @@ public sealed class RankerTests
         var scored = Ranker.Score([listing], MikkelPersona(), RankingCfg());
 
         // Hellerup is in Mikkel's metro list — expect ~0.85 * weight.
-        Assert.Equal(DefaultWeights.LocationRemote * 0.85, scored[0].Breakdown["location_remote"], 3);
+        Assert.Equal(DefaultWeights.LocationRemote * 0.85, scored[0].Breakdown.LocationRemote, 3);
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public sealed class RankerTests
             remote: RemoteMode.Remote, postedAt: DateTimeOffset.UtcNow);
 
         var scored = Ranker.Score([worldwide], pref, RankingCfg());
-        Assert.Equal(DefaultWeights.LocationRemote, scored[0].Breakdown["location_remote"], 3);
+        Assert.Equal(DefaultWeights.LocationRemote, scored[0].Breakdown.LocationRemote, 3);
     }
 
     [Fact]
@@ -366,8 +366,8 @@ public sealed class RankerTests
         var rankingDefault = RankingCfg();
         var rankingCustom = RankingCfg() with { LocationTierWeights = new LocationTierWeights(1.0, 0.9, 0.2, 0.1, 0.0) };
 
-        var def = Ranker.Score([country], pref, rankingDefault)[0].Breakdown["location_remote"];
-        var cus = Ranker.Score([country], pref, rankingCustom)[0].Breakdown["location_remote"];
+        var def = Ranker.Score([country], pref, rankingDefault)[0].Breakdown.LocationRemote;
+        var cus = Ranker.Score([country], pref, rankingCustom)[0].Breakdown.LocationRemote;
 
         // Custom country tier (0.2) should produce a lower contribution than the default (0.6).
         Assert.True(cus < def, $"custom (0.2) should yield smaller contribution than default (0.6); cus={cus:0.000} def={def:0.000}");
@@ -468,5 +468,59 @@ public sealed class RankerTests
 
         var matches = Ranker.Rank([listing], MikkelPersona(), RankingCfg());
         Assert.Equal(3, matches[0].Reasoning.PrimaryStackHits.Count);
+    }
+
+    [Fact]
+    public void ScoreBreakdown_Components_Sum_To_PreClamp_Score()
+    {
+        var listing = MakeListing(
+            "Senior .NET Engineer",
+            "We use C#, .NET, Azure and SQL Server. Internal tools. Docker.",
+            location: "Copenhagen, Denmark",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-3));
+
+        var scored = Ranker.Score([listing], MikkelPersona(), RankingCfg());
+        var b = scored[0].Breakdown;
+
+        var sum = b.PrimaryStack + b.SecondaryStack + b.Seniority
+            + b.LocationRemote + b.Domain + b.Freshness + b.DisqualifierPenalty;
+
+        // No disqualifier hit on this listing — penalty must be exactly 0.
+        Assert.Equal(0.0, b.DisqualifierPenalty);
+        Assert.Equal(scored[0].Score, sum, precision: 4);
+    }
+
+    [Fact]
+    public void ScoreBreakdown_DisqualifierPenalty_Is_Negative_When_Triggered()
+    {
+        var listing = MakeListing(
+            "Senior .NET Engineer",
+            "We use C#, .NET, Azure. This is unpaid.",
+            location: "Copenhagen, Denmark",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow);
+
+        // Penalty = 0 zeroes the score; the breakdown's disqualifier delta must
+        // equal the negation of the pre-penalty positive components.
+        var ranking = RankingCfg(disqualifierPenalty: 0.0);
+        var scored = Ranker.Score([listing], MikkelPersona(), ranking);
+        var b = scored[0].Breakdown;
+
+        Assert.Single(scored[0].Reasoning.DisqualifierHits);
+        Assert.True(b.DisqualifierPenalty < 0, $"penalty must be < 0 when triggered, got {b.DisqualifierPenalty:0.000}");
+        var positives = b.PrimaryStack + b.SecondaryStack + b.Seniority + b.LocationRemote + b.Domain + b.Freshness;
+        Assert.Equal(-positives, b.DisqualifierPenalty, precision: 4);
+        Assert.Equal(0.0, scored[0].Score);
+    }
+
+    [Fact]
+    public void ScoreBreakdown_EnumerateComponents_Returns_All_Seven_In_Stable_Order()
+    {
+        var b = new ScoreBreakdown(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, -0.7);
+        var labels = b.EnumerateComponents().Select(c => c.Label).ToList();
+        Assert.Equal(
+            ["primary_stack", "secondary_stack", "seniority", "location_remote", "domain", "freshness", "disqualifier_penalty"],
+            labels);
     }
 }

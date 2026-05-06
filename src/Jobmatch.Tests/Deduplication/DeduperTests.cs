@@ -30,7 +30,7 @@ public sealed class DeduperTests
             Make("a", "Software Engineer", "Acme", "https://acme.com/jobs/1"),
             Make("b", "Software Engineer", "Acme", "https://acme.com/jobs/1"),
         };
-        var result = Deduper.Deduplicate(input);
+        var result = Deduper.Deduplicate(input).Deduped;
         Assert.Single(result);
     }
 
@@ -42,7 +42,7 @@ public sealed class DeduperTests
             Make("a", "Job A", "Acme", "https://acme.com/jobs/1"),
             Make("a", "Job A (variant)", "Acme", "https://acme.com/jobs/1#apply"),
         };
-        Assert.Single(Deduper.Deduplicate(input));
+        Assert.Single(Deduper.Deduplicate(input).Deduped);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class DeduperTests
             Make("a", "Job A", "Acme", "https://acme.com/jobs/1"),
             Make("b", "Job A", "Acme", "https://acme.com/jobs/1/"),
         };
-        Assert.Single(Deduper.Deduplicate(input));
+        Assert.Single(Deduper.Deduplicate(input).Deduped);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class DeduperTests
             Make("linkedin", "Senior Engineer", "Acme Corp", "https://linkedin.com/jobs/1"),
             Make("jobnet", "Senior Engineer", "Acme Corp", "https://jobnet.dk/jobs/abc"),
         };
-        Assert.Single(Deduper.Deduplicate(input));
+        Assert.Single(Deduper.Deduplicate(input).Deduped);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class DeduperTests
             Make("a", "Senior   Engineer", "Acme  Corp", "https://a.com/1"),
             Make("b", "senior engineer", "ACME CORP", "https://b.com/2"),
         };
-        Assert.Single(Deduper.Deduplicate(input));
+        Assert.Single(Deduper.Deduplicate(input).Deduped);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class DeduperTests
             Make("jobnet", "Senior Engineer", "Acme", "https://acme.com/jobs/cph", location: "Copenhagen"),
             Make("jobnet", "Senior Engineer", "Acme", "https://acme.com/jobs/ber", location: "Berlin"),
         };
-        Assert.Equal(2, Deduper.Deduplicate(input).Count);
+        Assert.Equal(2, Deduper.Deduplicate(input).Deduped.Count);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class DeduperTests
             Make("a", "Senior Engineer", "Acme", "https://a.com/1"),
             Make("b", "Senior Engineer", "Globex", "https://b.com/1"),
         };
-        Assert.Equal(2, Deduper.Deduplicate(input).Count);
+        Assert.Equal(2, Deduper.Deduplicate(input).Deduped.Count);
     }
 
     [Fact]
@@ -110,10 +110,43 @@ public sealed class DeduperTests
             Make("a", "Job B", "Acme", "https://acme.com/2"),
             Make("b", "Job A", "Acme", "https://other.com/1"),
         };
-        var result = Deduper.Deduplicate(input);
+        var result = Deduper.Deduplicate(input).Deduped;
         Assert.Equal(2, result.Count);
         Assert.Equal("a", result[0].Portal);
         Assert.Equal("Job A", result[0].Title);
         Assert.Equal("Job B", result[1].Title);
+    }
+
+    [Fact]
+    public void Deduplicate_MergeGroups_Cover_Each_Duplicate_Exactly_Once()
+    {
+        var firstA = Make("portal-a", "Senior Engineer", "Acme", "https://acme.com/jobs/1");
+        var dupeUrlA = Make("portal-b", "Senior Engineer", "Acme", "https://acme.com/jobs/1#section");
+        var dupeTclA = Make("portal-c", "Senior Engineer", "Acme", "https://other.com/listing/abc");
+        var distinct = Make("portal-d", "Junior Engineer", "Acme", "https://acme.com/jobs/2");
+
+        var result = Deduper.Deduplicate([firstA, dupeUrlA, dupeTclA, distinct]);
+
+        Assert.Equal(2, result.Deduped.Count);
+        Assert.Single(result.Merges);
+
+        var group = result.Merges[0];
+        Assert.Equal(firstA.Id, group.CanonicalId);
+        Assert.Equal(2, group.MergedFromIds.Count);
+        Assert.Contains(dupeUrlA.Id, group.MergedFromIds);
+        Assert.Contains(dupeTclA.Id, group.MergedFromIds);
+    }
+
+    [Fact]
+    public void Deduplicate_NoDuplicates_Yields_Empty_Merges()
+    {
+        var input = new[]
+        {
+            Make("a", "Engineer", "Acme", "https://a.com/1"),
+            Make("b", "Engineer", "Globex", "https://b.com/1"),
+        };
+        var result = Deduper.Deduplicate(input);
+        Assert.Equal(2, result.Deduped.Count);
+        Assert.Empty(result.Merges);
     }
 }
