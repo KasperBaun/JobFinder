@@ -142,6 +142,43 @@ public sealed class PortalConfigLoaderTests
     }
 
     [Fact]
+    public void Parse_Method_And_BodyTemplate_Are_Loaded()
+    {
+        var yaml = """
+            portals:
+              - name: jooble
+                type: api
+                method: post
+                endpoint: https://example.com/api/{api_key}
+                query_params:
+                  api_key: "ABC"
+                body_template:
+                  keywords: "software"
+                  page: 1
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+
+        Assert.Equal("post", portals[0].Method, ignoreCase: true);
+        Assert.NotNull(portals[0].BodyTemplate);
+        Assert.Equal("software", portals[0].BodyTemplate!["keywords"]?.ToString());
+        Assert.Equal("1", portals[0].BodyTemplate!["page"]?.ToString());
+    }
+
+    [Fact]
+    public void Parse_Without_Method_Yields_Null()
+    {
+        var yaml = """
+            portals:
+              - name: x
+                type: api
+                endpoint: https://example.com
+            """;
+        var portals = PortalConfigLoader.Parse(yaml);
+        Assert.Null(portals[0].Method);
+        Assert.Null(portals[0].BodyTemplate);
+    }
+
+    [Fact]
     public void Parse_Invalid_Url_Throws()
     {
         var yaml = """

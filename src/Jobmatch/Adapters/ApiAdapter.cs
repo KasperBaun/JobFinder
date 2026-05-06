@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
 
@@ -8,6 +9,8 @@ namespace Jobmatch.Adapters;
 
 public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger logger) : BaseAdapter(config, http, logger)
 {
+    private static readonly Regex EndpointPlaceholder = new(@"\{([a-zA-Z0-9_]+)\}", RegexOptions.Compiled);
+
     public override async Task<IReadOnlyList<Listing>> FetchAsync(CancellationToken ct = default)
     {
         if (Config.Endpoint is null)
@@ -15,18 +18,26 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             throw new ConfigException($"portal '{PortalName}': api adapter requires 'endpoint'");
         }
 
-        var uri = BuildRequestUri(Config.Endpoint, Config.QueryParams);
-        Logger.LogInformation("portal={Portal} GET {Uri}", PortalName, uri);
+        var (renderedEndpoint, remainingQueryParams) = RenderEndpointTemplate(Config.Endpoint, Config.QueryParams, PortalName);
+        var uri = BuildRequestUri(renderedEndpoint, remainingQueryParams);
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        var method = ParseHttpMethod(Config.Method, PortalName);
+        Logger.LogInformation("portal={Portal} {Method} {Uri}", PortalName, method.Method, uri);
+
+        using var request = new HttpRequestMessage(method, uri);
         request.Headers.Accept.Clear();
         request.Headers.Accept.ParseAdd("application/json");
         if (Config.Headers is not null)
         {
             foreach (var kvp in Config.Headers)
             {
+                if (string.Equals(kvp.Key, "Content-Type", StringComparison.OrdinalIgnoreCase)) continue;
                 request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);
             }
+        }
+        if (method == HttpMethod.Post && Config.BodyTemplate is not null)
+        {
+            request.Content = JsonContent.Create(Config.BodyTemplate);
         }
 
         using var response = await Http.SendAsync(request, ct);
@@ -92,6 +103,46 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         }
         builder.Query = string.Join("&", existing);
         return builder.Uri;
+    }
+
+    private static (Uri Endpoint, IReadOnlyDictionary<string, object?>? QueryParams) RenderEndpointTemplate(
+        Uri endpoint, IReadOnlyDictionary<string, object?>? queryParams, string portalName)
+    {
+        var template = endpoint.OriginalString;
+        if (!template.Contains('{')) return (endpoint, queryParams);
+
+        var consumed = new HashSet<string>(StringComparer.Ordinal);
+        var rendered = EndpointPlaceholder.Replace(template, match =>
+        {
+            var key = match.Groups[1].Value;
+            if (queryParams is null || !queryParams.TryGetValue(key, out var val) || val is null)
+            {
+                throw new ConfigException(
+                    $"portal '{portalName}': endpoint template references '{{{key}}}' but no matching key in query_params.");
+            }
+            consumed.Add(key);
+            return Uri.EscapeDataString(Convert.ToString(val, CultureInfo.InvariantCulture) ?? string.Empty);
+        });
+
+        var renderedUri = new Uri(rendered, UriKind.Absolute);
+        if (queryParams is null || consumed.Count == 0) return (renderedUri, queryParams);
+
+        var remaining = queryParams
+            .Where(kvp => !consumed.Contains(kvp.Key))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal);
+        return (renderedUri, remaining.Count == 0 ? null : remaining);
+    }
+
+    private static HttpMethod ParseHttpMethod(string? method, string portalName)
+    {
+        if (string.IsNullOrWhiteSpace(method)) return HttpMethod.Get;
+        return method.Trim().ToUpperInvariant() switch
+        {
+            "GET" => HttpMethod.Get,
+            "POST" => HttpMethod.Post,
+            _ => throw new ConfigException(
+                $"portal '{portalName}': method must be one of [get, post], got '{method}'."),
+        };
     }
 
     private static JsonElement WalkJsonPath(JsonElement root, string? dottedPath)

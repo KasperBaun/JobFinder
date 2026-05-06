@@ -8,19 +8,46 @@ _(none)_
 
 ## Backlog (next up)
 
-- **[T-007 — Portal API research (DK general + tech)](docs/tasks/T-007-portal-api-research.md).**
-  For each portal in the supplied DK general + tech ranking
-  (Jobindex, Jobnet, LinkedIn, Indeed, Ofir, Stepstone, Jobzonen,
-  Careerjet, Jooble, Jobsearch, The Hub, Monster, Workindenmark,
-  Jobbank, EURES; IT-jobbank, TechJob, Recruit IT, DevJobsScanner,
-  Stack Overflow / GitHub Jobs), determine whether an automatable
-  feed (API / RSS) exists. Output: a *Findings* table in the task
-  spec + disabled stub blocks in `portals.example.yml` for every
-  portal with a viable endpoint, mirroring the `adzuna-dk` pattern.
-  No new adapter types; no anti-bot bypass.
+_(none)_
 
 ## Completed (recent)
 
+- **`ApiAdapter` POST + endpoint templating extension.** First T-007
+  follow-up — unblocks the `jooble` stub. New `Method` and
+  `BodyTemplate` fields on `PortalConfig`; loader parses `method:` and
+  `body_template:`. `ApiAdapter.FetchAsync` branches on method (GET
+  default; POST attaches `JsonContent.Create(BodyTemplate)`),
+  validates against `[get, post]`, and substitutes `{key}`
+  placeholders in `endpoint` from matching `query_params` entries
+  (consumed keys are removed from the query string; unknown
+  placeholder throws `ConfigException`). Headers loop now skips
+  `Content-Type` so JsonContent can set its own. `jooble` block in
+  `portals.example.yml` cleaned of "NOT YET SUPPORTED" markers and
+  ships disabled awaiting a user-registered api_key. New R-026.
+  Seven new tests (5 adapter + 2 loader); 119 total green; 0 warnings.
+- **T-007 — Portal API research (DK general + tech).**
+  Surveyed 20 DK general + tech portals for automatable feeds.
+  Per-portal worksheets under [`docs/tasks/T-007/`](docs/tasks/T-007/);
+  roll-up at [`docs/tasks/T-007/INDEX.md`](docs/tasks/T-007/INDEX.md).
+  Dispatched 8 parallel research agents (Jobindex family / public
+  sector / newspaper aggregators / EURES / TechJob / Careerjet finish /
+  Jooble finish / 5-portal manual+dead survey). Five new viable
+  endpoints discovered, three more confirmed dead/manual. New disabled
+  stub blocks shipped in `src/config/portals.example.yml` under a
+  T-007 section: `jobindex-rss` (undocumented public feed, accepts
+  `q=`), `it-jobbank-rss` (same Jobindex backend, IT-scoped),
+  `jobsearch-dk` (canonical for the Jobzonen pool, RSS only carries
+  title/desc/link), `careerjet-dk` (api, free `affid` registration),
+  `jooble` (api, ships disabled with explicit "NOT YET SUPPORTED"
+  markers — needs adapter POST/`body_template:`/`{api_key}`
+  extension), `recruit-it` (html scrape with stable selectors),
+  `stepstone-dk` (manual stub clarifying it doesn't share Jobindex's
+  `/jobsoegning.rss`). Confirmed dead: Indeed.dk (single-source XML
+  shut off Mar 31 2026), Ofir.dk (whole-host 301 to jobindex.dk),
+  Jobzonen.dk (duplicates jobsearch.dk), Monster.dk, Workindenmark.dk
+  (frontend over Jobnet/EURES), DevJobsScanner. Confirmed manual:
+  Jobnet (STAR cert auth), LinkedIn, Stepstone, Jobbank, EURES (CSRF
+  gate), TechJob (robots.txt opts out AI crawlers).
 - **T-006 — Search transparency (raw / dedupe / scored / dropped).**
   Every run now records four extra sections in `RunDetail`: raw
   fetched listings per provider, dedupe merge groups, the full
