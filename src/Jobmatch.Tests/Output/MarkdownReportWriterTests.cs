@@ -127,4 +127,21 @@ public sealed class MarkdownReportWriterTests : IDisposable
         var content = File.ReadAllText(path);
         Assert.Contains("No matches above the minimum score threshold.", content);
     }
+
+    [Fact]
+    public void WriteMatches_Emits_Yaml_Frontmatter_For_Downstream_Tooling()
+    {
+        var path = Path.Combine(_dir, "top_jobs.md");
+        MarkdownReportWriter.WriteMatches([MakeMatch(0.42), MakeMatch(0.18)], path);
+
+        var content = File.ReadAllText(path);
+        Assert.StartsWith("---\n", content);
+        Assert.Contains("match_count: 2", content);
+        Assert.Contains("top_score: 0.420", content);
+        Assert.Matches(@"generated_at: \d{4}-\d{2}-\d{2}T", content);
+        // The closing fence must precede the H1 — frontmatter parsers stop at the second ---.
+        var frontmatterEnd = content.IndexOf("\n---\n", 4, StringComparison.Ordinal);
+        var headingIdx = content.IndexOf("# Top matches", StringComparison.Ordinal);
+        Assert.True(frontmatterEnd > 0 && frontmatterEnd < headingIdx);
+    }
 }

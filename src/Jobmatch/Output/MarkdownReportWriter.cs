@@ -40,6 +40,12 @@ public static class MarkdownReportWriter
     public static void WriteMatches(IReadOnlyList<Match> matches, string path, string title = "Top matches")
     {
         var sb = new StringBuilder();
+        var topScore = matches.Count > 0 ? matches.Max(m => m.Score) : 0.0;
+        sb.Append("---\n");
+        sb.Append(CultureInfo.InvariantCulture, $"generated_at: {DateTimeOffset.Now:O}\n");
+        sb.Append(CultureInfo.InvariantCulture, $"match_count: {matches.Count}\n");
+        sb.Append(CultureInfo.InvariantCulture, $"top_score: {topScore:0.000}\n");
+        sb.Append("---\n\n");
         sb.Append("# ").Append(title).Append('\n').Append('\n');
         sb.Append($"_Generated {DateTimeOffset.Now:O} — {matches.Count} match(es)_").Append('\n').Append('\n');
 
