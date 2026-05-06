@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getHistory, getRun } from '../api/client'
@@ -88,15 +88,19 @@ function HistoryListView() {
   )
 }
 
-type TabKey = 'shortlist' | 'raw' | 'dedupe' | 'ranking' | 'dropped'
+type TabKey = 'shortlist' | 'longlist' | 'raw' | 'dedupe' | 'dropped'
 
 function parseHash(hash: string): { tab: TabKey; provider?: string } {
   const cleaned = hash.startsWith('#') ? hash.slice(1) : hash
   const params = new URLSearchParams(cleaned)
-  const tab = params.get('tab')
+  const raw = params.get('tab')
   const provider = params.get('provider') ?? undefined
-  const valid: TabKey[] = ['shortlist', 'raw', 'dedupe', 'ranking', 'dropped']
-  if (tab && (valid as string[]).includes(tab)) return { tab: tab as TabKey, provider }
+  // Back-compat: legacy ?tab=ranking → longlist
+  const normalised = raw === 'ranking' ? 'longlist' : raw
+  const valid: TabKey[] = ['shortlist', 'longlist', 'raw', 'dedupe', 'dropped']
+  if (normalised && (valid as string[]).includes(normalised)) {
+    return { tab: normalised as TabKey, provider }
+  }
   return { tab: 'shortlist', provider }
 }
 
@@ -107,7 +111,44 @@ function buildHash(tab: TabKey, provider?: string): string {
   return `#${params.toString()}`
 }
 
-function TabStrip({
+function ResultsToggle({
+  active,
+  onChange,
+  data,
+}: {
+  active: TabKey
+  onChange: (tab: TabKey) => void
+  data: RunDetail
+}) {
+  const longlistCount = data.scored?.length
+  const longlistAvailable = !!data.scored
+  return (
+    <div className="view-toggle" role="tablist" aria-label="Result view">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active === 'shortlist'}
+        className={`view-toggle__seg ${active === 'shortlist' ? 'view-toggle__seg--active' : ''}`}
+        onClick={() => onChange('shortlist')}
+      >
+        Shortlist <span className="view-toggle__count">{data.shortlist.length}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active === 'longlist'}
+        className={`view-toggle__seg ${active === 'longlist' ? 'view-toggle__seg--active' : ''}`}
+        onClick={() => longlistAvailable && onChange('longlist')}
+        disabled={!longlistAvailable}
+        title={longlistAvailable ? 'All ranked candidates, including those beyond top-N' : 'Not recorded for this run.'}
+      >
+        Longlist {longlistCount !== undefined && <span className="view-toggle__count">{longlistCount}</span>}
+      </button>
+    </div>
+  )
+}
+
+function AuditTabs({
   active,
   onChange,
   data,
@@ -117,25 +158,24 @@ function TabStrip({
   data: RunDetail
 }) {
   const tabs: { key: TabKey; label: string; count?: number; available: boolean }[] = [
-    { key: 'shortlist', label: 'Shortlist', count: data.shortlist.length, available: true },
-    { key: 'raw',       label: 'Raw fetch', count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
-    { key: 'dedupe',    label: 'Dedupe',    count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
-    { key: 'ranking',   label: 'Full ranking', count: data.scored?.length, available: !!data.scored },
-    { key: 'dropped',   label: 'Dropped',   count: data.dropped?.length, available: !!data.dropped },
+    { key: 'raw',     label: 'raw fetch', count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
+    { key: 'dedupe',  label: 'dedupe',    count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
+    { key: 'dropped', label: 'dropped',   count: data.dropped?.length, available: !!data.dropped },
   ]
   return (
-    <nav className="tabs" aria-label="Run sections">
+    <nav className="audit-tabs" aria-label="Audit views">
+      <span className="audit-tabs__label">audit:</span>
       {tabs.map(t => (
         <button
           key={t.key}
           type="button"
-          className={`tab ${active === t.key ? 'tab--active' : ''} ${!t.available ? 'tab--disabled' : ''}`}
+          className={`audit-tab ${active === t.key ? 'audit-tab--active' : ''} ${!t.available ? 'audit-tab--disabled' : ''}`}
           onClick={() => t.available && onChange(t.key)}
           disabled={!t.available}
           title={t.available ? '' : 'Not recorded for this run.'}
         >
           {t.label}
-          {t.count !== undefined && <span className="tab__count">{t.count}</span>}
+          {t.count !== undefined && <span className="audit-tab__count">{t.count}</span>}
         </button>
       ))}
     </nav>
@@ -167,6 +207,18 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
   const [open, setOpen] = useState<Set<string>>(() =>
     new Set(focusProvider ? [focusProvider] : data.raw?.map(p => p.provider) ?? [])
   )
+
+  useEffect(() => {
+    if (!focusProvider) return
+    const el = document.getElementById(`raw-${focusProvider}`)
+    if (!el) return
+    const t = window.setTimeout(
+      () => el.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      50,
+    )
+    return () => window.clearTimeout(t)
+  }, [focusProvider])
+
   if (!data.raw) {
     return <div className="muted">No raw fetch data recorded for this run.</div>
   }
@@ -178,7 +230,11 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
           <div
             key={group.provider}
             id={`raw-${group.provider}`}
-            className={`raw-group ${focusProvider === group.provider ? 'raw-group--focus' : ''}`}
+            className={[
+              'raw-group',
+              isOpen ? 'raw-group--open' : '',
+              focusProvider === group.provider ? 'raw-group--focus' : '',
+            ].filter(Boolean).join(' ')}
           >
             <button
               type="button"
@@ -528,11 +584,12 @@ function RunDetailView({ runId }: { runId: string }) {
       {data && (
         <>
           <RunSummaryCard run={data} />
-          <TabStrip active={tab} onChange={setTab} data={data} />
+          <ResultsToggle active={tab} onChange={setTab} data={data} />
+          <AuditTabs active={tab} onChange={setTab} data={data} />
           {tab === 'shortlist' && <ShortlistTab data={data} />}
+          {tab === 'longlist'  && <RankingTab data={data} />}
           {tab === 'raw'       && <RawFetchTab data={data} focusProvider={provider} />}
           {tab === 'dedupe'    && <DedupeTab data={data} />}
-          {tab === 'ranking'   && <RankingTab data={data} />}
           {tab === 'dropped'   && <DroppedTab data={data} />}
         </>
       )}

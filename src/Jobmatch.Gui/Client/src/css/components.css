@@ -840,7 +840,60 @@ a.btn--danger:hover {
   margin-bottom: var(--space-6);
   box-shadow: var(--shadow-1);
   position: relative;
+  transition: padding 320ms cubic-bezier(.2,.7,.2,1);
 }
+
+.progress-panel--collapsed { padding: 0.55rem var(--space-5); margin-bottom: var(--space-5); }
+
+.progress-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 320ms cubic-bezier(.2,.7,.2,1);
+}
+.progress-collapse > * { overflow: hidden; min-height: 0; }
+.progress-panel--collapsed .progress-collapse { grid-template-rows: 0fr; }
+
+.progress-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--c-text);
+}
+.progress-panel:not(.progress-panel--collapsed) .progress-summary { padding-bottom: var(--space-3); border-bottom: 1px solid var(--c-slate-200); margin-bottom: var(--space-3); }
+.progress-summary__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem; height: 1.25rem;
+  border-radius: 50%;
+  background: var(--c-good-bg);
+  color: var(--c-good);
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.progress-summary__text {
+  font-size: 0.86rem;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+.progress-summary__sep { color: var(--c-text-subtle); margin: 0 0.1rem; }
+.progress-summary__toggle {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.progress-summary:hover .progress-summary__toggle { color: var(--c-action); }
 
 .progress-panel__heading {
   font-family: var(--font-mono);
@@ -1068,42 +1121,101 @@ a.btn--danger:hover {
 }
 
 /* ============================================================
-   run summary card
+   run stat bar — horizontal summary at top of /history/:id
    ============================================================ */
 
-.run-summary-card {
-  position: relative;
+.run-stat-bar {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--space-5);
   background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
   border-top: 2px solid var(--c-navy-500);
   border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-6);
+  padding: 0.85rem var(--space-5);
   box-shadow: var(--shadow-1);
   margin-bottom: var(--space-5);
 }
 
-.run-summary-card__header {
+.run-stat-bar__lead {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-  flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding-right: var(--space-5);
+  border-right: 1px solid var(--c-slate-200);
+  min-width: 0;
 }
 
-.run-summary-card__title {
+.run-stat-bar__id {
   font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--c-navy-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.run-summary-card__time {
-  font-size: 0.82rem;
+.run-stat-bar__time {
+  font-size: 0.72rem;
   color: var(--c-text-muted);
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
+}
+
+.run-stat-bar__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  flex: 1;
+  gap: 0;
+  margin: 0;
+}
+
+.run-stat-bar__metrics .stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 var(--space-5);
+  border-right: 1px solid var(--c-slate-200);
+  min-width: max-content;
+}
+.run-stat-bar__metrics .stat:last-child { border-right: 0; }
+.run-stat-bar__metrics .stat:first-child { padding-left: 0; }
+
+.run-stat-bar .stat dt {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-navy-500);
+}
+
+.run-stat-bar .stat dd {
+  font-size: 0.92rem;
+  color: var(--c-text-mid);
+  font-variant-numeric: tabular-nums;
+}
+
+.run-stat-bar .stat__num {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.18rem;
+  letter-spacing: -0.01em;
+  color: var(--c-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.run-stat-bar .stat--bad .stat__num { color: var(--c-bad); }
+
+@media (max-width: 720px) {
+  .run-stat-bar { padding: var(--space-3) var(--space-4); gap: var(--space-3); }
+  .run-stat-bar__lead { padding-right: var(--space-4); }
+  .run-stat-bar__metrics .stat { padding: 0 var(--space-4); }
 }
 
 /* ============================================================
@@ -1602,6 +1714,111 @@ a.btn--danger:hover {
 .tab--active .tab__count { color: var(--c-action); }
 
 /* ------------------------------------------------------------------------
+   Results view toggle — primary segmented control (Shortlist | Longlist)
+   ------------------------------------------------------------------------ */
+.view-toggle {
+  display: inline-flex;
+  margin: 1.5rem 0 0.6rem;
+  border: 1px solid var(--c-slate-300);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--c-surface);
+  box-shadow: var(--shadow-1);
+}
+.view-toggle__seg {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0.65rem 1.4rem;
+  font: inherit;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.02rem;
+  letter-spacing: -0.005em;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  transition: background var(--transition), color var(--transition);
+  border-right: 1px solid var(--c-slate-200);
+}
+.view-toggle__seg:last-child { border-right: 0; }
+.view-toggle__seg:hover:not(:disabled):not(.view-toggle__seg--active) {
+  background: var(--c-action-soft);
+  color: var(--c-text);
+}
+.view-toggle__seg--active {
+  background: var(--c-navy-800);
+  color: #fff;
+}
+.view-toggle__seg:disabled { opacity: 0.4; cursor: not-allowed; }
+.view-toggle__count {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+}
+.view-toggle__seg:not(.view-toggle__seg--active) .view-toggle__count {
+  background: var(--c-action-soft);
+  color: var(--c-text-subtle);
+}
+
+/* ------------------------------------------------------------------------
+   Audit tabs — secondary, muted (raw fetch · dedupe · dropped)
+   ------------------------------------------------------------------------ */
+.audit-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.78rem;
+}
+.audit-tabs__label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-text-subtle);
+  margin-right: 0.4rem;
+}
+.audit-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0.3rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background var(--transition), color var(--transition);
+}
+.audit-tab:hover:not(:disabled) { background: var(--c-action-soft); color: var(--c-text); }
+.audit-tab--active {
+  background: var(--c-action-soft);
+  color: var(--c-action);
+  font-weight: 500;
+}
+.audit-tab--disabled { opacity: 0.4; cursor: not-allowed; }
+.audit-tab__count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-subtle);
+}
+.audit-tab--active .audit-tab__count { color: var(--c-action); }
+
+/* ------------------------------------------------------------------------
    Raw fetch tab — provider groups
    ------------------------------------------------------------------------ */
 .raw-fetch { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -1611,21 +1828,21 @@ a.btn--danger:hover {
   overflow: hidden;
   background: var(--c-surface);
 }
-.raw-group--focus { border-color: var(--c-action); box-shadow: 0 0 0 1px var(--c-action) inset; }
+.raw-group--focus { border-color: var(--c-action); }
 .raw-group__header {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   width: 100%;
-  padding: 0.6rem 0.9rem;
+  padding: 0.7rem var(--space-5);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--c-border);
   font: inherit;
   cursor: pointer;
   text-align: left;
   color: var(--c-text);
 }
+.raw-group--open .raw-group__header { border-bottom: 1px solid var(--c-border); }
 .raw-group__header:hover { background: var(--c-action-soft); }
 .raw-group__caret { color: var(--c-text-subtle); width: 0.7rem; }
 .raw-group__name { font-weight: 500; }
@@ -1636,6 +1853,18 @@ a.btn--danger:hover {
   font-variant-numeric: tabular-nums;
   color: var(--c-text-muted);
 }
+.raw-group .table-wrap { border: 0; border-radius: 0; box-shadow: none; }
+.raw-group .table th:first-child,
+.raw-group .table td:first-child { padding-left: var(--space-5); }
+.raw-group .table th:last-child,
+.raw-group .table td:last-child  { padding-right: var(--space-5); }
+
+@keyframes raw-group-glow {
+  0%   { box-shadow: 0 0 0 0   var(--c-action-soft); }
+  60%  { box-shadow: 0 0 0 6px var(--c-action-soft); }
+  100% { box-shadow: 0 0 0 0   transparent; }
+}
+.raw-group--focus { animation: raw-group-glow 1200ms ease-out 1; }
 
 /* ------------------------------------------------------------------------
    Dedupe tab

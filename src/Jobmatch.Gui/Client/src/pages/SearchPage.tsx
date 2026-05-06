@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getHistory, getProviders } from '../api/client'
@@ -62,6 +62,15 @@ export function SearchPage() {
     () => reduceProgress(stream.events, effectiveProviders),
     [stream.events, effectiveProviders],
   )
+
+  const [progressExpanded, setProgressExpanded] = useState(true)
+  useEffect(() => {
+    if (stream.status === 'running') setProgressExpanded(true)
+    if (stream.status === 'complete') {
+      const t = setTimeout(() => setProgressExpanded(false), 350)
+      return () => clearTimeout(t)
+    }
+  }, [stream.status])
 
   function toggleProvider(name: string) {
     const base = selectedProviders ?? enabledProviderNames
@@ -184,8 +193,30 @@ export function SearchPage() {
       )}
 
       {stream.status !== 'idle' && (
-        <section className="progress-panel">
-          <h2 className="progress-panel__heading">Progress</h2>
+        <section className={`progress-panel${stream.status === 'complete' && !progressExpanded ? ' progress-panel--collapsed' : ''}`}>
+          {stream.status === 'complete' ? (
+            <button
+              type="button"
+              className="progress-summary"
+              onClick={() => setProgressExpanded(e => !e)}
+              aria-expanded={progressExpanded}
+            >
+              <span className="progress-summary__check" aria-hidden="true">✓</span>
+              <span className="progress-summary__text">
+                <span className="tabular">{progress.rows.filter(r => r.status === 'ok').length}</span>
+                {' / '}
+                <span className="tabular">{progress.rows.length}</span> providers
+                {progress.dedupe !== undefined && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.dedupe}</span> deduped</>}
+                {progress.rank && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.rank.rankedCount}</span> ranked <span className="progress-summary__sep">·</span> top <span className="tabular mono">{progress.rank.topScore.toFixed(2)}</span></>}
+              </span>
+              <span className="progress-summary__toggle">
+                {progressExpanded ? 'hide steps' : 'show steps'} {progressExpanded ? '▴' : '▾'}
+              </span>
+            </button>
+          ) : (
+            <h2 className="progress-panel__heading">Progress</h2>
+          )}
+          <div className="progress-collapse"><div>
           <ul className="progress-list">
             {progress.rows.map(row => {
               const linkable = stream.status === 'complete' && !!stream.runId && row.status === 'ok'
@@ -232,7 +263,7 @@ export function SearchPage() {
             {progress.rank !== undefined && (
               <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
                 {stream.status === 'complete' && stream.runId ? (
-                  <Link to={`/history/${stream.runId}#tab=ranking`}>
+                  <Link to={`/history/${stream.runId}#tab=longlist`}>
                     <span className="progress-row__icon">·</span>
                     <span className="progress-row__name">rank</span>
                     <span className="progress-row__status">
@@ -251,6 +282,7 @@ export function SearchPage() {
               </li>
             )}
           </ul>
+          </div></div>
           {stream.status === 'error' && stream.error && (
             <div className="error-banner">Search failed: {stream.error}</div>
           )}
