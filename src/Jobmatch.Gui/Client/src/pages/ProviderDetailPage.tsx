@@ -1,130 +1,51 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  createProvider,
-  deleteProvider,
   getProvider,
+  setProviderEnabled,
+  setProviderSecrets,
   testProvider,
-  updateProvider,
 } from '../api/client'
-import type { ProviderDetail, ProviderTestResult, ProviderType, ProviderUpsert } from '../api/types'
+import type { ProviderTestResult } from '../api/types'
 import { Toggle } from '../components/Toggle'
-import { SaveBar } from '../components/SaveBar'
 import { Toast } from '../components/Toast'
 import { formatRelative } from '../utils/time'
 
-const TYPES: ProviderType[] = ['api', 'rss', 'html', 'manual']
-
-const BLANK: ProviderUpsert = {
-  name: '',
-  type: 'rss',
-  enabled: true,
-  endpoint: '',
-  rateLimitRps: 1.0,
-  notes: '',
-}
-
-function fromDetail(d: ProviderDetail): ProviderUpsert {
-  return {
-    name: d.name,
-    type: d.type,
-    enabled: d.enabled,
-    endpoint: d.endpoint ?? '',
-    rateLimitRps: d.rateLimitRps,
-    notes: d.notes ?? '',
-  }
-}
-
 export function ProviderDetailPage() {
   const { id: idParam } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
-
-  const isNew = idParam === 'new'
-  const id = isNew ? null : Number(idParam)
-  const validId = !isNew && id !== null && Number.isFinite(id)
+  const id = Number(idParam)
+  const validId = Number.isFinite(id)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['provider', id],
-    queryFn: () => getProvider(id as number),
+    queryFn: () => getProvider(id),
     enabled: validId,
   })
 
-  const [form, setForm] = useState<ProviderUpsert>(BLANK)
-  const [original, setOriginal] = useState<ProviderUpsert | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
   const [testResult, setTestResult] = useState<ProviderTestResult | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
-  useEffect(() => {
-    if (isNew) {
-      setForm(BLANK)
-      setOriginal(BLANK)
-      return
-    }
-    if (data) {
-      const u = fromDetail(data)
-      setForm(u)
-      setOriginal(u)
-    }
-  }, [data, isNew])
-
-  const dirty = useMemo(() => {
-    if (!original) return false
-    return JSON.stringify(form) !== JSON.stringify(original)
-  }, [form, original])
-
-  const save = useMutation({
-    mutationFn: async () => {
-      if (isNew) {
-        const res = await createProvider(form)
-        if (!res.success) throw new Error(res.error ?? 'Create failed')
-        return res.id
+  const toggle = useMutation({
+    mutationFn: (enabled: boolean) => setProviderEnabled(id, enabled),
+    onSuccess: (res) => {
+      if (!res.success) {
+        setToast({ kind: 'err', message: res.error ?? 'Save failed' })
+        return
       }
-      const res = await updateProvider(id as number, form)
-      if (!res.success) throw new Error(res.error ?? 'Save failed')
-      return id as number
-    },
-    onSuccess: (savedId) => {
-      setToast({ kind: 'ok', message: isNew ? 'Provider created' : 'Provider saved' })
+      void queryClient.invalidateQueries({ queryKey: ['provider', id] })
       void queryClient.invalidateQueries({ queryKey: ['providers'] })
-      void queryClient.invalidateQueries({ queryKey: ['provider', savedId] })
-      if (isNew) navigate(`/providers/${savedId}`, { replace: true })
-      else setOriginal(form)
     },
-    onError: (err) => {
-      setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
-    },
-  })
-
-  const remove = useMutation({
-    mutationFn: async () => {
-      const res = await deleteProvider(id as number)
-      if (!res.success) throw new Error(res.error ?? 'Delete failed')
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['providers'] })
-      navigate('/providers')
-    },
-    onError: (err) => {
-      setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
-      setConfirmDelete(false)
-    },
+    onError: (err) => setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) }),
   })
 
   const test = useMutation({
-    mutationFn: () => testProvider(id as number),
+    mutationFn: () => testProvider(id),
     onMutate: () => setTestResult(null),
     onSuccess: (result) => setTestResult(result),
-    onError: (err) => {
-      setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
-    },
+    onError: (err) => setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) }),
   })
-
-  function patch(p: Partial<ProviderUpsert>) {
-    setForm((f) => ({ ...f, ...p }))
-  }
 
   return (
     <div className="page">
@@ -132,94 +53,52 @@ export function ProviderDetailPage() {
 
       <Link to="/providers" className="back-link">← all providers</Link>
 
-      {!isNew && isLoading && <div className="muted">Loading…</div>}
-      {!isNew && error && <div className="error-text">Failed to load provider.</div>}
+      {isLoading && <div className="muted">Loading…</div>}
+      {error && <div className="error-text">Failed to load provider.</div>}
 
-      {(isNew || data) && (
+      {data && (
         <>
           <header className="page__header">
             <div className="provider-detail__head">
               <div className="provider-detail__head-left">
-                <div className="page__eyebrow">
-                  {isNew ? 'new provider' : `provider · #${data?.id}`}
-                </div>
-                <h1 className="page__heading provider-detail__heading">
-                  {isNew ? <em>New source</em> : <>{data?.name}</>}
-                </h1>
+                <div className="page__eyebrow">provider · #{data.id}</div>
+                <h1 className="page__heading provider-detail__heading">{data.name}</h1>
               </div>
-              {!isNew && (
-                <Toggle
-                  checked={form.enabled}
-                  onChange={(v) => patch({ enabled: v })}
-                  label={form.enabled ? 'Enabled' : 'Disabled'}
-                  ariaLabel="enabled"
-                />
-              )}
+              <Toggle
+                checked={data.enabled}
+                onChange={(v) => toggle.mutate(v)}
+                label={data.enabled ? 'Enabled' : 'Disabled'}
+                ariaLabel="enabled"
+              />
             </div>
           </header>
 
           <div className="provider-detail__sections">
-          <section className="card">
-            <h2 className="card__title">Configuration</h2>
-            <div className="provider-detail__form">
-              <div className="field">
-                <label className="field__label">Name</label>
-                <input
-                  className="input"
-                  value={form.name}
-                  onChange={(e) => patch({ name: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label className="field__label">Type</label>
-                <select
-                  className="select"
-                  value={form.type}
-                  onChange={(e) => patch({ type: e.target.value as ProviderType })}
-                >
-                  {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label className="field__label">Rate limit (rps)</label>
-                <input
-                  type="number"
-                  step={0.1}
-                  min={0}
-                  className="input input--mono tabular"
-                  value={form.rateLimitRps}
-                  onChange={(e) => patch({ rateLimitRps: Number(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="field provider-detail__field--wide">
-                <label className="field__label">Endpoint</label>
-                <input
-                  className="input input--mono"
-                  value={form.endpoint ?? ''}
-                  placeholder={form.type === 'manual' ? '(none — manual provider)' : 'https://…'}
-                  onChange={(e) => patch({ endpoint: e.target.value })}
-                  disabled={form.type === 'manual'}
-                />
-              </div>
-              <div className="field provider-detail__field--wide">
-                <label className="field__label">Notes</label>
-                <input
-                  className="input"
-                  value={form.notes ?? ''}
-                  placeholder="optional"
-                  onChange={(e) => patch({ notes: e.target.value })}
-                />
-              </div>
-              {isNew && (
-                <p className="field__hint provider-detail__field--wide">
-                  Advanced fields (selectors, query params, headers, response mapping)
-                  can be added by editing <code>portals.yml</code> directly. They round-trip through the GUI safely.
-                </p>
-              )}
-            </div>
-          </section>
+            <section className="card">
+              <h2 className="card__title">Configuration</h2>
+              <dl className="provider-detail__readonly">
+                <ReadonlyField label="Type"      value={data.type} />
+                <ReadonlyField label="Rate limit (rps)" value={data.rateLimitRps.toString()} />
+                <ReadonlyField label="Endpoint"  value={data.endpoint ?? '(none — manual provider)'} mono />
+                {data.notes && <ReadonlyField label="Notes" value={data.notes} />}
+              </dl>
+              <p className="field__hint">
+                Catalog values ship with the app and are read-only. To change one, open <code>src/Jobmatch/Configuration/portals.json</code> and submit a change.
+              </p>
+            </section>
 
-          {!isNew && (
+            {data.requiresSecret && (
+              <SecretsCard
+                providerId={data.id}
+                secretName={data.requiresSecret}
+                hasSecret={data.hasSecret}
+                onSaved={() => {
+                  void queryClient.invalidateQueries({ queryKey: ['provider', data.id] })
+                  void queryClient.invalidateQueries({ queryKey: ['providers'] })
+                }}
+              />
+            )}
+
             <section className="card">
               <div className="row-spread">
                 <h2 className="card__title" style={{ marginBottom: 0 }}>Test connection</h2>
@@ -227,13 +106,13 @@ export function ProviderDetailPage() {
                   type="button"
                   className="btn btn--secondary"
                   onClick={() => test.mutate()}
-                  disabled={test.isPending || form.type === 'manual'}
+                  disabled={test.isPending || data.type === 'manual'}
                 >
                   {test.isPending ? <span className="spinner" /> : 'Run test'}
                 </button>
               </div>
               <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>
-                {form.type === 'manual'
+                {data.type === 'manual'
                   ? 'Manual providers have no live endpoint — nothing to test.'
                   : 'Runs the actual adapter once and reports listings fetched, latency, and a sample title.'}
               </p>
@@ -267,59 +146,120 @@ export function ProviderDetailPage() {
                 </div>
               )}
             </section>
-          )}
 
-          {!isNew && data && data.recentRuns.length > 0 && (
-            <section className="card">
-              <h2 className="card__title">Recent runs</h2>
-              <ul className="provider-recent-runs">
-                {data.recentRuns.map((r) => (
-                  <li key={r.runId} className={`provider-recent-runs__row provider-recent-runs__row--${r.status}`}>
-                    <span className="provider-recent-runs__date tabular">{formatRelative(r.startedAt)}</span>
-                    <span className="provider-recent-runs__status">{r.status}</span>
-                    <span className="provider-recent-runs__count tabular">
-                      {typeof r.fetchedCount === 'number' ? r.fetchedCount : '—'}
-                    </span>
-                    <Link to={`/history/${r.runId}`} className="provider-recent-runs__link">view run →</Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {!isNew && (
-            <section className="card provider-danger">
-              <h2 className="card__title">Danger zone</h2>
-              <p className="field__hint">Removes the provider from <code>portals.yml</code>. Past run history attribution is preserved.</p>
-              {!confirmDelete ? (
-                <button type="button" className="btn btn--danger" onClick={() => setConfirmDelete(true)}>
-                  Delete provider
-                </button>
-              ) : (
-                <div className="provider-danger__confirm">
-                  <span>Delete <strong>{data?.name}</strong>?</span>
-                  <button type="button" className="btn btn--danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
-                    {remove.isPending ? <span className="spinner" /> : 'Yes, delete'}
-                  </button>
-                  <button type="button" className="btn btn--ghost" onClick={() => setConfirmDelete(false)}>
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </section>
-          )}
-
+            {data.recentRuns.length > 0 && (
+              <section className="card">
+                <h2 className="card__title">Recent runs</h2>
+                <ul className="provider-recent-runs">
+                  {data.recentRuns.map((r) => (
+                    <li key={r.runId} className={`provider-recent-runs__row provider-recent-runs__row--${r.status}`}>
+                      <span className="provider-recent-runs__date tabular">{formatRelative(r.startedAt)}</span>
+                      <span className="provider-recent-runs__status">{r.status}</span>
+                      <span className="provider-recent-runs__count tabular">
+                        {typeof r.fetchedCount === 'number' ? r.fetchedCount : '—'}
+                      </span>
+                      <Link to={`/history/${r.runId}`} className="provider-recent-runs__link">view run →</Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
-
-          <SaveBar
-            visible={dirty}
-            message={isNew ? 'New provider — fill in fields to create' : 'Unsaved changes'}
-            saving={save.isPending}
-            onSave={() => save.mutate()}
-            onRevert={() => original && setForm(original)}
-          />
         </>
       )}
     </div>
+  )
+}
+
+function ReadonlyField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="provider-detail__readonly-row">
+      <dt>{label}</dt>
+      <dd className={mono ? 'mono' : undefined}>{value}</dd>
+    </div>
+  )
+}
+
+function SecretsCard({
+  providerId,
+  secretName,
+  hasSecret,
+  onSaved,
+}: {
+  providerId: number
+  secretName: string
+  hasSecret: boolean
+  onSaved: () => void
+}) {
+  const [value, setValue] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+
+  async function save() {
+    setSaving(true)
+    try {
+      const res = await setProviderSecrets(providerId, { [secretName]: value })
+      if (!res.success) throw new Error(res.error ?? 'Save failed')
+      setValue('')
+      setMsg({ kind: 'ok', text: 'Saved.' })
+      onSaved()
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function clear() {
+    setSaving(true)
+    try {
+      const res = await setProviderSecrets(providerId, { [secretName]: '' })
+      if (!res.success) throw new Error(res.error ?? 'Clear failed')
+      setMsg({ kind: 'ok', text: 'Cleared.' })
+      onSaved()
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2 className="card__title">Secret · {secretName}</h2>
+      <p className="field__hint">
+        Per-user. Stored locally in <code>data/&lt;email&gt;/provider-state.json</code>.
+        The provider is skipped at search time until a non-empty value is set.
+      </p>
+      <div className="secrets-form">
+        <input
+          className="input input--mono"
+          type="password"
+          autoComplete="off"
+          placeholder={hasSecret ? '••••••••  (overwrite to update)' : 'paste value'}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          disabled={saving}
+        />
+        <button
+          type="button"
+          className="btn btn--primary btn--sm"
+          disabled={saving || value.length === 0}
+          onClick={save}
+        >
+          {saving ? <span className="spinner" /> : 'Save'}
+        </button>
+        {hasSecret && (
+          <button type="button" className="btn btn--ghost btn--sm" disabled={saving} onClick={clear}>
+            Clear
+          </button>
+        )}
+        {msg && (
+          <span className={msg.kind === 'ok' ? 'muted small' : 'error-text small'}>
+            {msg.text}
+          </span>
+        )}
+      </div>
+    </section>
   )
 }
