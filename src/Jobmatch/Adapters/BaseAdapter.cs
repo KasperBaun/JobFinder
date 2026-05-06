@@ -60,6 +60,13 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
         DateTimeOffset? postedAt,
         JsonElement raw)
     {
+        if (Config.StaticFields is { } sf)
+        {
+            if (sf.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)) title = t;
+            if (sf.TryGetValue("company", out var c) && !string.IsNullOrWhiteSpace(c)) company = c;
+            if (sf.TryGetValue("location", out var l) && !string.IsNullOrWhiteSpace(l)) location = l;
+        }
+
         return new Listing(
             Id: StableId(Config.Name, sourceId),
             Portal: Config.Name,

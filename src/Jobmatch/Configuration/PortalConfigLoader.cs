@@ -59,6 +59,7 @@ public static class PortalConfigLoader
         var rateLimit = ReadDouble(map, "rate_limit_rps", 1.0);
         var notes = map.TryGetValue("notes", out var n) ? n?.ToString() : null;
         var html = ReadHtmlSelectors(map, name, type);
+        var staticFields = ReadStringDict(map, "static_fields");
 
         return new PortalConfig(
             Name: name,
@@ -71,7 +72,8 @@ public static class PortalConfigLoader
             ResponseMapping: responseMapping,
             Html: html,
             RateLimitRps: rateLimit,
-            Notes: notes);
+            Notes: notes,
+            StaticFields: staticFields);
     }
 
     private static HtmlSelectors? ReadHtmlSelectors(IReadOnlyDictionary<string, object?> map, string portalName, PortalType type)

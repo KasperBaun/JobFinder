@@ -8,13 +8,6 @@ _(none)_
 
 ## Backlog (next up)
 
-- **[T-005 — Copenhagen-relevant provider seed](docs/tasks/T-005-copenhagen-providers.md).**
-  Replace the generic seed with Greenhouse / Lever ATS feeds for
-  ~10–20 Copenhagen tech employers + Adzuna DK. Smallest backend
-  change: add `static_fields:` overlay to `PortalConfig` so per-company
-  boards stamp their company name onto every listing. Goal: a fresh
-  `dotnet run` produces a search that actually represents the user's
-  market.
 - **[T-006 — Search transparency (raw / dedupe / scored / dropped)](docs/tasks/T-006-search-transparency.md).**
   Drill-down on every run so the user can audit *what was fetched*,
   *what got merged*, *what was scored*, and *what got dropped and
@@ -24,6 +17,22 @@ _(none)_
 
 ## Completed (recent)
 
+- **T-005 — Copenhagen-relevant provider seed.**
+  Added `StaticFields` to `PortalConfig` (parsed from a `static_fields:`
+  YAML block) and a tiny overlay in `BaseAdapter.BuildListing` —
+  static value wins over mapped value when non-empty. Picks up Api /
+  Rss / Html adapters since all three call `BuildListing`. New R-025
+  documents the contract. Rewrote `portals.example.yml` with five
+  verified Greenhouse boards (`pleo`, `trustpilot`, `unity3d`, `wolt`,
+  `adyen`), each stamping its company name via `static_fields`. Kept
+  `thehub` and `remotive` enabled as complements; added a disabled
+  `adzuna-dk` skeleton with placeholder keys + signup notes for the
+  Danish aggregator. Each candidate slug was probed live before
+  inclusion — many initially-suggested companies (Vivino, Templafy,
+  Dixa, Forecast, TwentyThree, Falcon.io, Siteimprove, Zendesk,
+  Tradeshift, Lunar) 404'd and were dropped. Loader and adapter tests
+  cover round-trip parse + override precedence; a smoke test parses
+  the shipped example file end-to-end. 105 tests green.
 - **GUI v2 — editable Skillset/Providers + navy editorial redesign.**
   (commit `42f1d44`, no T-NNN — feedback iteration on T-003.)
   `PUT /api/skillset` and `PUT /api/providers` with structured editors,

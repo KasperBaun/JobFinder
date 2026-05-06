@@ -13,4 +13,5 @@ public sealed record PortalConfig(
     IReadOnlyDictionary<string, string>? ResponseMapping = null,
     HtmlSelectors? Html = null,
     double RateLimitRps = 1.0,
-    string? Notes = null);
+    string? Notes = null,
+    IReadOnlyDictionary<string, string>? StaticFields = null);

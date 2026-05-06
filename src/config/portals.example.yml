@@ -1,31 +1,126 @@
 # Each portal has a `type` that selects the adapter.
 # Disable portals by setting `enabled: false` — no code change needed.
+#
+# `static_fields:` overlays fixed values onto every produced listing
+# (title / company / location). Used by per-company ATS boards that
+# don't carry the company name in their payload — the board *is* the
+# company. Static value wins over the mapped value when non-empty.
 
 portals:
-  # jobnet.dk's public-facing search no longer returns JSON for unauthenticated
-  # callers — the URL below now serves an HTML page. Real machine integration
-  # against STAR (Danish labour-market authority) requires certificate auth and
-  # a paid agreement (spoc@star.dk). Left here as a config skeleton; flip to
-  # `enabled: true` only if you have a working endpoint.
-  - name: jobnet
+  # ────────────────────────────────────────────────────────────────
+  # Greenhouse boards — per-company ATS feeds. Endpoint pattern:
+  #   https://boards-api.greenhouse.io/v1/boards/<slug>/jobs?content=true
+  # Each board only carries that company's roles, so we stamp the
+  # company name via `static_fields:`. The boards below were verified
+  # live; if a company moves ATS the slug 404s — flip `enabled: false`
+  # and replace, or remove.
+  # ────────────────────────────────────────────────────────────────
+
+  - name: greenhouse-pleo
     type: api
-    enabled: false
-    endpoint: https://job.jobnet.dk/CV/FindWork/Search
+    enabled: true
+    endpoint: https://boards-api.greenhouse.io/v1/boards/pleo/jobs
     query_params:
-      SearchString: "software engineer"
-      Country: Danmark
-      Offset: 0
-      SortValue: CreationDate
+      content: "true"
     response_mapping:
-      items_path: "JobPositionPostings"
-      id: "Id"
-      title: "Title"
-      company: "HiringOrgName"
-      location: "WorkPlaceCity"
-      description: "Description"
-      url_template: "https://job.jobnet.dk/CV/FindWork/Details/{Id}"
-      posted_at: "PostingCreated"
-    rate_limit_rps: 2.0
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      location: "location.name"
+      description: "content"
+      url: "absolute_url"
+      posted_at: "updated_at"
+    static_fields:
+      company: "Pleo"
+    rate_limit_rps: 1.0
+
+  - name: greenhouse-trustpilot
+    type: api
+    enabled: true
+    endpoint: https://boards-api.greenhouse.io/v1/boards/trustpilot/jobs
+    query_params:
+      content: "true"
+    response_mapping:
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      location: "location.name"
+      description: "content"
+      url: "absolute_url"
+      posted_at: "updated_at"
+    static_fields:
+      company: "Trustpilot"
+    rate_limit_rps: 1.0
+
+  - name: greenhouse-unity
+    type: api
+    enabled: true
+    endpoint: https://boards-api.greenhouse.io/v1/boards/unity3d/jobs
+    query_params:
+      content: "true"
+    response_mapping:
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      location: "location.name"
+      description: "content"
+      url: "absolute_url"
+      posted_at: "updated_at"
+    static_fields:
+      company: "Unity"
+    rate_limit_rps: 1.0
+
+  - name: greenhouse-wolt
+    type: api
+    enabled: true
+    endpoint: https://boards-api.greenhouse.io/v1/boards/wolt/jobs
+    query_params:
+      content: "true"
+    response_mapping:
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      location: "location.name"
+      description: "content"
+      url: "absolute_url"
+      posted_at: "updated_at"
+    static_fields:
+      company: "Wolt"
+    rate_limit_rps: 1.0
+
+  - name: greenhouse-adyen
+    type: api
+    enabled: true
+    endpoint: https://boards-api.greenhouse.io/v1/boards/adyen/jobs
+    query_params:
+      content: "true"
+    response_mapping:
+      items_path: "jobs"
+      id: "id"
+      title: "title"
+      location: "location.name"
+      description: "content"
+      url: "absolute_url"
+      posted_at: "updated_at"
+    static_fields:
+      company: "Adyen"
+    rate_limit_rps: 1.0
+
+  # ────────────────────────────────────────────────────────────────
+  # Adding more Greenhouse boards: pick a company, find the slug
+  # (often the company name lowercased), then verify with:
+  #   curl https://boards-api.greenhouse.io/v1/boards/<slug>/jobs
+  # If the response is JSON with a "jobs" array, copy a block above,
+  # change `name`, `endpoint`, and `static_fields.company`, done.
+  #
+  # The same pattern works for Lever boards. Lever endpoint shape:
+  #   https://api.lever.co/v0/postings/<slug>?mode=json
+  # Lever response is a JSON array at the root (no items_path), with
+  # mapping: id=id, title=text, location=categories.location,
+  # description=descriptionPlain, url=hostedUrl, posted_at=createdAt.
+  # Note: Lever's createdAt is epoch milliseconds, which the current
+  # ApiAdapter does not parse — postedAt will be null until that lands.
+  # ────────────────────────────────────────────────────────────────
 
   - name: thehub
     type: api
@@ -62,10 +157,61 @@ portals:
       posted_at: "publication_date"
     rate_limit_rps: 1.0
 
-  - name: generic-rss-example
-    type: rss
+  # ────────────────────────────────────────────────────────────────
+  # Disabled by default — flip to `enabled: true` once configured.
+  # ────────────────────────────────────────────────────────────────
+
+  - name: adzuna-dk
+    type: api
     enabled: false
-    endpoint: https://example.com/jobs.rss
+    endpoint: https://api.adzuna.com/v1/api/jobs/dk/search/1
+    query_params:
+      app_id: "YOUR_APP_ID"
+      app_key: "YOUR_APP_KEY"
+      what: "software"
+      results_per_page: 50
+      content-type: "application/json"
+    response_mapping:
+      items_path: "results"
+      id: "id"
+      title: "title"
+      company: "company.display_name"
+      location: "location.display_name"
+      description: "description"
+      url: "redirect_url"
+      posted_at: "created"
+    rate_limit_rps: 1.0
+    notes: |
+      Adzuna DK — general-purpose Danish job aggregator (free tier).
+      Register at https://developer.adzuna.com to get app_id and
+      app_key, paste them into query_params above, then flip
+      enabled: true. Free tier: ~250 calls/day.
+
+  # jobnet.dk's public-facing search no longer returns JSON for
+  # unauthenticated callers — the URL below now serves an HTML page.
+  # Real machine integration against STAR (Danish labour-market
+  # authority) requires certificate auth and a paid agreement
+  # (spoc@star.dk). Left here as a config skeleton; flip to
+  # `enabled: true` only if you have a working endpoint.
+  - name: jobnet
+    type: api
+    enabled: false
+    endpoint: https://job.jobnet.dk/CV/FindWork/Search
+    query_params:
+      SearchString: "software engineer"
+      Country: Danmark
+      Offset: 0
+      SortValue: CreationDate
+    response_mapping:
+      items_path: "JobPositionPostings"
+      id: "Id"
+      title: "Title"
+      company: "HiringOrgName"
+      location: "WorkPlaceCity"
+      description: "Description"
+      url_template: "https://job.jobnet.dk/CV/FindWork/Details/{Id}"
+      posted_at: "PostingCreated"
+    rate_limit_rps: 2.0
 
   - name: jobindex
     type: manual
@@ -80,6 +226,11 @@ portals:
     type: manual
     enabled: false
     notes: "LinkedIn requires a logged-in session. Use job alerts or a manual export."
+
+  - name: generic-rss-example
+    type: rss
+    enabled: false
+    endpoint: https://example.com/jobs.rss
 
   - name: html-example
     type: html
