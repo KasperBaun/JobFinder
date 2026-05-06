@@ -1,3 +1,4 @@
+using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Models;
 
@@ -202,7 +203,7 @@ public sealed class ConfigVerifier
                 return new VerificationCheck("HTML adapter available", VerificationStatus.Pass, "no html portals enabled");
             }
             return new VerificationCheck("HTML adapter available", VerificationStatus.Warn,
-                $"{htmlEnabled.Count} html portal(s) enabled — ensure Playwright browsers are installed: pwsh bin/Debug/net10.0/playwright.ps1 install chromium");
+                $"{htmlEnabled.Count} html portal(s) enabled — ensure Playwright browsers are installed: {HtmlAdapter.PlaywrightInstallCommand}");
         }
         catch (ConfigException)
         {
