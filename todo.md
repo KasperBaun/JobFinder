@@ -12,6 +12,15 @@ _(none)_
 
 ## Completed (recent)
 
+- **`top_jobs.md` carries YAML frontmatter for downstream tooling.**
+  Each generated `top_jobs.md` now opens with a small `---` block
+  carrying `generated_at`, `match_count`, and `top_score` so static-
+  site / pipeline tools can read the report without scraping the H1
+  back. New test asserts the frontmatter precedes the `# Top matches`
+  heading and contains the expected fields. Stale nice-to-haves
+  pruned: `jobnet.dk` live smoke (T-007 confirmed STAR cert-auth is
+  the only path), markdown `|` escaping in titles (no rendered table
+  carries title/company text — only label/score pairs).
 - **Removed unused `PortalConfig.BaseUrl`.** The field was parsed
   from `base_url:` YAML, round-tripped through the GUI editor, and
   never read by any adapter — pure dead surface area. Dropped from
@@ -212,9 +221,7 @@ These pre-date the restructure. Still valid; will fold into the GUI work where t
 
 ## Nice-to-haves
 
-- Live smoke against `jobnet.dk` behind an env flag (off in CI).
-- YAML frontmatter at the top of `top_jobs.md` for downstream tooling.
-- Markdown table escaping for `|` in titles/companies.
+_(none — table-escaping nice-to-have was stale; the rendered table only carries label/score pairs, no titles/companies that could contain `|`. Live smoke against `jobnet.dk` is no longer worth chasing — T-007 confirmed STAR cert-auth is the only path. Frontmatter shipped.)_
 
 ## Bugs deferred
 
