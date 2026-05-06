@@ -125,17 +125,24 @@ public static class Ranker
 
     private static (double score, bool? match) ScoreSeniority(Listing listing, Seniority user)
     {
-        var inferred = InferSeniority(listing.Title);
+        var inferred = InferSeniority(listing.Title, listing.Description);
         if (user == Seniority.Any) return (1.0, true);
         if (inferred is null) return (0.5, null);
         if (inferred.Value == user) return (1.0, true);
         return IsAdjacent(inferred.Value, user) ? (0.5, true) : (0.0, false);
     }
 
-    private static Seniority? InferSeniority(string title)
+    private static Seniority? InferSeniority(string title, string? description)
     {
-        if (string.IsNullOrEmpty(title)) return null;
-        var lower = title.ToLowerInvariant();
+        var fromTitle = MatchSeniority(title);
+        if (fromTitle is not null) return fromTitle;
+        return MatchSeniority(description);
+    }
+
+    private static Seniority? MatchSeniority(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var lower = text.ToLowerInvariant();
         if (Regex.IsMatch(lower, @"\b(jr\.?|junior|graduate|intern)\b")) return Seniority.Junior;
         if (Regex.IsMatch(lower, @"\b(sr\.?|senior)\b")) return Seniority.Senior;
         if (Regex.IsMatch(lower, @"\b(lead|principal|staff)\b")) return Seniority.Lead;

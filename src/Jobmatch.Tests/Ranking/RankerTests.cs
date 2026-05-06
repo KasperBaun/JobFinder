@@ -179,6 +179,42 @@ public sealed class RankerTests
     }
 
     [Fact]
+    public void Rank_Seniority_Inferred_From_Description_When_Title_Generic()
+    {
+        // Title-only inference missed listings whose seniority cue lives in the
+        // description ("We're hiring a senior backend engineer..."). The matcher
+        // now falls back to the description when the title has no seniority keyword.
+        var listing = MakeListing(
+            "Software Engineer",
+            "We're hiring a senior backend engineer with deep .NET and Azure experience to join our team.",
+            postedAt: DateTimeOffset.UtcNow,
+            remote: RemoteMode.Remote);
+        var matches = Ranker.Rank([listing], MikkelPersona(), RankingCfg());
+
+        Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
+        Assert.True(matches[0].Breakdown.Seniority >= DefaultWeights.Seniority - 0.0001,
+            $"expected full seniority credit, got {matches[0].Breakdown.Seniority:0.000}");
+    }
+
+    [Fact]
+    public void Rank_Title_Seniority_Wins_Over_Description()
+    {
+        // Regression guard: if the title carries a seniority cue, that wins —
+        // the description is only consulted as a fallback when the title is silent.
+        var listing = MakeListing(
+            "Senior .NET Engineer",
+            "You'll mentor our junior developers and pair regularly with the team.",
+            location: "Copenhagen",
+            remote: RemoteMode.Remote,
+            postedAt: DateTimeOffset.UtcNow);
+        var matches = Ranker.Rank([listing], MikkelPersona(), RankingCfg());
+
+        Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
+        Assert.True(matches[0].Breakdown.Seniority >= DefaultWeights.Seniority - 0.0001,
+            $"expected full seniority credit (title=Senior wins over description=junior), got {matches[0].Breakdown.Seniority:0.000}");
+    }
+
+    [Fact]
     public void Rank_Below_MinScore_Is_Dropped()
     {
         var listing = MakeListing("HR Specialist", "Payroll processing and benefits admin.", remote: RemoteMode.Remote);
