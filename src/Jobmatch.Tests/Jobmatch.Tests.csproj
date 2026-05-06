@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Jobmatch\Jobmatch.csproj" />
+    <ProjectReference Include="..\Jobmatch.Gui\Jobmatch.Gui.csproj" />
   </ItemGroup>
 
 </Project>

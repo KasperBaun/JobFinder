@@ -90,6 +90,45 @@ public static class ProvidersHandler
         }
     }
 
+    public static IResult SetSecrets(int id, SetSecretsRequest? req, Jobmatch.UserContext ctx)
+    {
+        if (req is null) return Results.BadRequest(new SaveResponse(false, "request body is required"));
+
+        try
+        {
+            var catalog = PortalCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "portals.json"));
+            var portal = catalog.FirstOrDefault(p => p.Id == id);
+            if (portal is null) return Results.NotFound();
+            if (portal.RequiresSecret is null)
+                return Results.BadRequest(new SaveResponse(false, $"provider '{portal.Name}' does not declare requiresSecret"));
+
+            var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+            var secrets = state.Secrets.ToDictionary(
+                kvp => kvp.Key,
+                kvp => (IReadOnlyDictionary<string, string>)new Dictionary<string, string>(kvp.Value));
+
+            var current = secrets.TryGetValue(id, out var c)
+                ? new Dictionary<string, string>(c)
+                : new Dictionary<string, string>();
+            foreach (var (k, v) in req.Values)
+            {
+                if (string.IsNullOrEmpty(v)) current.Remove(k);
+                else current[k] = v;
+            }
+            if (current.Count == 0) secrets.Remove(id);
+            else secrets[id] = current;
+
+            var next = state with { Secrets = secrets };
+            ProviderStateLoader.Save(ctx.ProviderStatePath, next);
+            return Results.Ok(new SaveResponse(true));
+        }
+        catch (Exception ex)
+        {
+            GuiLog.Error($"PUT /api/providers/{id}/secrets — {ex.GetType().Name}: {ex.Message}");
+            return Results.Ok(new SaveResponse(false, ex.Message));
+        }
+    }
+
     public static async Task<IResult> Test(int id, Jobmatch.UserContext ctx, CancellationToken ct)
     {
         try
