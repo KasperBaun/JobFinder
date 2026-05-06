@@ -2033,3 +2033,223 @@ a.btn--danger:hover {
 }
 .progress-row--link a:hover { color: var(--c-action); text-decoration: none; }
 
+/* ============================================================
+   provider-tile: needs-key warning badge
+   ============================================================ */
+
+.provider-tile__needs-key {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-warn-border);
+  background: var(--c-warn-bg);
+  color: var(--c-warn);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: background var(--transition), color var(--transition);
+}
+.provider-tile__needs-key:hover { background: var(--c-warn-border); color: var(--c-warn); text-decoration: none; }
+
+/* ============================================================
+   provider-detail: read-only catalog fields
+   ============================================================ */
+
+.provider-detail__readonly {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem var(--space-5);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.provider-detail__readonly-row {
+  display: contents;
+}
+
+.provider-detail__readonly-row dt {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-text-subtle);
+  padding-top: 0.15rem;
+}
+
+.provider-detail__readonly-row dd {
+  color: var(--c-text);
+  margin: 0;
+  word-break: break-word;
+}
+
+/* ============================================================
+   secrets form
+   ============================================================ */
+
+.secrets-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.secrets-form .input { width: auto; min-width: 14rem; }
+
+.secrets-form__status {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   longlist page
+   ============================================================ */
+
+.longlist {
+  padding: var(--space-5) 0 var(--space-8);
+}
+
+.longlist__filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--c-bg);
+  border-bottom: 1px solid var(--c-slate-200);
+  padding: var(--space-3) 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.longlist__search {
+  min-width: 240px;
+}
+
+.longlist__chips,
+.longlist__pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.longlist__score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--c-text-muted);
+}
+
+.longlist__score input[type="range"] {
+  width: 100px;
+  accent-color: var(--c-action);
+}
+
+.longlist__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.longlist__toggle input[type="checkbox"] {
+  accent-color: var(--c-action);
+  cursor: pointer;
+}
+
+.longlist__strip {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--c-text-subtle);
+  margin-bottom: var(--space-3);
+}
+
+.longlist__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  color: var(--c-text);
+}
+
+.longlist__table th,
+.longlist__table td {
+  text-align: left;
+  padding: 0.55rem var(--space-4);
+  border-bottom: 1px solid var(--c-slate-200);
+  vertical-align: middle;
+}
+
+.longlist__table th {
+  background: var(--c-surface-alt);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--c-navy-500);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  border-bottom: 1px solid var(--c-slate-200);
+}
+
+.longlist__table tbody tr:last-child td { border-bottom: none; }
+.longlist__table tbody tr { transition: background var(--transition); }
+.longlist__table tbody tr:hover { background: var(--c-action-soft); }
+
+.longlist__score-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.longlist__expanded > td {
+  padding: 0;
+  background: var(--c-surface-alt);
+  border-bottom: 1px solid var(--c-slate-200);
+}
+
+.longlist__expanded:hover { background: transparent !important; }
+
+.longlist__empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-5);
+  color: var(--c-text-muted);
+  font-size: 0.92rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ============================================================
+   sortable table headers
+   ============================================================ */
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable--active {
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+/* ============================================================
+   mark-button compact variant
+   ============================================================ */
+
+.mark-button--compact {
+  padding: 0.18rem 0.55rem;
+  font-size: 0.72rem;
+}
+
