@@ -16,7 +16,6 @@ function fromSummary(p: ProviderSummary): Row {
     name: p.name,
     type: p.type,
     enabled: p.enabled,
-    baseUrl: p.baseUrl ?? '',
     endpoint: p.endpoint ?? '',
     rateLimitRps: p.rateLimitRps,
     notes: p.notes ?? '',
@@ -30,7 +29,6 @@ function toUpsert(r: Row): ProviderUpsert {
     name: r.name.trim(),
     type: r.type,
     enabled: r.enabled,
-    baseUrl: r.baseUrl?.trim() || undefined,
     endpoint: r.endpoint?.trim() || undefined,
     rateLimitRps: r.rateLimitRps,
     notes: r.notes?.trim() || undefined,
@@ -82,7 +80,7 @@ export function ProvidersPage() {
     setRows((rs) => rs ? rs.filter((_, i) => i !== idx) : rs)
   }
   function addRow() {
-    const blank: Row = { name: '', type: 'rss', enabled: true, baseUrl: '', endpoint: '', rateLimitRps: 1.0, notes: '' }
+    const blank: Row = { name: '', type: 'rss', enabled: true, endpoint: '', rateLimitRps: 1.0, notes: '' }
     setRows((rs) => rs ? [...rs, blank] : [blank])
   }
   function revert() {
@@ -170,15 +168,6 @@ export function ProvidersPage() {
                       className="input input--mono tabular"
                       value={row.rateLimitRps}
                       onChange={(e) => patchRow(idx, { rateLimitRps: Number(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="field" style={{ gridColumn: '1 / -1' }}>
-                    <label className="field__label">Base URL</label>
-                    <input
-                      className="input input--mono"
-                      value={row.baseUrl ?? ''}
-                      placeholder="https://…"
-                      onChange={(e) => patchRow(idx, { baseUrl: e.target.value })}
                     />
                   </div>
                   <div className="field" style={{ gridColumn: '1 / -1' }}>

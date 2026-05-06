@@ -4,7 +4,6 @@ public sealed record ProviderSummary(
     string Name,
     string Type,
     bool Enabled,
-    string? BaseUrl,
     string? Endpoint,
     double RateLimitRps,
     string? Notes,
@@ -17,7 +16,6 @@ public sealed record ProviderUpsert(
     string? Name,
     string? Type,
     bool? Enabled,
-    string? BaseUrl,
     string? Endpoint,
     double? RateLimitRps,
     string? Notes);

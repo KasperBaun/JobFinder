@@ -51,7 +51,6 @@ public static class PortalConfigLoader
         }
 
         var enabled = ReadBool(map, "enabled", true);
-        var baseUrl = ReadUri(map, "base_url", name);
         var endpoint = ReadUri(map, "endpoint", name);
         var queryParams = ReadDict(map, "query_params");
         var headers = ReadStringDict(map, "headers");
@@ -68,7 +67,6 @@ public static class PortalConfigLoader
             Name: name,
             Type: type,
             Enabled: enabled,
-            BaseUrl: baseUrl,
             Endpoint: endpoint,
             QueryParams: queryParams,
             Headers: headers,

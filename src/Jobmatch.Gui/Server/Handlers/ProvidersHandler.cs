@@ -27,7 +27,6 @@ public static class ProvidersHandler
                     Name: p.Name,
                     Type: p.Type.ToString().ToLowerInvariant(),
                     Enabled: p.Enabled,
-                    BaseUrl: p.BaseUrl?.ToString(),
                     Endpoint: p.Endpoint?.ToString(),
                     RateLimitRps: p.RateLimitRps,
                     Notes: p.Notes,
@@ -128,9 +127,6 @@ public static class ProvidersHandler
             var rateLimit = p.RateLimitRps ?? 1.0;
             if (rateLimit < 0) throw new ConfigException($"provider '{name}': rateLimitRps must be >= 0");
 
-            var baseUrl = NullIfBlank(p.BaseUrl);
-            if (baseUrl is not null && !Uri.TryCreate(baseUrl, UriKind.Absolute, out _))
-                throw new ConfigException($"provider '{name}': baseUrl must be an absolute URL");
             var endpoint = NullIfBlank(p.Endpoint);
             if (endpoint is not null && !Uri.TryCreate(endpoint, UriKind.Absolute, out _))
                 throw new ConfigException($"provider '{name}': endpoint must be an absolute URL");
@@ -142,7 +138,6 @@ public static class ProvidersHandler
             node["name"] = name;
             node["type"] = type;
             node["enabled"] = enabled;
-            SetOrRemove(node, "base_url", baseUrl);
             SetOrRemove(node, "endpoint", endpoint);
             node["rate_limit_rps"] = rateLimit;
             SetOrRemove(node, "notes", NullIfBlank(p.Notes));
