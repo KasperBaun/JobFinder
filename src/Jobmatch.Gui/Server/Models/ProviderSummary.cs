@@ -9,7 +9,9 @@ public sealed record ProviderSummary(
     double RateLimitRps,
     string? Notes,
     DateTimeOffset? LastFetchedAt,
-    int? LastFetchCount);
+    int? LastFetchCount,
+    string? RequiresSecret,
+    bool HasSecret);
 
 public sealed record ProvidersResponse(IReadOnlyList<ProviderSummary> Providers);
 
@@ -30,6 +32,8 @@ public sealed record ProviderDetail(
     string? Notes,
     DateTimeOffset? LastFetchedAt,
     int? LastFetchCount,
+    string? RequiresSecret,
+    bool HasSecret,
     IReadOnlyList<ProviderRecentRun> RecentRuns);
 
 public sealed record ProviderUpsert(

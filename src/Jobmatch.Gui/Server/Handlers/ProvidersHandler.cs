@@ -18,13 +18,20 @@ public static class ProvidersHandler
         return ProviderStateMerger.Merge(catalog, state);
     }
 
+    private static (IReadOnlyList<PortalConfig> Catalog, ProviderState State) LoadCatalogAndState(Jobmatch.UserContext ctx)
+    {
+        var catalog = PortalCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "portals.json"));
+        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        return (catalog, state);
+    }
+
     public static IResult GetList(Jobmatch.UserContext ctx)
     {
         try
         {
-            var portals = LoadMerged(ctx);
+            var (catalog, state) = LoadCatalogAndState(ctx);
             var lastByProvider = LoadLastFetchByProvider(ctx.HistoryDir);
-            var summaries = portals.Select(p => MakeSummary(p, lastByProvider)).ToList();
+            var summaries = catalog.Select(p => MakeSummary(p, state, lastByProvider)).ToList();
             return Results.Ok(new ProvidersResponse(summaries));
         }
         catch (Exception ex)
@@ -37,24 +44,32 @@ public static class ProvidersHandler
     {
         try
         {
-            var portals = LoadMerged(ctx);
-            var match = portals.FirstOrDefault(p => p.Id == id);
+            var (catalog, state) = LoadCatalogAndState(ctx);
+            var match = catalog.FirstOrDefault(p => p.Id == id);
             if (match is null) return Results.NotFound();
 
             var lastByProvider = LoadLastFetchByProvider(ctx.HistoryDir);
             lastByProvider.TryGetValue(match.Name, out var last);
             var recent = LoadRecentRuns(ctx.HistoryDir, match.Name, take: 5);
 
+            var enabled = match.Enabled && !state.Disabled.Contains(match.Id);
+            var hasSecret = match.RequiresSecret is not null
+                && state.Secrets.TryGetValue(match.Id, out var secrets)
+                && secrets.TryGetValue(match.RequiresSecret, out var v)
+                && !string.IsNullOrEmpty(v);
+
             return Results.Ok(new ProviderDetail(
                 Id: match.Id,
                 Name: match.Name,
                 Type: match.Type.ToString().ToLowerInvariant(),
-                Enabled: match.Enabled,
+                Enabled: enabled,
                 Endpoint: match.Endpoint?.ToString(),
                 RateLimitRps: match.RateLimitRps,
                 Notes: match.Notes,
                 LastFetchedAt: last?.FetchedAt,
                 LastFetchCount: last?.FetchedCount,
+                RequiresSecret: match.RequiresSecret,
+                HasSecret: hasSecret,
                 RecentRuns: recent));
         }
         catch (Exception ex)
@@ -187,19 +202,29 @@ public static class ProvidersHandler
         }
     }
 
-    private static ProviderSummary MakeSummary(PortalConfig p, IReadOnlyDictionary<string, LastFetch> lastByProvider)
+    private static ProviderSummary MakeSummary(
+        PortalConfig catalogPortal,
+        ProviderState state,
+        IReadOnlyDictionary<string, LastFetch> lastByProvider)
     {
-        lastByProvider.TryGetValue(p.Name, out var last);
+        var enabled = catalogPortal.Enabled && !state.Disabled.Contains(catalogPortal.Id);
+        var hasSecret = catalogPortal.RequiresSecret is not null
+            && state.Secrets.TryGetValue(catalogPortal.Id, out var secrets)
+            && secrets.TryGetValue(catalogPortal.RequiresSecret, out var v)
+            && !string.IsNullOrEmpty(v);
+        lastByProvider.TryGetValue(catalogPortal.Name, out var last);
         return new ProviderSummary(
-            Id: p.Id,
-            Name: p.Name,
-            Type: p.Type.ToString().ToLowerInvariant(),
-            Enabled: p.Enabled,
-            Endpoint: p.Endpoint?.ToString(),
-            RateLimitRps: p.RateLimitRps,
-            Notes: p.Notes,
+            Id: catalogPortal.Id,
+            Name: catalogPortal.Name,
+            Type: catalogPortal.Type.ToString().ToLowerInvariant(),
+            Enabled: enabled,
+            Endpoint: catalogPortal.Endpoint?.ToString(),
+            RateLimitRps: catalogPortal.RateLimitRps,
+            Notes: catalogPortal.Notes,
             LastFetchedAt: last?.FetchedAt,
-            LastFetchCount: last?.FetchedCount);
+            LastFetchCount: last?.FetchedCount,
+            RequiresSecret: catalogPortal.RequiresSecret,
+            HasSecret: hasSecret);
     }
 
     private sealed record LastFetch(DateTimeOffset FetchedAt, int? FetchedCount);
