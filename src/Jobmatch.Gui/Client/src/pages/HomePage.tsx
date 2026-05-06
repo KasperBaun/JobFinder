@@ -21,7 +21,7 @@ export function HomePage() {
         <div className="page__eyebrow">00 / dashboard</div>
         <h1 className="hero__headline">Find work that <em>fits.</em></h1>
         <p className="hero__lede">
-          A quiet, local tool that pulls openings from your portals, ranks them against your skillset,
+          A local tool that pulls openings from your chosen portals, ranks them against your skillset,
           and gets out of your way. No telemetry. No cloud. Your data, your machine.
         </p>
         <div className="hero__meta">
