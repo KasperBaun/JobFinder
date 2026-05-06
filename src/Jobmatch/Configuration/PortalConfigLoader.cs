@@ -6,6 +6,7 @@ namespace Jobmatch.Configuration;
 public static class PortalConfigLoader
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder().Build();
+    private static readonly ISerializer Serializer = new SerializerBuilder().Build();
 
     public static IReadOnlyList<PortalConfig> Parse(string yaml)
     {
@@ -38,7 +39,69 @@ public static class PortalConfigLoader
         return list;
     }
 
-    public static IReadOnlyList<PortalConfig> Load(string path) => Parse(File.ReadAllText(path));
+    public static IReadOnlyList<PortalConfig> Load(string path)
+    {
+        EnsureIdsAssigned(path);
+        return Parse(File.ReadAllText(path));
+    }
+
+    /// <summary>
+    /// Reads <paramref name="path"/>, assigns a stable monotonic <c>id</c> to every portal that
+    /// lacks one, and atomically rewrites the file if anything changed. Idempotent: a fully
+    /// id-tagged file is a no-op. Ids are never reused — the next id is one greater than the
+    /// max existing id (or 1 if none exist).
+    /// </summary>
+    private static void EnsureIdsAssigned(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var yaml = File.ReadAllText(path);
+        if (string.IsNullOrWhiteSpace(yaml)) return;
+
+        Dictionary<object, object?>? root;
+        try
+        {
+            root = Deserializer.Deserialize<Dictionary<object, object?>>(yaml);
+        }
+        catch
+        {
+            return;
+        }
+        if (root is null) return;
+        if (!root.TryGetValue("portals", out var raw) || raw is not List<object?> entries) return;
+
+        var maxId = 0;
+        foreach (var entry in entries)
+        {
+            if (entry is IDictionary<object, object?> map &&
+                map.TryGetValue("id", out var idVal) &&
+                int.TryParse(idVal?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var id) &&
+                id > maxId)
+            {
+                maxId = id;
+            }
+        }
+
+        var changed = false;
+        foreach (var entry in entries)
+        {
+            if (entry is not IDictionary<object, object?> map) continue;
+            var hasValidId = map.TryGetValue("id", out var idVal) &&
+                int.TryParse(idVal?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var id) &&
+                id > 0;
+            if (hasValidId) continue;
+            maxId++;
+            map["id"] = maxId;
+            changed = true;
+        }
+
+        if (!changed) return;
+
+        var output = Serializer.Serialize(root);
+        var temp = path + ".tmp";
+        File.WriteAllText(temp, output);
+        File.Move(temp, path, overwrite: true);
+    }
 
     private static PortalConfig BuildPortal(IReadOnlyDictionary<string, object?> map, int index)
     {
@@ -62,6 +125,7 @@ public static class PortalConfigLoader
         var method = map.TryGetValue("method", out var m) ? m?.ToString() : null;
         var bodyTemplate = ReadDict(map, "body_template");
         var pagination = ReadPagination(map, name);
+        var id = ReadInt(map, "id", 0);
 
         return new PortalConfig(
             Name: name,
@@ -77,7 +141,8 @@ public static class PortalConfigLoader
             StaticFields: staticFields,
             Method: method,
             BodyTemplate: bodyTemplate,
-            Pagination: pagination);
+            Pagination: pagination,
+            Id: id);
     }
 
     private static PaginationConfig? ReadPagination(IReadOnlyDictionary<string, object?> map, string portalName)

@@ -16,7 +16,11 @@ public static class Routes
     public static class Providers
     {
         public const string Get = "/api/providers";
-        public const string Put = "/api/providers";
+        public const string GetOne = "/api/providers/{id:int}";
+        public const string Create = "/api/providers";
+        public const string Update = "/api/providers/{id:int}";
+        public const string Delete = "/api/providers/{id:int}";
+        public const string Test = "/api/providers/{id:int}/test";
     }
 
     public static class Skillset

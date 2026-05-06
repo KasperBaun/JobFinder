@@ -196,7 +196,7 @@ export function SearchPage() {
                   <span className="progress-row__status">
                     {row.status === 'pending' && 'pending'}
                     {row.status === 'running' && 'running…'}
-                    {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} fetched`}
+                    {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} jobs`}
                     {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
                   </span>
                 </>

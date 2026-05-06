@@ -7,6 +7,7 @@ export type WhoamiResponse = {
 export type ProviderType = 'api' | 'rss' | 'html' | 'manual'
 
 export type ProviderSummary = {
+  id: number
   name: string
   type: ProviderType
   enabled: boolean
@@ -19,6 +20,18 @@ export type ProviderSummary = {
 
 export type ProvidersResponse = { providers: ProviderSummary[] }
 
+export type ProviderRecentRun = {
+  runId: string
+  startedAt: string
+  status: string
+  fetchedCount?: number
+  error?: string
+}
+
+export type ProviderDetail = ProviderSummary & {
+  recentRuns: ProviderRecentRun[]
+}
+
 export type ProviderUpsert = {
   name: string
   type: ProviderType
@@ -28,7 +41,16 @@ export type ProviderUpsert = {
   notes?: string
 }
 
-export type ProvidersUpdateRequest = { providers: ProviderUpsert[] }
+export type ProviderTestResult = {
+  ok: boolean
+  fetchedCount: number
+  durationMs: number
+  sampleTitle?: string
+  error?: string
+  testedAt: string
+}
+
+export type CreateResponse = { success: boolean; id: number; error?: string }
 
 export type SkillsetResponse = {
   name: string
