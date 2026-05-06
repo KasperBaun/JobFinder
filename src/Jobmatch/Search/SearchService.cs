@@ -44,8 +44,21 @@ public sealed class SearchService
         SearchRequest req,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        var catalogPath = Path.Combine(AppContext.BaseDirectory, "portals.json");
+        var catalog = PortalCatalogLoader.Load(catalogPath);
+        var state = ProviderStateLoader.LoadOrEmpty(_ctx.ProviderStatePath);
+        var allPortals = ProviderStateMerger.Merge(catalog, state);
+
+        await foreach (var evt in RunAsync(req, allPortals, ct).ConfigureAwait(false))
+            yield return evt;
+    }
+
+    internal async IAsyncEnumerable<SearchProgressEvent> RunAsync(
+        SearchRequest req,
+        IReadOnlyList<PortalConfig> allPortals,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
         var skillset = SkillsetParser.Load(_ctx.SkillsetPath);
-        var allPortals = PortalConfigLoader.Load(_ctx.PortalsPath);
         var ranking = RankingConfigLoader.Load(_ctx.RankingPath);
 
         var requested = req.Providers is { Count: > 0 }
