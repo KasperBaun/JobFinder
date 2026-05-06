@@ -248,11 +248,25 @@ public static class Ranker
                 string[] euSynonyms = ["europe", "european", "emea", "eea", "nordic", "scandinavia"];
                 if (euSynonyms.Any(t => l.Contains(t, StringComparison.Ordinal))) return (w.Region, false);
                 if (ContainsToken(l, "eu")) return (w.Region, false);
+                if (EuMemberStates.Any(c => ContainsToken(l, c))) return (w.Region, false);
             }
         }
 
         return (w.Else, false);
     }
+
+    // EU 27 + EEA non-EU (Iceland, Norway, Liechtenstein) + Switzerland.
+    // UK is intentionally excluded post-Brexit; users who want UK can declare
+    // Country: "United Kingdom" explicitly.
+    private static readonly string[] EuMemberStates = [
+        "austria", "belgium", "bulgaria", "croatia", "cyprus",
+        "czech republic", "czechia", "denmark", "estonia", "finland",
+        "france", "germany", "greece", "hungary", "iceland",
+        "ireland", "italy", "latvia", "liechtenstein", "lithuania",
+        "luxembourg", "malta", "netherlands", "norway", "poland",
+        "portugal", "romania", "slovakia", "slovenia", "spain",
+        "sweden", "switzerland",
+    ];
 
     private static (string? city, string? country) SplitCityCountry(string? userLocation)
     {
