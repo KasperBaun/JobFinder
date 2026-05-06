@@ -1262,3 +1262,218 @@ a.btn--danger:hover {
 
 [data-tooltip]::after { transform: translateY(4px); }
 
+/* ------------------------------------------------------------------------
+   Tab strip — RunDetailView (T-006)
+   ------------------------------------------------------------------------ */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 1.5rem 0 1rem;
+  border-bottom: 1px solid var(--c-border);
+}
+.tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 1rem;
+  margin-bottom: -1px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color var(--transition), border-color var(--transition);
+}
+.tab:hover:not(:disabled) { color: var(--c-text); }
+.tab--active {
+  color: var(--c-navy-900);
+  border-bottom-color: var(--c-action);
+  font-weight: 500;
+}
+.tab--disabled { opacity: 0.4; cursor: not-allowed; }
+.tab__count {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-subtle);
+  background: var(--c-action-soft);
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+}
+.tab--active .tab__count { color: var(--c-action); }
+
+/* ------------------------------------------------------------------------
+   Raw fetch tab — provider groups
+   ------------------------------------------------------------------------ */
+.raw-fetch { display: flex; flex-direction: column; gap: 0.75rem; }
+.raw-group {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--c-surface);
+}
+.raw-group--focus { border-color: var(--c-action); box-shadow: 0 0 0 1px var(--c-action) inset; }
+.raw-group__header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--c-border);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  color: var(--c-text);
+}
+.raw-group__header:hover { background: var(--c-action-soft); }
+.raw-group__caret { color: var(--c-text-subtle); width: 0.7rem; }
+.raw-group__name { font-weight: 500; }
+.raw-group__count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+}
+
+/* ------------------------------------------------------------------------
+   Dedupe tab
+   ------------------------------------------------------------------------ */
+.dedupe-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.dedupe-group {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  background: var(--c-surface);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.dedupe-group__canonical, .dedupe-group__merges { display: flex; flex-direction: column; gap: 0.3rem; }
+.dedupe-group__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-subtle);
+}
+.dedupe-group__title { color: var(--c-text); font-weight: 500; }
+.dedupe-group__merges ul {
+  list-style: disc;
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--c-text-muted);
+  font-size: 0.88rem;
+}
+
+/* ------------------------------------------------------------------------
+   Full ranking tab — breakdown bar + expanded detail
+   ------------------------------------------------------------------------ */
+.ranking-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.ranking-table tbody tr.ranking-table__expanded:hover { background: transparent; }
+.ranking-table__expanded td { padding: 0; background: var(--c-action-soft); }
+
+.bd-bar {
+  position: relative;
+  display: inline-flex;
+  height: 8px;
+  width: 200px;
+  max-width: 100%;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--c-surface-alt, #f7f8fa);
+  vertical-align: middle;
+}
+.bd-bar__seg { display: block; height: 100%; }
+.bd-bar__seg--0 { background: var(--c-navy-800); }
+.bd-bar__seg--1 { background: var(--c-navy-700); }
+.bd-bar__seg--2 { background: var(--c-navy-600); }
+.bd-bar__seg--3 { background: var(--c-navy-500); }
+.bd-bar__seg--4 { background: var(--c-navy-400); }
+.bd-bar__seg--5 { background: var(--c-navy-300); }
+.bd-bar__seg--penalty {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--c-bad) 0,
+    var(--c-bad) 4px,
+    rgba(169, 52, 37, 0.4) 4px,
+    rgba(169, 52, 37, 0.4) 8px
+  );
+}
+
+.bd-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.4rem 1.5rem;
+  padding: 0.9rem 1rem;
+}
+.bd-detail__row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--c-border);
+  padding-bottom: 0.2rem;
+  font-size: 0.85rem;
+}
+.bd-detail__row--total {
+  border-bottom: 0;
+  border-top: 1px solid var(--c-action);
+  padding-top: 0.3rem;
+  margin-top: 0.2rem;
+  font-weight: 600;
+  color: var(--c-navy-900);
+}
+.bd-detail__label { color: var(--c-text-muted); }
+
+/* ------------------------------------------------------------------------
+   Dropped tab — filter chips + reason badges
+   ------------------------------------------------------------------------ */
+.dropped-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.reason-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.reason-badge--disqualifier             { color: var(--c-bad);   border-color: var(--c-bad-border);   background: var(--c-bad-bg); }
+.reason-badge--below_min_score          { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
+.reason-badge--beyond_top_n             { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
+.reason-badge--above_max_age            { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
+.reason-badge--missing_required_primary { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
+
+/* ------------------------------------------------------------------------
+   Search progress rows — linkify when complete (T-006h)
+   ------------------------------------------------------------------------ */
+.progress-row--link {
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.progress-row--link:hover { background: var(--c-action-soft); }
+.progress-row--link a {
+  display: contents;
+  color: inherit;
+  text-decoration: none;
+}
+.progress-row--link a:hover { color: var(--c-action); text-decoration: none; }
+

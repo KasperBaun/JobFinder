@@ -120,9 +120,70 @@ export type RunSummary = {
 
 export type HistoryResponse = { runs: RunSummary[] }
 
+export type ScoreBreakdown = {
+  primaryStack: number
+  secondaryStack: number
+  seniority: number
+  locationRemote: number
+  domain: number
+  freshness: number
+  disqualifierPenalty: number
+}
+
+export type RawListing = {
+  id: string
+  title: string
+  company?: string
+  location?: string
+  url: string
+  postedAt?: string
+}
+
+export type ProviderRaw = {
+  provider: string
+  listings: RawListing[]
+}
+
+export type DedupeGroup = {
+  canonicalId: string
+  mergedFromIds: string[]
+}
+
+export type ScoredEntry = {
+  id: string
+  title: string
+  company?: string
+  location?: string
+  url: string
+  postedAt?: string
+  portal: string
+  score: number
+  breakdown: ScoreBreakdown
+}
+
+export type DropReason =
+  | 'disqualifier'
+  | 'below_min_score'
+  | 'beyond_top_n'
+  | 'above_max_age'
+  | 'missing_required_primary'
+
+export type DroppedEntry = {
+  id: string
+  title: string
+  company?: string
+  score: number
+  reason: DropReason
+  context?: string
+}
+
 export type RunDetail = RunSummary & {
   shortlist: ListingMatch[]
   marks: Record<string, 'good' | 'bad'>
+  raw?: ProviderRaw[]
+  dedupeMerges?: DedupeGroup[]
+  scored?: ScoredEntry[]
+  dropped?: DroppedEntry[]
 }
 
 export type MarkRequest = {

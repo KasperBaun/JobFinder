@@ -187,32 +187,67 @@ export function SearchPage() {
         <section className="progress-panel">
           <h2 className="progress-panel__heading">Progress</h2>
           <ul className="progress-list">
-            {progress.rows.map(row => (
-              <li key={row.name} className={`progress-row progress-row--${row.status}`}>
-                <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
-                <span className="progress-row__name">{row.name}</span>
-                <span className="progress-row__status">
-                  {row.status === 'pending' && 'pending'}
-                  {row.status === 'running' && 'running…'}
-                  {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} fetched`}
-                  {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
-                </span>
-              </li>
-            ))}
+            {progress.rows.map(row => {
+              const linkable = stream.status === 'complete' && !!stream.runId && row.status === 'ok'
+              const body = (
+                <>
+                  <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
+                  <span className="progress-row__name">{row.name}</span>
+                  <span className="progress-row__status">
+                    {row.status === 'pending' && 'pending'}
+                    {row.status === 'running' && 'running…'}
+                    {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} fetched`}
+                    {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
+                  </span>
+                </>
+              )
+              const className = `progress-row progress-row--${row.status}${linkable ? ' progress-row--link' : ''}`
+              return (
+                <li key={row.name} className={className}>
+                  {linkable ? (
+                    <Link to={`/history/${stream.runId}#tab=raw&provider=${encodeURIComponent(row.name)}`}>
+                      {body}
+                    </Link>
+                  ) : body}
+                </li>
+              )
+            })}
             {progress.dedupe !== undefined && (
-              <li className="progress-row progress-row--info">
-                <span className="progress-row__icon">·</span>
-                <span className="progress-row__name">dedupe</span>
-                <span className="progress-row__status">{progress.dedupe} after merge</span>
+              <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
+                {stream.status === 'complete' && stream.runId ? (
+                  <Link to={`/history/${stream.runId}#tab=dedupe`}>
+                    <span className="progress-row__icon">·</span>
+                    <span className="progress-row__name">dedupe</span>
+                    <span className="progress-row__status">{progress.dedupe} after merge</span>
+                  </Link>
+                ) : (
+                  <>
+                    <span className="progress-row__icon">·</span>
+                    <span className="progress-row__name">dedupe</span>
+                    <span className="progress-row__status">{progress.dedupe} after merge</span>
+                  </>
+                )}
               </li>
             )}
             {progress.rank !== undefined && (
-              <li className="progress-row progress-row--info">
-                <span className="progress-row__icon">·</span>
-                <span className="progress-row__name">rank</span>
-                <span className="progress-row__status">
-                  {progress.rank.rankedCount} ranked · top {progress.rank.topScore.toFixed(2)}
-                </span>
+              <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
+                {stream.status === 'complete' && stream.runId ? (
+                  <Link to={`/history/${stream.runId}#tab=ranking`}>
+                    <span className="progress-row__icon">·</span>
+                    <span className="progress-row__name">rank</span>
+                    <span className="progress-row__status">
+                      {progress.rank.rankedCount} ranked · top {progress.rank.topScore.toFixed(2)}
+                    </span>
+                  </Link>
+                ) : (
+                  <>
+                    <span className="progress-row__icon">·</span>
+                    <span className="progress-row__name">rank</span>
+                    <span className="progress-row__status">
+                      {progress.rank.rankedCount} ranked · top {progress.rank.topScore.toFixed(2)}
+                    </span>
+                  </>
+                )}
               </li>
             )}
           </ul>
