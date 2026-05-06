@@ -60,7 +60,7 @@ public static class Ranker
                 DisqualifierPenalty: disqualifierDelta);
 
             var ageDays = AgeInDays(listing.PostedAt);
-            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, locationMatch, remoteMatch, disqualifierHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
+            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityScore, locationMatch, remoteMatch, disqualifierHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
 
             matches.Add(new Match(
                 Listing: listing,
@@ -336,6 +336,7 @@ public static class Ranker
         IReadOnlyList<string> secondaryHits,
         IReadOnlyList<string> domainHits,
         bool? seniorityMatch,
+        double seniorityScore,
         bool? locationMatch,
         bool? remoteMatch,
         IReadOnlyList<string> disqualifierHits,
@@ -367,11 +368,12 @@ public static class Ranker
             parts.Add($"Domain: {string.Join(", ", domainHits)}.");
         }
 
-        parts.Add(seniorityMatch switch
+        parts.Add((seniorityMatch, seniorityScore) switch
         {
-            true => "Seniority fits.",
-            false => "Seniority mismatch.",
-            null => "Seniority not stated.",
+            (true, >= 0.99) => "Seniority fits.",
+            (true, _) => "Seniority adjacent (near-fit, half credit).",
+            (false, _) => "Seniority mismatch.",
+            (null, _) => "Seniority not stated.",
         });
 
         var locPart = (locationMatch, remoteMatch) switch

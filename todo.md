@@ -12,6 +12,17 @@ _(none)_
 
 ## Completed (recent)
 
+- **`ScoreSeniority` adjacent reasoning text fixed.** Previously a
+  Mid-level listing for a Senior user got `Seniority: 0.5` (half
+  credit) AND `SeniorityMatch: true`, with reasoning text "Seniority
+  fits." — actively misleading. `BuildNotes` now takes the seniority
+  score alongside the match flag and emits "Seniority adjacent
+  (near-fit, half credit)." for the adjacent case while preserving
+  the existing "fits / mismatch / not stated" texts. `MatchReasoning`
+  shape unchanged so the GUI / RunDetail JSON / output writers all
+  remain wire-compatible. One new test asserts the new text appears
+  for adjacent matches and the misleading "Seniority fits" no longer
+  does. 132 total green.
 - **`ManualAdapter` CSV: quoted newlines preserved.** `ReadCsvFile`
   used `StreamReader.ReadLine` which split inside quoted fields that
   span lines, producing malformed rows. Replaced with a stream-based
@@ -197,4 +208,3 @@ These pre-date the restructure. Still valid; will fold into the GUI work where t
 
 ## Bugs deferred
 
-- `ScoreSeniority` adjacent case returns `(0.5, true)` — reasoning says "Seniority fits" for half-credit adjacent matches. Cleanest fix is a tri-state on `MatchReasoning`.
