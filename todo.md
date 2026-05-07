@@ -30,6 +30,22 @@ _(none)_
 
 ## Completed (recent)
 
+- **Code-review cleanup pass (K-G1 / K-G2 / K-G3 / K-C1 + SOLID/DRY full pass).**
+  Resolved six review findings and a focused SOLID/DRY pass.
+  - `760829b` K-C1: `scripts/dev-utils.mjs` — stale `Jobmatch.Gui` comment + `/api/shutdown` path corrected to `Jobmatch.Host` + `/api/system/shutdown`.
+  - `7da0473` K-G1: `UserContext.Resolve` now falls back to `%LOCALAPPDATA%/jobfinder/` (Windows) / `~/.local/share/jobfinder/` (Unix) when run outside a git repo, instead of dumping `data/<email>/` cwd-relative. New requirement R-004; new `cwdOverride` test seam; throws `ConfigException` if `LocalApplicationData` resolves empty.
+  - `37f82e9` K-G2: host shutdown moved from inline `app.MapPost` in `Program.cs` into `Jobmatch.Host/Endpoints/HostShutdownEndpoint : IEndpointRegistration`, matching the API-layer pattern. Standalone `Jobmatch.Api` continues to NOT expose shutdown (codified by canary test below).
+  - `7c3debe` SOLID/DRY: extracted `Jobmatch.Json/{JobmatchJsonOptions,JsonValueReader,StringTemplate}` and removed duplicated JSON options + `JsonElement→string` + `{key}` template logic from `SearchService`, `SseHelper`, `ApiAdapter`, `ManualAdapter`. No behaviour change.
+  - `0be3759` SOLID/DIP: introduced `Jobmatch.IO/{IFileSystem,PhysicalFileSystem}` and injected through `ManualAdapter` / `AdapterFactory.Create` / `SearchService` / `ProvidersService`. DI registers singleton. Remaining `File.*` / `Directory.*` calls in `SearchService.WriteHistory` and `ProvidersService.LoadLastFetchByProvider/LoadRecentRuns` are deliberately untouched — out of scope for the audit's DIP finding (which targeted `ManualAdapter`); seam is plumbed if future tests need it.
+  - `2c88391` SOLID/OCP: `AdapterFactory` switch replaced by `Dictionary<PortalType, Factory>` registry. Audit also suggested a `KnownTypes` export consumed by `PortalCatalogLoader` and `SearchService`; on inspection neither file actually enumerates portal types, so that speculative export was skipped (CLAUDE.md no-premature-abstraction rule).
+  - `3f8ad43` K-G3 backend: added `Microsoft.AspNetCore.Mvc.Testing` and `SystemEndpointsTests` covering ping=200 and shutdown=404-on-standalone-Api. The Api project already declares `<StartupObject>Jobmatch.Api.ApiProgram</StartupObject>` so we use `WebApplicationFactory<ApiProgram>` directly — no `partial class Program;` shim needed.
+  - `146792d` K-G3 frontend: added Vitest + RTL + jsdom and one `App.test.tsx` smoke test (wraps `App` in `MemoryRouter` + `QueryClientProvider`). Root `npm run test:client` now runs Vitest instead of the build.
+  - `2872de8` K-G3 e2e: added `src/tests/playwright/tests/system.spec.ts` with two specs (ping=200, SPA `#root` mounts). Not auto-run; user runs locally via `npm run test:e2e`.
+  - K-S1 (path-traversal probe): closed — no fix needed. Probe rejected cleanly via lookup-not-concat in `ProvidersHandler`. No leak.
+  - K-C3 (email mismatch): closed — auto-memory under `~/.claude/projects/.../memory/` contains no email; the system-reminder `userEmail` field comes from a global user setting outside this project's memory. Code reads dynamically from `git config user.email` (`UserContext.TryGetGitUserEmail`), so no repo or memory edit applies.
+
+  Final test counts: backend 177/177 (was 174), frontend 1/1 new, Playwright 2 specs scaffolded.
+
 - **Provider catalog moved into app bundle; per-user state reduced to opt-outs + secrets.**
   Replaced `data/<email>/portals.yml` (per-user, gitignored, drift-prone) with
   `src/backend/Jobmatch/Configuration/portals.json` (committed catalog) +
