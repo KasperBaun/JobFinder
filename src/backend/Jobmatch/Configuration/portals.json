@@ -1,0 +1,407 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "id": 1,
+      "name": "greenhouse-pleo",
+      "displayName": "Greenhouse Pleo",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/pleo/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Pleo"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 2,
+      "name": "greenhouse-trustpilot",
+      "displayName": "Greenhouse Trustpilot",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/trustpilot/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Trustpilot"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 3,
+      "name": "greenhouse-unity",
+      "displayName": "Greenhouse Unity",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/unity3d/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Unity"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 4,
+      "name": "greenhouse-wolt",
+      "displayName": "Greenhouse Wolt",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/wolt/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Wolt"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 5,
+      "name": "greenhouse-adyen",
+      "displayName": "Greenhouse Adyen",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/adyen/jobs",
+      "queryParams": {
+        "content": "true"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": {
+        "company": "Adyen"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 6,
+      "name": "thehub",
+      "displayName": "The Hub",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://thehub.io/api/jobs",
+      "queryParams": {
+        "country_code": "DK",
+        "limit": 100
+      },
+      "responseMapping": {
+        "items_path": "docs",
+        "id": "id",
+        "title": "title",
+        "company": "company.name",
+        "location": "location.address",
+        "description": "description",
+        "url": "absoluteJobUrl",
+        "posted_at": "publishedAt"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 7,
+      "name": "remotive",
+      "displayName": "Remotive",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://remotive.com/api/remote-jobs",
+      "queryParams": {
+        "category": "software-dev"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "company": "company_name",
+        "location": "candidate_required_location",
+        "description": "description",
+        "url": "url",
+        "posted_at": "publication_date"
+      },
+      "rateLimitRps": 1.0
+    },
+    {
+      "id": 8,
+      "name": "adzuna-dk",
+      "displayName": "Adzuna DK",
+      "type": "api",
+      "enabled": false,
+      "endpoint": "https://api.adzuna.com/v1/api/jobs/dk/search/1",
+      "queryParams": {
+        "app_id": "YOUR_APP_ID",
+        "app_key": "YOUR_APP_KEY",
+        "what": "software",
+        "results_per_page": 50,
+        "content-type": "application/json"
+      },
+      "responseMapping": {
+        "items_path": "results",
+        "id": "id",
+        "title": "title",
+        "company": "company.display_name",
+        "location": "location.display_name",
+        "description": "description",
+        "url": "redirect_url",
+        "posted_at": "created"
+      },
+      "rateLimitRps": 1.0,
+      "notes": "Adzuna is a general-purpose job aggregator with Danish coverage (free plan, ~250 searches/day). Setup needs both an app_id and an app_key from https://developer.adzuna.com. Two-key configuration isn't supported from this page yet — leave this off until that's wired up."
+    },
+    {
+      "id": 9,
+      "name": "jobnet",
+      "displayName": "Jobnet",
+      "type": "api",
+      "enabled": false,
+      "endpoint": "https://job.jobnet.dk/CV/FindWork/Search",
+      "queryParams": {
+        "SearchString": "software engineer",
+        "Country": "Danmark",
+        "Offset": 0,
+        "SortValue": "CreationDate"
+      },
+      "responseMapping": {
+        "items_path": "JobPositionPostings",
+        "id": "Id",
+        "title": "Title",
+        "company": "HiringOrgName",
+        "location": "WorkPlaceCity",
+        "description": "Description",
+        "url_template": "https://job.jobnet.dk/CV/FindWork/Details/{Id}",
+        "posted_at": "PostingCreated"
+      },
+      "rateLimitRps": 2.0,
+      "notes": "Jobnet is the Danish public employment service's job site. They no longer offer free automated access — using it now requires a paid agreement with the STAR agency (spoc@star.dk). Leave this off unless you have arranged access."
+    },
+    {
+      "id": 10,
+      "name": "jobindex",
+      "displayName": "Jobindex",
+      "type": "manual",
+      "enabled": false,
+      "notes": "Jobindex doesn't allow automated access. To include its listings, run a search on jobindex.dk in your browser, export the results, and save the CSV in your data/imports/ folder named jobindex-*.csv. The file needs these columns: title, company, location, url, description, posted_at."
+    },
+    {
+      "id": 11,
+      "name": "linkedin",
+      "displayName": "LinkedIn",
+      "type": "manual",
+      "enabled": false,
+      "notes": "LinkedIn requires a logged-in account, so it can't be queried automatically. Use LinkedIn's email job alerts, or save manual exports to your data/imports/ folder."
+    },
+    {
+      "id": 12,
+      "name": "generic-rss-example",
+      "displayName": "Generic RSS Example",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://example.com/jobs.rss",
+      "notes": "Example template — not a real job source. Used as a starting point when adding a new RSS provider."
+    },
+    {
+      "id": 13,
+      "name": "html-example",
+      "displayName": "HTML Example",
+      "type": "html",
+      "enabled": false,
+      "endpoint": "https://example.com/careers",
+      "html": {
+        "listSelector": ".job-card",
+        "titleSelector": ".job-title",
+        "linkSelector": "a.job-link",
+        "companySelector": ".company",
+        "locationSelector": ".location",
+        "descriptionSelector": ".summary",
+        "urlAttribute": "href"
+      },
+      "notes": "Example template — not a real job source. Used as a starting point when adding a new web-scraped provider."
+    },
+    {
+      "id": 14,
+      "name": "jobindex-rss",
+      "displayName": "Jobindex (RSS)",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": {
+        "q": "software engineer"
+      },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex's public RSS feed of latest listings. Listings show only title and a short description — the full body is on the linked page. Heavy overlap with the IT-jobbank source — turn on one or the other, not both."
+    },
+    {
+      "id": 15,
+      "name": "it-jobbank-rss",
+      "displayName": "IT Jobbank",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://www.it-jobbank.dk/jobsoegning.rss",
+      "queryParams": {
+        "q": "developer"
+      },
+      "rateLimitRps": 0.5,
+      "notes": "IT-jobbank's public RSS feed — same source pool as Jobindex but limited to IT roles. Heavy overlap with the Jobindex source — turn on one or the other, not both."
+    },
+    {
+      "id": 16,
+      "name": "jobsearch-dk",
+      "displayName": "Jobsearch DK",
+      "type": "rss",
+      "enabled": false,
+      "endpoint": "https://www.jobsearch.dk/feed/job-annoncer",
+      "rateLimitRps": 1.0,
+      "notes": "Jobsearch.dk's public RSS feed — about 100 newest listings, no signup needed. Listings show only title and a short description; company and location aren't included."
+    },
+    {
+      "id": 17,
+      "name": "careerjet-dk",
+      "displayName": "CareerJet DK",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://search.api.careerjet.net/v4/query",
+      "queryParams": {
+        "affid": "YOUR_AFFID",
+        "user_ip": "8.8.8.8",
+        "user_agent": "Mozilla/5.0",
+        "url": "https://example.com/jobs",
+        "locale_code": "da_DK",
+        "keywords": "software",
+        "location": "Copenhagen",
+        "sort": "date"
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "url",
+        "title": "title",
+        "company": "company",
+        "location": "locations",
+        "description": "description",
+        "url": "url",
+        "posted_at": "date"
+      },
+      "pagination": {
+        "param": "page",
+        "start": 1,
+        "step": 1,
+        "sizeParam": "page_size",
+        "size": 100,
+        "maxPages": 5
+      },
+      "rateLimitRps": 1.0,
+      "requiresSecret": "affid",
+      "notes": "Careerjet covers job listings across Denmark. To use it, sign up for a free affiliate ID at https://www.careerjet.com/partners/api, paste it in the Affiliate ID field below, then turn the provider on. Each search pulls up to 500 listings."
+    },
+    {
+      "id": 18,
+      "name": "jooble",
+      "displayName": "Jooble",
+      "type": "api",
+      "enabled": true,
+      "method": "post",
+      "endpoint": "https://jooble.org/api/{api_key}",
+      "queryParams": {
+        "api_key": "YOUR_API_KEY"
+      },
+      "bodyTemplate": {
+        "keywords": "software engineer",
+        "location": "Denmark",
+        "radius": 0,
+        "SearchMode": 0
+      },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "company": "company",
+        "location": "location",
+        "description": "snippet",
+        "url": "link",
+        "posted_at": "updated"
+      },
+      "pagination": {
+        "param": "page",
+        "start": 1,
+        "step": 1,
+        "sizeParam": "ResultOnPage",
+        "size": 50,
+        "maxPages": 5
+      },
+      "rateLimitRps": 1.0,
+      "requiresSecret": "api_key",
+      "notes": "Jooble is a global job aggregator with Danish coverage. To use it, get a free API key at https://jooble.org/api/about, paste it in the API key field below, then turn the provider on. Each search pulls up to 250 listings."
+    },
+    {
+      "id": 19,
+      "name": "recruit-it",
+      "displayName": "Recruit IT",
+      "type": "html",
+      "enabled": false,
+      "endpoint": "https://recruit-it.dk/ledige-stillinger-danmark",
+      "html": {
+        "listSelector": "a:has(> div.ledige-stillinger-box)",
+        "titleSelector": ".ls-title",
+        "linkSelector": ":scope",
+        "descriptionSelector": ".ls-description",
+        "urlAttribute": "href"
+      },
+      "staticFields": {
+        "company": "Recruit IT (agency)"
+      },
+      "notes": "A small Danish IT recruitment agency with a few dozen open roles at any time. The actual hiring company is shown inside each job title (e.g. 'IT-chef til 3F')."
+    },
+    {
+      "id": 20,
+      "name": "stepstone-dk",
+      "displayName": "Stepstone DK",
+      "type": "manual",
+      "enabled": false,
+      "notes": "Stepstone doesn't offer a public feed. To include its listings, run a search on stepstone.dk in your browser, export the results, and save the CSV in your data/imports/ folder named stepstone-*.csv. The file needs these columns: title, company, location, url, description, posted_at."
+    }
+  ]
+}

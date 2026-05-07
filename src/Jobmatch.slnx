@@ -1,9 +1,12 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="Jobmatch/Jobmatch.csproj" />
-    <Project Path="Jobmatch.Gui/Jobmatch.Gui.csproj" />
+  <Folder Name="/backend/">
+    <Project Path="backend/Jobmatch/Jobmatch.csproj" />
+    <Project Path="backend/Jobmatch.Api/Jobmatch.Api.csproj" />
+  </Folder>
+  <Folder Name="/infrastructure/">
+    <Project Path="infrastructure/Jobmatch.Host/Jobmatch.Host.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="Jobmatch.Tests/Jobmatch.Tests.csproj" />
+    <Project Path="tests/Jobmatch.Tests/Jobmatch.Tests.csproj" />
   </Folder>
 </Solution>

@@ -18,13 +18,18 @@ obj/
 # Anything personal lives under data/<email>/, never committed
 data/
 
-# Belt-and-suspenders for src/config/ — committed examples only
-src/config/skillset.md
-src/config/portals.yml
+# Belt-and-suspenders for src/backend/config/ — committed examples only
+src/backend/config/skillset.md
+src/backend/config/portals.yml
 
-# Frontend build outputs (when GUI lands)
-src/Jobmatch.Gui/Client/node_modules/
-src/Jobmatch.Gui/Client/dist/
+# Frontend build outputs
+src/frontend/node_modules/
+src/frontend/dist/
+
+# Playwright e2e — local installs and reports
+src/tests/playwright/node_modules/
+src/tests/playwright/test-results/
+src/tests/playwright/playwright-report/
 
 # Root tooling — npm script wrapper
 node_modules/

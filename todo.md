@@ -24,12 +24,30 @@ _(none)_
   `description` / `link` — no `pubDate`, no structured company/location.
   Add a parser that extracts company/location from the title or URL slug
   `/{role}/{city}/{id}`.
-- **Existing-user portal migration.** First-run seeding copies
-  `portals.example.yml` once; existing `data/<email>/portals.yml` files
-  miss new portals shipped after first-run. Add a "new portals available"
-  diff/merge prompt in the GUI Providers page.
+- **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
+  Gui startup. After all known users have run the new build at least once,
+  delete the shim, its tests, and the YAML loader's only remaining caller path.
 
 ## Completed (recent)
+
+- **Provider catalog moved into app bundle; per-user state reduced to opt-outs + secrets.**
+  Replaced `data/<email>/portals.yml` (per-user, gitignored, drift-prone) with
+  `src/backend/Jobmatch/Configuration/portals.json` (committed catalog) +
+  `data/<email>/provider-state.json` (opt-out ids and secrets). Removes the
+  existing-user portal migration gap entirely. One-shot startup shim
+  (`PortalsMigrationShim.RunIfNeeded`) translates any legacy `portals.yml`
+  into the new state file and renames the yaml `.bak`. GUI loses the
+  +Add/Edit/Delete affordances; the toggle and a per-provider secrets form
+  remain. New requirements R-085, R-086. Resolves the long-standing
+  "existing-user portal migration" backlog item.
+
+- **Longlist filterable table.** Replaced the small ranking-table on the
+  History run-detail's Longlist tab with `LonglistTable.tsx`, a
+  filterable/sortable view (search, portal chips, posted-within, score
+  range, stack-hit chips, mark, shortlist-only). Filter state lives in the
+  URL hash so it's bookmarkable and survives refresh. `ScoredEntry` extended
+  with `primaryStackHits`/`secondaryStackHits` so the stack-hit filter has
+  data to filter on.
 
 - **Production-readiness pass: backend testable headless, three quality
   fixes shipped.** Drove the existing Kestrel `/api/search` SSE endpoint
@@ -234,7 +252,7 @@ _(none)_
   `[data-tooltip]` CSS pattern. `UserContext` now anchors
   `data/<email>/` to the repo root by walking up to the nearest
   `.git` (fixes `dotnet run --project src/Jobmatch.Gui` creating a
-  stray data dir). `ApiAdapter` detects HTML responses and surfaces
+  stray data dir, no longer relevant after move to src/backend/Jobmatch.Api). `ApiAdapter` detects HTML responses and surfaces
   a clear error instead of *"'<' is an invalid start of a value"*.
   `portals.example.yml`: `jobnet` ships disabled, `thehub` and
   `remotive` seeded enabled.

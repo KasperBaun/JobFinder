@@ -10,7 +10,7 @@ mkdirSync(pkgDir, { recursive: true })
 
 const args = [
   'pack',
-  'src/Jobmatch.Gui/Jobmatch.Gui.csproj',
+  'src/infrastructure/Jobmatch.Host/Jobmatch.Host.csproj',
   '-c', 'Release',
   '-p:BuildGui=true',
   `-o`, pkgDir,
@@ -18,5 +18,5 @@ const args = [
 ]
 
 console.log(`> dotnet ${args.join(' ')}`)
-const result = spawnSync('dotnet', args, { stdio: 'inherit', cwd: root, shell: true })
+const result = spawnSync('dotnet', args, { stdio: 'inherit', cwd: root })
 process.exit(result.status ?? 1)
