@@ -283,14 +283,6 @@ _(none)_
 
 (Anything older than the restructure lives in git history.)
 
-## Pending engine improvements (carried over)
-
-These pre-date the restructure. Still valid; will fold into the GUI work where they touch the same code paths.
-
-
 ## Nice-to-haves
 
 _(none — table-escaping nice-to-have was stale; the rendered table only carries label/score pairs, no titles/companies that could contain `|`. Live smoke against `jobnet.dk` is no longer worth chasing — T-007 confirmed STAR cert-auth is the only path. Frontmatter shipped.)_
-
-## Bugs deferred
-
