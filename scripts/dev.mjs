@@ -26,8 +26,8 @@ const env = {
   DOTNET_WATCH_SUPPRESS_EMOJIS: '1',
 }
 
-console.log(`> dotnet watch run --project src/Jobmatch.Gui   [api  → :${apiPort}]`)
-console.log(`> vite dev                                        [client → :${vitePort}, /api → ${apiTarget}]`)
+console.log(`> dotnet watch run --project src/backend/Jobmatch.Api   [api  → :${apiPort}]`)
+console.log(`> vite dev                                                [client → :${vitePort}, /api → ${apiTarget}]`)
 
 const children = []
 // `dotnet` is a real .exe — spawn directly. `npm` is a .cmd shim on Windows
@@ -56,7 +56,7 @@ async function cleanup() {
 
   // Order matters on Windows. `dotnet watch` treats a force-killed app as a
   // crash and respawns it before our taskkill walk reaches watch itself —
-  // the new instance is then orphaned, holds bin\Debug\Jobmatch.Gui.dll, and
+  // the new instance is then orphaned, holds bin\Debug\Jobmatch.Api.dll, and
   // breaks the next `npm run dev` build with an MSB3026 file-lock error.
   // Asking the host to exit cleanly (exit code 0) tells watch to stop, not
   // restart. We then wait for the port to actually drain before force-killing
@@ -73,8 +73,8 @@ process.on('SIGINT',  cleanup)
 process.on('SIGTERM', cleanup)
 process.on('exit',    () => { for (const { child } of children) killTree(child.pid) })
 
-start('server', 'dotnet', ['watch', '--project', 'src/Jobmatch.Gui', 'run'])
-start('client', 'npm',    ['--prefix', 'src/Jobmatch.Gui/Client', 'run', 'dev'])
+start('server', 'dotnet', ['watch', '--project', 'src/backend/Jobmatch.Api', 'run'])
+start('client', 'npm',    ['--prefix', 'src/frontend', 'run', 'dev'])
 
 const [apiReady, viteReady] = await Promise.all([
   waitForPort(apiPort,  { timeoutMs: 90000 }),  // first dotnet build can be slow

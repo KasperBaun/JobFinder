@@ -1,4 +1,4 @@
-// Removes build outputs: pkg/, src/Jobmatch.Gui/Client/dist/, plus dotnet bin/obj.
+// Removes build outputs: pkg/, src/frontend/dist/, plus dotnet bin/obj.
 import { spawnSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -7,7 +7,7 @@ const root = resolve(import.meta.dirname, '..')
 
 const dirs = [
   'pkg',
-  'src/Jobmatch.Gui/Client/dist',
+  'src/frontend/dist',
 ]
 for (const d of dirs) {
   const full = resolve(root, d)

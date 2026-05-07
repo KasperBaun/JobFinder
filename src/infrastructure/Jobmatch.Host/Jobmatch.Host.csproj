@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Jobmatch.Host</RootNamespace>
+    <BuildGui Condition="'$(BuildGui)' == ''">false</BuildGui>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>jobfinder</ToolCommandName>
+    <PackageId>Jobfinder</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Kasper Baun</Authors>
+    <Description>Local-first job search aggregator with editorial GUI. Run `jobfinder` to launch — opens the browser to an ephemeral local server.</Description>
+    <PackageTags>jobs;search;gui;local-first</PackageTags>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\..\pkg</PackageOutputPath>
+    <NoWarn>$(NoWarn);NU5048</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\backend\Jobmatch.Api\Jobmatch.Api.csproj" />
+  </ItemGroup>
+
+  <Target Name="BuildFrontend"
+          BeforeTargets="Build;Publish"
+          Condition="'$(BuildGui)' == 'true'"
+          Inputs="..\..\frontend\package.json;..\..\frontend\package-lock.json;..\..\frontend\src\**\*;..\..\frontend\index.html;..\..\frontend\vite.config.ts"
+          Outputs="..\..\frontend\dist\index.html">
+    <Message Importance="high" Text="Building frontend..." />
+    <Exec Command="npm install" WorkingDirectory="..\..\frontend" />
+    <Exec Command="npm run build" WorkingDirectory="..\..\frontend" />
+  </Target>
+
+  <Target Name="CopyFrontendToOutput"
+          AfterTargets="BuildFrontend"
+          Condition="'$(BuildGui)' == 'true'">
+    <ItemGroup>
+      <_FrontendDist Include="..\..\frontend\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_FrontendDist)"
+          DestinationFiles="@(_FrontendDist->'$(OutDir)gui\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyFrontendToPublish"
+          AfterTargets="ComputeFilesToPublish"
+          BeforeTargets="CopyFilesToPublishDirectory"
+          Condition="'$(BuildGui)' == 'true'">
+    <ItemGroup>
+      <_FrontendDist Include="..\..\frontend\dist\**\*" />
+      <ResolvedFileToPublish Include="@(_FrontendDist)">
+        <RelativePath>gui\%(_FrontendDist.RecursiveDir)%(_FrontendDist.Filename)%(_FrontendDist.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="FrontendBuildSkippedNotice" BeforeTargets="Build" Condition="'$(BuildGui)' != 'true'">
+    <Message Importance="high" Text="Frontend not bundled. Pass -p:BuildGui=true to include the React app." />
+  </Target>
+
+</Project>

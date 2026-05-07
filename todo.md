@@ -32,7 +32,7 @@ _(none)_
 
 - **Provider catalog moved into app bundle; per-user state reduced to opt-outs + secrets.**
   Replaced `data/<email>/portals.yml` (per-user, gitignored, drift-prone) with
-  `src/Jobmatch/Configuration/portals.json` (committed catalog) +
+  `src/backend/Jobmatch/Configuration/portals.json` (committed catalog) +
   `data/<email>/provider-state.json` (opt-out ids and secrets). Removes the
   existing-user portal migration gap entirely. One-shot startup shim
   (`PortalsMigrationShim.RunIfNeeded`) translates any legacy `portals.yml`
@@ -252,7 +252,7 @@ _(none)_
   `[data-tooltip]` CSS pattern. `UserContext` now anchors
   `data/<email>/` to the repo root by walking up to the nearest
   `.git` (fixes `dotnet run --project src/Jobmatch.Gui` creating a
-  stray data dir). `ApiAdapter` detects HTML responses and surfaces
+  stray data dir, no longer relevant after move to src/backend/Jobmatch.Api). `ApiAdapter` detects HTML responses and surfaces
   a clear error instead of *"'<' is an invalid start of a value"*.
   `portals.example.yml`: `jobnet` ships disabled, `thehub` and
   `remotive` seeded enabled.
