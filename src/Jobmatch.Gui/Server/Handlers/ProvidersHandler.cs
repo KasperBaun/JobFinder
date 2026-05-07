@@ -58,6 +58,7 @@ public static class ProvidersHandler
             return Results.Ok(new ProviderDetail(
                 Id: match.Id,
                 Name: match.Name,
+                DisplayName: string.IsNullOrWhiteSpace(match.DisplayName) ? match.Name : match.DisplayName!,
                 Type: match.Type.ToString().ToLowerInvariant(),
                 Enabled: enabled,
                 Endpoint: match.Endpoint?.ToString(),
@@ -210,6 +211,7 @@ public static class ProvidersHandler
         return new ProviderSummary(
             Id: catalogPortal.Id,
             Name: catalogPortal.Name,
+            DisplayName: string.IsNullOrWhiteSpace(catalogPortal.DisplayName) ? catalogPortal.Name : catalogPortal.DisplayName!,
             Type: catalogPortal.Type.ToString().ToLowerInvariant(),
             Enabled: enabled,
             Endpoint: catalogPortal.Endpoint?.ToString(),

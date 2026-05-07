@@ -62,6 +62,9 @@ public static class PortalCatalogLoader
         var requiresSecret = el.TryGetProperty("requiresSecret", out var rsEl) && rsEl.ValueKind == JsonValueKind.String
             ? rsEl.GetString()
             : null;
+        var displayName = el.TryGetProperty("displayName", out var dnEl) && dnEl.ValueKind == JsonValueKind.String
+            ? dnEl.GetString()
+            : null;
 
         var queryParams = ReadObjectDict(el, "queryParams");
         var headers = ReadStringDict(el, "headers");
@@ -87,7 +90,8 @@ public static class PortalCatalogLoader
             BodyTemplate: bodyTemplate,
             Pagination: pagination,
             Id: id,
-            RequiresSecret: requiresSecret);
+            RequiresSecret: requiresSecret,
+            DisplayName: displayName);
     }
 
     private static PaginationConfig? ReadPagination(JsonElement el, string portalName)
