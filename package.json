@@ -11,7 +11,7 @@
     "dev:client": "npm --prefix src/frontend run dev",
     "dev:bundled": "dotnet watch --project src/infrastructure/Jobmatch.Host run -- -p:BuildGui=true",
     "test": "dotnet test src/Jobmatch.slnx --nologo",
-    "test:client": "npm --prefix src/frontend run build",
+    "test:client": "npm --prefix src/frontend run test",
     "test:e2e": "npm --prefix src/tests/playwright test",
     "package": "node scripts/package.mjs",
     "install:tool": "node scripts/install-tool.mjs",
