@@ -75,12 +75,8 @@ if (Directory.Exists(guiPath))
 
 app.MapJobmatchApi();
 
-// Graceful shutdown — React calls this when the user is done.
-app.MapPost(Routes.System.Shutdown, (CancellationTokenSource shutdownCts) =>
-{
-    shutdownCts.CancelAfter(TimeSpan.FromMilliseconds(300));
-    return Results.Ok();
-});
+// Host-owned endpoints — shutdown is not part of the standalone Api surface.
+new Jobmatch.Host.Endpoints.HostShutdownEndpoint().Register(app);
 
 // SPA fallback — any unmatched route returns index.html (so React Router works on hard refresh)
 app.MapFallback(async http =>

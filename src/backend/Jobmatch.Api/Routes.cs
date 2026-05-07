@@ -7,6 +7,8 @@ public static class Routes
         public const string Tag = "System";
         public const string Base = $"{ApiConstants.RouteBase}/system";
         public const string Ping = $"{Base}/ping";
+        // Shutdown is mapped only by Jobmatch.Host (HostShutdownEndpoint). The
+        // standalone Jobmatch.Api project intentionally does not expose this.
         public const string Shutdown = $"{Base}/shutdown";
     }
 
