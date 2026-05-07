@@ -1,16 +1,11 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 
 namespace Jobmatch.Api;
 
 public static class SseHelper
 {
-    public static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    public static readonly JsonSerializerOptions JsonOptions = Jobmatch.Json.JobmatchJsonOptions.Default;
 
     public static void SetHeaders(HttpContext ctx)
     {

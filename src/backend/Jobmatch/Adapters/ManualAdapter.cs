@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Jobmatch.Json;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
 
@@ -120,13 +121,7 @@ public sealed class ManualAdapter(PortalConfig config, HttpClient http, ILogger 
         if (obj.ValueKind != JsonValueKind.Object) return dict;
         foreach (var prop in obj.EnumerateObject())
         {
-            dict[prop.Name] = prop.Value.ValueKind switch
-            {
-                JsonValueKind.String => prop.Value.GetString() ?? string.Empty,
-                JsonValueKind.Number => prop.Value.ToString(),
-                JsonValueKind.True or JsonValueKind.False => prop.Value.ToString(),
-                _ => string.Empty,
-            };
+            dict[prop.Name] = JsonValueReader.AsString(prop.Value) ?? string.Empty;
         }
         return dict;
     }

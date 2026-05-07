@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Jobmatch.Json;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
 
@@ -85,7 +86,7 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         using var doc = await ParseJsonOrThrow(stream, PortalName, ct);
 
         var itemsPath = mapping.TryGetValue("items_path", out var ip) ? ip : null;
-        var items = WalkJsonPath(doc.RootElement, itemsPath);
+        var items = JsonValueReader.Walk(doc.RootElement, itemsPath);
         if (items.ValueKind != JsonValueKind.Array)
         {
             Logger.LogWarning("portal={Portal} items_path did not resolve to an array; got {Kind}", PortalName, items.ValueKind);
@@ -198,38 +199,23 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         };
     }
 
-    private static JsonElement WalkJsonPath(JsonElement root, string? dottedPath)
-    {
-        if (string.IsNullOrEmpty(dottedPath)) return root;
-        var current = root;
-        foreach (var segment in dottedPath.Split('.'))
-        {
-            if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(segment, out var next))
-            {
-                return default;
-            }
-            current = next;
-        }
-        return current;
-    }
-
     private Listing? TryBuildListing(JsonElement item, IReadOnlyDictionary<string, string> mapping)
     {
         try
         {
-            var sourceId = ReadString(item, mapping, "id");
-            var title = ReadString(item, mapping, "title") ?? string.Empty;
+            var sourceId = JsonValueReader.ReadMappedString(item, mapping, "id");
+            var title = JsonValueReader.ReadMappedString(item, mapping, "title") ?? string.Empty;
             if (string.IsNullOrWhiteSpace(title)) return null;
 
-            var company = ReadString(item, mapping, "company");
-            var location = ReadString(item, mapping, "location");
-            var descriptionRaw = ReadString(item, mapping, "description") ?? string.Empty;
+            var company = JsonValueReader.ReadMappedString(item, mapping, "company");
+            var location = JsonValueReader.ReadMappedString(item, mapping, "location");
+            var descriptionRaw = JsonValueReader.ReadMappedString(item, mapping, "description") ?? string.Empty;
             var description = StripHtml(descriptionRaw);
 
             Uri? url = null;
             if (mapping.TryGetValue("url", out var urlField))
             {
-                var urlStr = ReadString(item, mapping, "url");
+                var urlStr = JsonValueReader.ReadMappedString(item, mapping, "url");
                 if (!string.IsNullOrWhiteSpace(urlStr) && Uri.TryCreate(urlStr, UriKind.Absolute, out var parsed)) url = parsed;
             }
             else if (mapping.TryGetValue("url_template", out var tpl))
@@ -240,7 +226,7 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             if (url is null) return null;
 
             DateTimeOffset? postedAt = null;
-            var postedStr = ReadString(item, mapping, "posted_at");
+            var postedStr = JsonValueReader.ReadMappedString(item, mapping, "posted_at");
             if (!string.IsNullOrWhiteSpace(postedStr) && DateTimeOffset.TryParse(postedStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedDate))
             {
                 postedAt = parsedDate;
@@ -263,48 +249,24 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         }
     }
 
-    private static string? ReadString(JsonElement item, IReadOnlyDictionary<string, string> mapping, string field)
-    {
-        if (!mapping.TryGetValue(field, out var path)) return null;
-        var el = WalkJsonPath(item, path);
-        return el.ValueKind switch
+    private string RenderTemplate(string template, JsonElement item) =>
+        StringTemplate.Render(template, key =>
         {
-            JsonValueKind.String => el.GetString(),
-            JsonValueKind.Number => el.ToString(),
-            JsonValueKind.True or JsonValueKind.False => el.ToString(),
-            _ => null,
-        };
-    }
-
-    private string RenderTemplate(string template, JsonElement item)
-    {
-        var result = template;
-        var start = result.IndexOf('{');
-        while (start >= 0)
-        {
-            var end = result.IndexOf('}', start);
-            if (end < 0) break;
-            var key = result.Substring(start + 1, end - start - 1);
-            string value;
             if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var prop))
             {
-                value = prop.ValueKind switch
+                var value = JsonValueReader.AsString(prop);
+                if (value is null)
                 {
-                    JsonValueKind.String => prop.GetString() ?? string.Empty,
-                    JsonValueKind.Number => prop.ToString(),
-                    _ => string.Empty,
-                };
+                    Logger.LogWarning(
+                        "portal={Portal} url_template references '{{{Key}}}' which is not in this item; the produced URL will be malformed and the listing will be dropped",
+                        PortalName, key);
+                    return string.Empty;
+                }
+                return value;
             }
-            else
-            {
-                Logger.LogWarning(
-                    "portal={Portal} url_template references '{{{Key}}}' which is not in this item; the produced URL will be malformed and the listing will be dropped",
-                    PortalName, key);
-                value = string.Empty;
-            }
-            result = string.Concat(result.AsSpan(0, start), value, result.AsSpan(end + 1));
-            start = result.IndexOf('{', start + value.Length);
-        }
-        return result;
-    }
+            Logger.LogWarning(
+                "portal={Portal} url_template references '{{{Key}}}' which is not in this item; the produced URL will be malformed and the listing will be dropped",
+                PortalName, key);
+            return null;
+        });
 }
