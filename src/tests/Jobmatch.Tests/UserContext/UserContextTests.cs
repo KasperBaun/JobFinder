@@ -165,6 +165,24 @@ public sealed class UserContextTests : IDisposable
         Assert.Equal(expectedDefault, ctx.RankingPath);
     }
 
+    [Fact]
+    public void Resolve_When_NotInRepo_FallsBack_To_StableUserLocation()
+    {
+        // _tempRoot is *not* a git repo and has no .git anywhere up the chain on a typical CI box.
+        var ctx = JobmatchUserContext.Resolve(
+            emailOverride: "stable-fallback-test@example.com",
+            repoRoot: null,
+            cwdOverride: _tempRoot,
+            seedExamples: false);
+
+        var stableRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var expectedPrefix = Path.Combine(stableRoot, "jobfinder");
+        Assert.StartsWith(expectedPrefix, ctx.RootDir);
+        Assert.EndsWith(Path.Combine("data", "stable-fallback-test@example.com"), ctx.RootDir);
+
+        if (Directory.Exists(ctx.RootDir)) Directory.Delete(ctx.RootDir, recursive: true);
+    }
+
     private static string? TryReadGlobalGitEmail()
     {
         try
