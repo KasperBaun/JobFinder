@@ -3,6 +3,7 @@ namespace Jobmatch.Gui.Server.Models;
 public sealed record ProviderSummary(
     int Id,
     string Name,
+    string DisplayName,
     string Type,
     bool Enabled,
     string? Endpoint,
@@ -25,6 +26,7 @@ public sealed record ProviderRecentRun(
 public sealed record ProviderDetail(
     int Id,
     string Name,
+    string DisplayName,
     string Type,
     bool Enabled,
     string? Endpoint,

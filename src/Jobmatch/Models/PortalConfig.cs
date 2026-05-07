@@ -18,7 +18,8 @@ public sealed record PortalConfig(
     IReadOnlyDictionary<string, object?>? BodyTemplate = null,
     PaginationConfig? Pagination = null,
     int Id = 0,
-    string? RequiresSecret = null);
+    string? RequiresSecret = null,
+    string? DisplayName = null);
 
 public sealed record PaginationConfig(
     string Param,

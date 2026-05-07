@@ -91,21 +91,9 @@ export function ProvidersPage() {
   const stats = useMemo(() => {
     if (!data) return null
     const total = data.providers.length
-    let enabled = 0
-    let working = 0
-    let failing = 0
-    let stale = 0
-    let untested = 0
-    for (const p of data.providers) {
-      if (p.enabled) enabled++
-      const h = classifyHealth(p, tests[p.id])
-      if (h === 'working') working++
-      else if (h === 'failing') failing++
-      else if (h === 'stale') stale++
-      else untested++
-    }
-    return { total, enabled, disabled: total - enabled, working, failing, stale, untested }
-  }, [data, tests])
+    const enabled = data.providers.filter((p) => p.enabled).length
+    return { total, enabled, disabled: total - enabled }
+  }, [data])
 
   return (
     <div className="page page--wide">
@@ -129,11 +117,6 @@ export function ProvidersPage() {
           <Stat label="total" value={stats.total} />
           <Stat label="enabled" value={stats.enabled} tone={stats.enabled > 0 ? 'good' : undefined} />
           <Stat label="disabled" value={stats.disabled} tone="muted" />
-          <span className="provider-stats__sep" aria-hidden />
-          <Stat label="working" value={stats.working} tone={stats.working > 0 ? 'good' : undefined} />
-          <Stat label="failing" value={stats.failing} tone={stats.failing > 0 ? 'bad' : undefined} />
-          <Stat label="stale" value={stats.stale} tone={stats.stale > 0 ? 'warn' : undefined} />
-          <Stat label="untested" value={stats.untested} tone="muted" />
         </div>
       )}
 
@@ -155,12 +138,12 @@ export function ProvidersPage() {
                 className={`provider-tile${p.enabled ? '' : ' provider-tile--disabled'}`}
               >
                 <div className="provider-tile__eyebrow">
-                  <span className="provider-tile__type">{p.type}</span>
+                  <span className="provider-tile__type">{friendlyType(p.type)}</span>
                   <span className="provider-tile__id">#{p.id}</span>
                 </div>
 
                 <Link to={`/providers/${p.id}`} className="provider-tile__title">
-                  {p.name}
+                  {p.displayName}
                 </Link>
 
                 <div className={`provider-tile__health provider-tile__health--${health}`}>
@@ -180,8 +163,8 @@ export function ProvidersPage() {
                 </div>
 
                 {p.requiresSecret && !p.hasSecret && (
-                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`${p.name} needs ${p.requiresSecret}`}>
-                    needs {p.requiresSecret} →
+                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`${p.displayName} needs ${friendlySecretLabel(p.requiresSecret)}`}>
+                    needs {friendlySecretLabel(p.requiresSecret).toLowerCase()} →
                   </Link>
                 )}
 
@@ -203,7 +186,7 @@ export function ProvidersPage() {
                     checked={p.enabled}
                     onChange={(e) => toggle.mutate({ p, enabled: e.target.checked })}
                     disabled={toggle.isPending}
-                    aria-label={`${p.name} enabled`}
+                    aria-label={`${p.displayName} enabled`}
                   />
                   <span>{p.enabled ? 'enabled' : 'disabled'}</span>
                 </label>
@@ -226,10 +209,28 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'go
 }
 
 function nameById(list: ProviderSummary[] | undefined, id: number): string {
-  return list?.find((p) => p.id === id)?.name ?? `#${id}`
+  return list?.find((p) => p.id === id)?.displayName ?? `#${id}`
 }
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s
   return s.slice(0, max - 1) + '…'
+}
+
+function friendlyType(type: string): string {
+  switch (type) {
+    case 'api':    return 'Job board API'
+    case 'rss':    return 'RSS feed'
+    case 'html':   return 'Web scraping'
+    case 'manual': return 'Manual import'
+    default:       return type
+  }
+}
+
+function friendlySecretLabel(name: string): string {
+  switch (name) {
+    case 'api_key': return 'API key'
+    case 'affid':   return 'Affiliate ID'
+    default:        return 'Access key'
+  }
 }

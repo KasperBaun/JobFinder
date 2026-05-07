@@ -9,6 +9,7 @@ export type ProviderType = 'api' | 'rss' | 'html' | 'manual'
 export type ProviderSummary = {
   id: number
   name: string
+  displayName: string
   type: ProviderType
   enabled: boolean
   endpoint?: string

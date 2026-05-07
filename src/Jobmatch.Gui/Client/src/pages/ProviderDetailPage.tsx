@@ -62,7 +62,7 @@ export function ProviderDetailPage() {
             <div className="provider-detail__head">
               <div className="provider-detail__head-left">
                 <div className="page__eyebrow">provider · #{data.id}</div>
-                <h1 className="page__heading provider-detail__heading">{data.name}</h1>
+                <h1 className="page__heading provider-detail__heading">{data.displayName}</h1>
               </div>
               <Toggle
                 checked={data.enabled}
@@ -75,16 +75,11 @@ export function ProviderDetailPage() {
 
           <div className="provider-detail__sections">
             <section className="card">
-              <h2 className="card__title">Configuration</h2>
+              <h2 className="card__title">About this source</h2>
               <dl className="provider-detail__readonly">
-                <ReadonlyField label="Type"      value={data.type} />
-                <ReadonlyField label="Rate limit (rps)" value={data.rateLimitRps.toString()} />
-                <ReadonlyField label="Endpoint"  value={data.endpoint ?? '(none — manual provider)'} mono />
+                <ReadonlyField label="Source type" value={friendlyType(data.type)} />
                 {data.notes && <ReadonlyField label="Notes" value={data.notes} />}
               </dl>
-              <p className="field__hint">
-                Catalog values ship with the app and are read-only. To change one, open <code>src/Jobmatch/Configuration/portals.json</code> and submit a change.
-              </p>
             </section>
 
             {data.requiresSecret && (
@@ -113,8 +108,8 @@ export function ProviderDetailPage() {
               </div>
               <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>
                 {data.type === 'manual'
-                  ? 'Manual providers have no live endpoint — nothing to test.'
-                  : 'Runs the actual adapter once and reports listings fetched, latency, and a sample title.'}
+                  ? "This source doesn't fetch automatically — there's nothing to test."
+                  : 'Runs a single test fetch and reports how many listings come back, how long it took, and one example title.'}
               </p>
               {testResult && (
                 <div className={`provider-test-result provider-test-result--${testResult.ok ? 'ok' : 'fail'}`}>
@@ -169,6 +164,24 @@ export function ProviderDetailPage() {
       )}
     </div>
   )
+}
+
+function friendlyType(type: string): string {
+  switch (type) {
+    case 'api':    return 'Job board API'
+    case 'rss':    return 'RSS feed'
+    case 'html':   return 'Web scraping'
+    case 'manual': return 'Manual import'
+    default:       return type
+  }
+}
+
+function friendlySecretLabel(name: string): string {
+  switch (name) {
+    case 'api_key': return 'API key'
+    case 'affid':   return 'Affiliate ID'
+    default:        return 'Access key'
+  }
 }
 
 function ReadonlyField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
@@ -226,17 +239,16 @@ function SecretsCard({
 
   return (
     <section className="card">
-      <h2 className="card__title">Secret · {secretName}</h2>
+      <h2 className="card__title">{friendlySecretLabel(secretName)}</h2>
       <p className="field__hint">
-        Per-user. Stored locally in <code>data/&lt;email&gt;/provider-state.json</code>.
-        The provider is skipped at search time until a non-empty value is set.
+        Saved on this computer only. Until you save a value here, this source is skipped during searches.
       </p>
       <div className="secrets-form">
         <input
           className="input input--mono"
           type="password"
           autoComplete="off"
-          placeholder={hasSecret ? '••••••••  (overwrite to update)' : 'paste value'}
+          placeholder={hasSecret ? '••••••••  (overwrite to update)' : `Paste your ${friendlySecretLabel(secretName)}`}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={saving}
