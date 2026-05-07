@@ -78,8 +78,8 @@ export function killTree(pid) {
 }
 
 /**
- * POST /api/shutdown to ask the .NET host to cancel itself. Critical on
- * Windows: if we just taskkill Jobmatch.Gui, `dotnet watch` reads the abrupt
+ * POST /api/system/shutdown to ask the .NET host to cancel itself. Critical on
+ * Windows: if we just taskkill Jobmatch.Host, `dotnet watch` reads the abrupt
  * exit as a crash and immediately respawns the app — the new instance becomes
  * orphaned the moment we kill watch, leaving a zombie that holds the build
  * output's file handles. A clean exit (code 0) tells watch to stop instead.
@@ -87,7 +87,7 @@ export function killTree(pid) {
 export function postShutdown(port, timeoutMs = 1500) {
   return new Promise((resolve) => {
     const req = http.request({
-      host: '127.0.0.1', port, method: 'POST', path: '/api/shutdown', timeout: timeoutMs,
+      host: '127.0.0.1', port, method: 'POST', path: '/api/system/shutdown', timeout: timeoutMs,
     }, (res) => { res.resume(); res.on('end', () => resolve(true)) })
     req.on('error',   () => resolve(false))
     req.on('timeout', () => { req.destroy(); resolve(false) })
