@@ -17,5 +17,5 @@ for (const d of dirs) {
 
 console.log('> dotnet clean src/Jobmatch.slnx')
 spawnSync('dotnet', ['clean', 'src/Jobmatch.slnx', '--nologo', '-v', 'minimal'], {
-  stdio: 'inherit', cwd: root, shell: true,
+  stdio: 'inherit', cwd: root,
 })

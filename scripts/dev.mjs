@@ -30,8 +30,15 @@ console.log(`> dotnet watch run --project src/Jobmatch.Gui   [api  → :${apiPor
 console.log(`> vite dev                                        [client → :${vitePort}, /api → ${apiTarget}]`)
 
 const children = []
+// `dotnet` is a real .exe — spawn directly. `npm` is a .cmd shim on Windows
+// that requires shell:true (CVE-2024-27980), and shell:true + an args array
+// triggers DEP0190, so npm goes through shell as a single command string.
+// Safe because both args lists are hardcoded in this file.
 function start(label, cmd, args) {
-  const child = spawn(cmd, args, { stdio: 'inherit', cwd: root, shell: true, env })
+  const useShell = cmd === 'npm'
+  const child = useShell
+    ? spawn(`${cmd} ${args.join(' ')}`, { stdio: 'inherit', cwd: root, env, shell: true })
+    : spawn(cmd, args, { stdio: 'inherit', cwd: root, env })
   children.push({ label, child })
   child.on('exit', (code, signal) => {
     if (!shuttingDown) {
