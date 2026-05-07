@@ -181,12 +181,10 @@ a.btn--danger:hover {
   text-decoration: none;
 }
 .top-nav__brand-mark {
-  display: inline-block;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--c-action);
-  transform: translateY(-1px);
-  box-shadow: 0 0 0 3px rgba(10, 36, 86, 0.15);
+  width: 20px;
+  height: 20px;
+  color: var(--c-action);
+  flex-shrink: 0;
 }
 .top-nav__brand-tag {
   font-family: var(--font-mono);
