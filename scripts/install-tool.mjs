@@ -22,5 +22,5 @@ const args = [
 ]
 
 console.log(`> dotnet ${args.join(' ')}`)
-const result = spawnSync('dotnet', args, { stdio: 'inherit', shell: true })
+const result = spawnSync('dotnet', args, { stdio: 'inherit' })
 process.exit(result.status ?? 1)

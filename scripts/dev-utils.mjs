@@ -1,6 +1,7 @@
 // Tiny helpers shared by dev.mjs. Kept inline (no deps) so `npm run dev`
 // has zero installation cost beyond what npm already pulled for vite/react.
 import net from 'node:net'
+import http from 'node:http'
 import { spawn, spawnSync } from 'node:child_process'
 
 /**
@@ -74,4 +75,82 @@ export function killTree(pid) {
   } else {
     try { process.kill(pid, 'SIGTERM') } catch { /* already dead */ }
   }
+}
+
+/**
+ * POST /api/shutdown to ask the .NET host to cancel itself. Critical on
+ * Windows: if we just taskkill Jobmatch.Gui, `dotnet watch` reads the abrupt
+ * exit as a crash and immediately respawns the app — the new instance becomes
+ * orphaned the moment we kill watch, leaving a zombie that holds the build
+ * output's file handles. A clean exit (code 0) tells watch to stop instead.
+ */
+export function postShutdown(port, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const req = http.request({
+      host: '127.0.0.1', port, method: 'POST', path: '/api/shutdown', timeout: timeoutMs,
+    }, (res) => { res.resume(); res.on('end', () => resolve(true)) })
+    req.on('error',   () => resolve(false))
+    req.on('timeout', () => { req.destroy(); resolve(false) })
+    req.end()
+  })
+}
+
+/**
+ * Polls a port until nothing is listening on it (or the timeout elapses).
+ * Used after `postShutdown` to confirm the .NET host has actually exited
+ * before we taskkill its parent dotnet-watch — without this confirmation
+ * we re-introduce the respawn race we were trying to avoid.
+ */
+export async function waitForPortFree(port, { timeoutMs = 5000, intervalMs = 150 } = {}) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const stillUp = await new Promise((resolve) => {
+      const sock = net.createConnection({ port, host: '127.0.0.1' })
+      sock.once('connect', () => { sock.end(); resolve(true) })
+      sock.once('error',   () => { sock.destroy(); resolve(false) })
+    })
+    if (!stillUp) return true
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  return false
+}
+
+/**
+ * Final safety net on Windows: walk all descendants of `rootPid` via
+ * Win32_Process and force-kill each. Catches orphans whose parent chain
+ * was severed before we got to taskkill /T (e.g. a respawn that happened
+ * mid-shutdown). No-op on POSIX. wmic is gone on recent Windows builds,
+ * so we use Get-CimInstance — startup cost is paid only on shutdown.
+ */
+export function killDescendantsOnWindows(rootPid) {
+  if (process.platform !== 'win32' || !rootPid) return
+  const script = `
+    $root = ${rootPid}
+    $procs = Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId
+    $byParent = @{}
+    foreach ($p in $procs) {
+      if (-not $byParent.ContainsKey([int]$p.ParentProcessId)) {
+        $byParent[[int]$p.ParentProcessId] = New-Object System.Collections.ArrayList
+      }
+      [void]$byParent[[int]$p.ParentProcessId].Add([int]$p.ProcessId)
+    }
+    $visited = @{}
+    $queue = New-Object System.Collections.Queue
+    $queue.Enqueue($root)
+    while ($queue.Count -gt 0) {
+      $cur = $queue.Dequeue()
+      if ($byParent.ContainsKey($cur)) {
+        foreach ($child in $byParent[$cur]) {
+          if (-not $visited.ContainsKey($child)) {
+            $visited[$child] = $true
+            $queue.Enqueue($child)
+          }
+        }
+      }
+    }
+    foreach ($id in $visited.Keys) {
+      Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
+    }
+  `
+  spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { stdio: 'ignore' })
 }
