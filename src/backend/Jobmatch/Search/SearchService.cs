@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
@@ -27,14 +25,7 @@ public interface ISearchService
 /// </summary>
 public sealed class SearchService : ISearchService
 {
-    private static readonly JsonSerializerOptions HistoryJsonOptions = new()
-    {
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions HistoryJsonOptions = Json.JobmatchJsonOptions.Indented;
 
     private readonly UserContext _ctx;
     private readonly ILoggerFactory _loggerFactory;
