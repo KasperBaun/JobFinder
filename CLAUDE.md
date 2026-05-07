@@ -59,6 +59,8 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 - The committed `src/backend/config/*.example.*` files are templates copied into `data/<email>/` on first use.
 - `src/backend/config/ranking.yml` is the default; if `data/<email>/ranking.yml` exists, it overrides.
 - Never write user state outside `data/<email>/`. Never commit anything from `data/`.
+- When run outside a git repo (no `.git` anchor up the chain), `data/<email>/` is created under
+  `%LOCALAPPDATA%/jobfinder/` (Windows) / `~/.local/share/jobfinder/` (Unix) instead of the cwd.
 
 ## Entry point
 

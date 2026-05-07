@@ -31,12 +31,14 @@ public sealed class UserContext
     /// directory doesn't yet exist, and ensuring the standard subdirectories exist.
     /// </summary>
     /// <param name="emailOverride">Optional email override; takes precedence over env and git.</param>
-    /// <param name="repoRoot">Optional repo root; defaults to <see cref="Directory.GetCurrentDirectory"/>.</param>
+    /// <param name="repoRoot">Optional repo root; defaults to walking up from cwd looking for <c>.git</c>, falling back to <c>%LOCALAPPDATA%/jobfinder</c> if none found.</param>
     /// <param name="seedExamples">When true (default), copy example configs into a freshly created RootDir.</param>
+    /// <param name="cwdOverride">Optional cwd override used as the start of the <c>.git</c> walk-up; defaults to <see cref="Directory.GetCurrentDirectory"/>.</param>
     public static UserContext Resolve(
         string? emailOverride = null,
         string? repoRoot = null,
-        bool seedExamples = true)
+        bool seedExamples = true,
+        string? cwdOverride = null)
     {
         var email = ResolveEmail(emailOverride)
             ?? throw new ConfigException(
@@ -44,7 +46,8 @@ public sealed class UserContext
                 + "explicit override, environment variable JOBFINDER_USER, and `git config user.email`. "
                 + "Set one of these and try again.");
 
-        var root = repoRoot ?? FindRepoRoot(Directory.GetCurrentDirectory());
+        var cwd = cwdOverride ?? Directory.GetCurrentDirectory();
+        var root = repoRoot ?? FindRepoRootOrStableFallback(cwd);
         var rootDir = Path.Combine(root, "data", email);
 
         var firstRun = !Directory.Exists(rootDir);
@@ -92,7 +95,7 @@ public sealed class UserContext
         };
     }
 
-    private static string FindRepoRoot(string startDir)
+    private static string FindRepoRootOrStableFallback(string startDir)
     {
         var dir = new DirectoryInfo(startDir);
         while (dir is not null)
@@ -104,7 +107,17 @@ public sealed class UserContext
             }
             dir = dir.Parent;
         }
-        return startDir;
+        // No .git anchor: fall back to a stable per-user location instead of cwd.
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrEmpty(localAppData))
+        {
+            throw new ConfigException(
+                "Could not resolve a stable data directory: no `.git` anchor was found above "
+                + $"'{startDir}', and Environment.SpecialFolder.LocalApplicationData returned empty. "
+                + "Run jobfinder from inside a git repo, or set JOBFINDER_USER and ensure a writable "
+                + "user-profile directory is available.");
+        }
+        return Path.Combine(localAppData, "jobfinder");
     }
 
     private static string? ResolveEmail(string? emailOverride)

@@ -7,6 +7,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-001** The system should identify each user by email and keep all of that user's state under `data/<email>/`, never co-mingling users.
 - **R-002** The system should default a user's email from `git config user.email` and accept an explicit override (env `JOBFINDER_USER`, or a setting in the GUI).
 - **R-003** The system should treat `data/<email>/` as private and gitignored — nothing in it is ever committed.
+- **R-004** When jobfinder runs outside a git repository (no `.git` anchor up the directory tree), the per-user data directory resolves to `%LOCALAPPDATA%/jobfinder/data/<email>/` (Windows) or `~/.local/share/jobfinder/data/<email>/` (Unix) rather than the current working directory.
 
 ## Skillset
 
