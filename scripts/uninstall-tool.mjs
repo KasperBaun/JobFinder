@@ -4,5 +4,5 @@ import { spawnSync } from 'node:child_process'
 
 const args = ['tool', 'uninstall', '--global', 'Jobfinder']
 console.log(`> dotnet ${args.join(' ')}`)
-spawnSync('dotnet', args, { stdio: 'inherit', shell: true })
+spawnSync('dotnet', args, { stdio: 'inherit' })
 process.exit(0)
