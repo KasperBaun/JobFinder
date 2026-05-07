@@ -1,0 +1,65 @@
+using Jobmatch.Api.Endpoints;
+using Jobmatch.Api.Handlers;
+using Jobmatch.Api.Infrastructure;
+using Jobmatch.Configuration;
+using Jobmatch.Search;
+using Jobmatch.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Jobmatch.Api;
+
+public static class JobmatchApiExtensions
+{
+    public static IServiceCollection AddJobmatchApi(this IServiceCollection services)
+    {
+        // Active user — singleton resolved once per process. Side-effect: runs the one-time portals
+        // migration so the host doesn't need to know about it.
+        services.AddSingleton<UserContext>(_ =>
+        {
+            var ctx = UserContext.Resolve();
+            PortalsMigrationShim.RunIfNeeded(ctx.RootDir);
+            return ctx;
+        });
+
+        // Domain services
+        services.AddScoped<IWhoamiService, WhoamiService>();
+        services.AddScoped<IMarksService, MarksService>();
+        services.AddScoped<IHistoryService, HistoryService>();
+        services.AddScoped<ISkillsetService, SkillsetService>();
+        services.AddScoped<IProvidersService, ProvidersService>();
+        services.AddScoped<ISearchService, SearchService>();
+
+        // Handlers
+        services.AddScoped<ISystemHandler, SystemHandler>();
+        services.AddScoped<IWhoamiHandler, WhoamiHandler>();
+        services.AddScoped<IMarksHandler, MarksHandler>();
+        services.AddScoped<IHistoryHandler, HistoryHandler>();
+        services.AddScoped<ISkillsetHandler, SkillsetHandler>();
+        services.AddScoped<IProvidersHandler, ProvidersHandler>();
+        services.AddScoped<ISearchHandler, SearchHandler>();
+
+        return services;
+    }
+
+    public static WebApplication MapJobmatchApi(this WebApplication app)
+    {
+        IEndpointRegistration[] registrations =
+        [
+            new SystemEndpoints(),
+            new WhoamiEndpoints(),
+            new MarksEndpoints(),
+            new HistoryEndpoints(),
+            new SkillsetEndpoints(),
+            new ProvidersEndpoints(),
+            new SearchEndpoints(),
+        ];
+
+        foreach (var registration in registrations)
+        {
+            registration.Register(app);
+        }
+
+        return app;
+    }
+}

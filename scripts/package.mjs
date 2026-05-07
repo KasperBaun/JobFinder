@@ -10,7 +10,7 @@ mkdirSync(pkgDir, { recursive: true })
 
 const args = [
   'pack',
-  'src/Jobmatch.Gui/Jobmatch.Gui.csproj',
+  'src/infrastructure/Jobmatch.Host/Jobmatch.Host.csproj',
   '-c', 'Release',
   '-p:BuildGui=true',
   `-o`, pkgDir,
