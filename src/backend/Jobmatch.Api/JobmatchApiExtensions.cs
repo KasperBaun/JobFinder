@@ -22,6 +22,9 @@ public static class JobmatchApiExtensions
             return ctx;
         });
 
+        // Filesystem abstraction — physical by default; tests stage in-memory.
+        services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();
+
         // Domain services
         services.AddScoped<IWhoamiService, WhoamiService>();
         services.AddScoped<IMarksService, MarksService>();

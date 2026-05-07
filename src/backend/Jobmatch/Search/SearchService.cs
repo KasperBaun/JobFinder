@@ -4,6 +4,7 @@ using System.Text.Json;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
+using Jobmatch.IO;
 using Jobmatch.Models;
 using Jobmatch.Output;
 using Jobmatch.Ranking;
@@ -28,11 +29,13 @@ public sealed class SearchService : ISearchService
     private static readonly JsonSerializerOptions HistoryJsonOptions = Json.JobmatchJsonOptions.Indented;
 
     private readonly UserContext _ctx;
+    private readonly IFileSystem _fs;
     private readonly ILoggerFactory _loggerFactory;
 
-    public SearchService(UserContext ctx, ILoggerFactory? loggerFactory = null)
+    public SearchService(UserContext ctx, IFileSystem fs, ILoggerFactory? loggerFactory = null)
     {
         _ctx = ctx;
+        _fs = fs;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
     }
 
@@ -172,7 +175,7 @@ public sealed class SearchService : ISearchService
         try
         {
             var logger = _loggerFactory.CreateLogger($"Adapter.{portal.Name}");
-            var adapter = AdapterFactory.Create(portal, http, logger, _ctx.ImportsDir);
+            var adapter = AdapterFactory.Create(portal, http, logger, _ctx.ImportsDir, _fs);
             if (adapter is null)
             {
                 return (Array.Empty<Listing>(), $"unsupported portal type '{portal.Type}'");

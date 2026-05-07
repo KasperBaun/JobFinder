@@ -1,4 +1,5 @@
 using Jobmatch.Adapters;
+using Jobmatch.IO;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -6,6 +7,7 @@ namespace Jobmatch.Tests.Adapters;
 
 public sealed class ManualAdapterTests : IDisposable
 {
+    private static readonly IFileSystem Fs = new PhysicalFileSystem();
     private readonly string _imports;
 
     public ManualAdapterTests()
@@ -39,7 +41,7 @@ public sealed class ManualAdapterTests : IDisposable
             """);
 
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Single(results);
@@ -58,7 +60,7 @@ public sealed class ManualAdapterTests : IDisposable
             "Backend Dev,Initech,Berlin,https://initech.com/2,Java,2026-03-20\n");
 
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Equal(2, results.Count);
@@ -79,7 +81,7 @@ public sealed class ManualAdapterTests : IDisposable
             "\"Backend Dev\",Initech,Berlin,https://initech.com/2,\"Single line.\",2026-03-20\n");
 
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Equal(2, results.Count);
@@ -100,7 +102,7 @@ public sealed class ManualAdapterTests : IDisposable
             """);
 
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Single(results);
@@ -110,7 +112,7 @@ public sealed class ManualAdapterTests : IDisposable
     public async Task FetchAsync_No_Matching_Files_Returns_Empty()
     {
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("absent"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("absent"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Empty(results);
@@ -134,7 +136,7 @@ public sealed class ManualAdapterTests : IDisposable
             """);
 
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Equal(RemoteMode.Hybrid, results[0].RemoteMode);
@@ -145,7 +147,7 @@ public sealed class ManualAdapterTests : IDisposable
     {
         Directory.Delete(_imports);
         using var http = new HttpClient();
-        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports);
+        var adapter = new ManualAdapter(PortalNamed("mine"), http, NullLogger.Instance, _imports, Fs);
 
         var results = await adapter.FetchAsync();
         Assert.Empty(results);

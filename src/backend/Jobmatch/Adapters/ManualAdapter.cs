@@ -1,26 +1,30 @@
 using System.Globalization;
 using System.Text.Json;
+using Jobmatch.IO;
 using Jobmatch.Json;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Adapters;
 
-public sealed class ManualAdapter(PortalConfig config, HttpClient http, ILogger logger, string importsDirectory)
+public sealed class ManualAdapter(
+    PortalConfig config, HttpClient http, ILogger logger,
+    string importsDirectory, IFileSystem fs)
     : BaseAdapter(config, http, logger)
 {
     private readonly string _importsDirectory = importsDirectory;
+    private readonly IFileSystem _fs = fs;
 
     public override Task<IReadOnlyList<Listing>> FetchAsync(CancellationToken ct = default)
     {
-        if (!Directory.Exists(_importsDirectory))
+        if (!_fs.DirectoryExists(_importsDirectory))
         {
             Logger.LogWarning("portal={Portal} imports directory not found: {Dir}", PortalName, _importsDirectory);
             return Task.FromResult<IReadOnlyList<Listing>>([]);
         }
 
         var pattern = $"{Config.Name}-*.*";
-        var files = Directory.EnumerateFiles(_importsDirectory, pattern).ToList();
+        var files = _fs.EnumerateFiles(_importsDirectory, pattern).ToList();
         if (files.Count == 0)
         {
             Logger.LogInformation("portal={Portal} no import files matching {Pattern}", PortalName, pattern);
@@ -56,7 +60,7 @@ public sealed class ManualAdapter(PortalConfig config, HttpClient http, ILogger 
 
     private IEnumerable<Listing> ReadJsonFile(string path)
     {
-        using var stream = File.OpenRead(path);
+        using var stream = _fs.OpenRead(path);
         using var doc = JsonDocument.Parse(stream);
         if (doc.RootElement.ValueKind != JsonValueKind.Array) yield break;
 
@@ -69,7 +73,7 @@ public sealed class ManualAdapter(PortalConfig config, HttpClient http, ILogger 
 
     private IEnumerable<Listing> ReadCsvFile(string path)
     {
-        var content = File.ReadAllText(path);
+        var content = _fs.ReadAllText(path);
         using var enumerator = CsvRow.ParseCsvRecords(content).GetEnumerator();
         if (!enumerator.MoveNext()) yield break;
 

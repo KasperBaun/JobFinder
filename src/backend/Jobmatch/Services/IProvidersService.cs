@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
+using Jobmatch.IO;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,7 +44,7 @@ public interface IProvidersService
     Task<ProviderTestOutcome> TestAsync(int id, CancellationToken ct);
 }
 
-public sealed class ProvidersService(UserContext ctx, ILogger<ProvidersService> logger) : IProvidersService
+public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<ProvidersService> logger) : IProvidersService
 {
     public IReadOnlyList<ProviderListing> List()
     {
@@ -123,7 +124,7 @@ public sealed class ProvidersService(UserContext ctx, ILogger<ProvidersService> 
         }
 
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        var adapter = AdapterFactory.Create(portal, http, NullLogger.Instance, ctx.ImportsDir);
+        var adapter = AdapterFactory.Create(portal, http, NullLogger.Instance, ctx.ImportsDir, fs);
         if (adapter is null)
         {
             return new ProviderTestOutcome(

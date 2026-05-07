@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Jobmatch.Configuration;
+using Jobmatch.IO;
 using Jobmatch.Models;
 using Jobmatch.Search;
 using JobmatchUserContext = Jobmatch.UserContext;
@@ -8,6 +9,7 @@ namespace Jobmatch.Tests.Search;
 
 public sealed class SearchServiceTests : IDisposable
 {
+    private static readonly IFileSystem Fs = new PhysicalFileSystem();
     private readonly string _tempRoot;
     private readonly string? _envBackup;
 
@@ -111,7 +113,7 @@ public sealed class SearchServiceTests : IDisposable
             """;
         var (ctx, portalList) = CreateContext("empty@example.com", portals);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.Equal(4, events.Count);
@@ -151,7 +153,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.IsType<StartedEvent>(events[0]);
@@ -208,7 +210,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         var started = Assert.IsType<StartedEvent>(events[0]);
@@ -240,7 +242,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -271,7 +273,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.False(File.Exists(ctx.MarksPath), "search should not create marks.json");
@@ -365,7 +367,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -435,7 +437,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -474,7 +476,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var svc = new SearchService(ctx);
+        var svc = new SearchService(ctx, Fs);
         var events = await Drain(svc.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -510,7 +512,7 @@ public sealed class SearchServiceTests : IDisposable
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "other-1.json"),
             """[ { "title": "Y", "url": "https://y.com/1" } ]""");
 
-        var service = new SearchService(ctx);
+        var service = new SearchService(ctx, Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(Providers: ["mine"]), portalList));
 
         var started = Assert.IsType<StartedEvent>(events[0]);
