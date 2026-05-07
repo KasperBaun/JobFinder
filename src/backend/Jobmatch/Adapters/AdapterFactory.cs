@@ -6,17 +6,23 @@ namespace Jobmatch.Adapters;
 
 public static class AdapterFactory
 {
+    private delegate IJobPortalAdapter Factory(
+        PortalConfig portal, HttpClient http, ILogger logger,
+        string importsDirectory, IFileSystem fs);
+
+    private static readonly IReadOnlyDictionary<PortalType, Factory> Factories =
+        new Dictionary<PortalType, Factory>
+        {
+            [PortalType.Api]    = (p, h, l, _, _)   => new ApiAdapter(p, h, l),
+            [PortalType.Rss]    = (p, h, l, _, _)   => new RssAdapter(p, h, l),
+            [PortalType.Html]   = (p, h, l, _, _)   => new HtmlAdapter(p, h, l),
+            [PortalType.Manual] = (p, h, l, dir, fs) => new ManualAdapter(p, h, l, dir, fs),
+        };
+
     public static IJobPortalAdapter? Create(
         PortalConfig portal, HttpClient http, ILogger logger,
-        string importsDirectory, IFileSystem fs)
-    {
-        return portal.Type switch
-        {
-            PortalType.Api => new ApiAdapter(portal, http, logger),
-            PortalType.Rss => new RssAdapter(portal, http, logger),
-            PortalType.Manual => new ManualAdapter(portal, http, logger, importsDirectory, fs),
-            PortalType.Html => new HtmlAdapter(portal, http, logger),
-            _ => null,
-        };
-    }
+        string importsDirectory, IFileSystem fs) =>
+        Factories.TryGetValue(portal.Type, out var factory)
+            ? factory(portal, http, logger, importsDirectory, fs)
+            : null;
 }
