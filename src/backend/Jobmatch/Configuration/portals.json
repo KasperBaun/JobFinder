@@ -402,6 +402,106 @@
       "type": "manual",
       "enabled": false,
       "notes": "Stepstone doesn't offer a public feed. To include its listings, run a search on stepstone.dk in your browser, export the results, and save the CSV in your data/imports/ folder named stepstone-*.csv. The file needs these columns: title, company, location, url, description, posted_at."
+    },
+    {
+      "id": 21,
+      "name": "smartrecruiters-soprasteria",
+      "displayName": "Sopra Steria (SmartRecruiters)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.smartrecruiters.com/v1/companies/SopraSteria1/postings",
+      "queryParams": { "country": "dk", "limit": "100" },
+      "responseMapping": {
+        "items_path": "content",
+        "id": "id",
+        "title": "name",
+        "location": "location.fullLocation",
+        "url_template": "https://jobs.smartrecruiters.com/SopraSteria1/{id}",
+        "posted_at": "releasedDate"
+      },
+      "staticFields": { "company": "Sopra Steria" },
+      "rateLimitRps": 1.0,
+      "notes": "SmartRecruiters public Postings API filtered to DK. List endpoint only — description isn't included; ranker sees title + location + company. Sopra Steria mostly hires .NET / Java consultants; ~5 DK roles at any time."
+    },
+    {
+      "id": 22,
+      "name": "smartrecruiters-netcompany",
+      "displayName": "Netcompany (SmartRecruiters)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.smartrecruiters.com/v1/companies/Netcompany1/postings",
+      "queryParams": { "country": "dk", "limit": "100" },
+      "responseMapping": {
+        "items_path": "content",
+        "id": "id",
+        "title": "name",
+        "location": "location.fullLocation",
+        "url_template": "https://jobs.smartrecruiters.com/Netcompany1/{id}",
+        "posted_at": "releasedDate"
+      },
+      "staticFields": { "company": "Netcompany" },
+      "rateLimitRps": 1.0,
+      "notes": "Largest DK consultancy; ~47 DK roles at any time. Mix of Software Engineer / Senior Consultant / banking-domain titles. The non-engineering title gate filters out the Manager / HR / Finance roles automatically."
+    },
+    {
+      "id": 23,
+      "name": "smartrecruiters-deloitte-nordic",
+      "displayName": "Deloitte Nordic (SmartRecruiters)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.smartrecruiters.com/v1/companies/DeloitteNordic/postings",
+      "queryParams": { "country": "dk", "limit": "100" },
+      "responseMapping": {
+        "items_path": "content",
+        "id": "id",
+        "title": "name",
+        "location": "location.fullLocation",
+        "url_template": "https://jobs.smartrecruiters.com/DeloitteNordic/{id}",
+        "posted_at": "releasedDate"
+      },
+      "staticFields": { "company": "Deloitte Nordic" },
+      "rateLimitRps": 1.0,
+      "notes": "Big-4 Nordic tech consultancy; ~15 DK roles. Most are audit/finance — the title gate de-ranks those — but occasional engineering/cloud architect roles surface."
+    },
+    {
+      "id": 24,
+      "name": "smartrecruiters-devoteam",
+      "displayName": "Devoteam (SmartRecruiters)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.smartrecruiters.com/v1/companies/Devoteam/postings",
+      "queryParams": { "country": "dk", "limit": "100" },
+      "responseMapping": {
+        "items_path": "content",
+        "id": "id",
+        "title": "name",
+        "location": "location.fullLocation",
+        "url_template": "https://jobs.smartrecruiters.com/Devoteam/{id}",
+        "posted_at": "releasedDate"
+      },
+      "staticFields": { "company": "Devoteam" },
+      "rateLimitRps": 1.0,
+      "notes": "DK cloud / data engineering consultancy; ~8 DK roles. Cloud and data-focused, but most postings are senior IC engineering."
+    },
+    {
+      "id": 25,
+      "name": "smartrecruiters-beumer",
+      "displayName": "BEUMER Group (SmartRecruiters)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.smartrecruiters.com/v1/companies/BEUMERGroup1/postings",
+      "queryParams": { "country": "dk", "limit": "100" },
+      "responseMapping": {
+        "items_path": "content",
+        "id": "id",
+        "title": "name",
+        "location": "location.fullLocation",
+        "url_template": "https://jobs.smartrecruiters.com/BEUMERGroup1/{id}",
+        "posted_at": "releasedDate"
+      },
+      "staticFields": { "company": "BEUMER Group" },
+      "rateLimitRps": 1.0,
+      "notes": "DK industrial automation; ~13 DK roles. Includes some software engineering roles around their conveyor / sortation control systems."
     }
   ]
 }
