@@ -1,0 +1,142 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using Jobmatch.Adapters;
+using Jobmatch.Models;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Jobmatch.Tests.Adapters;
+
+// FeedReader's static ReadAsync does its own HTTP, so we can't stub a feed end-to-end
+// without standing up a local listener. These tests exercise the body-enrichment path
+// directly via internal helpers; the feed-parse path is covered indirectly by live use.
+public sealed class RssAdapterTests
+{
+    private static Listing MakeListing(string url, string description) => new(
+        Id: "id",
+        Portal: "p",
+        Title: "Software Engineer",
+        Company: null,
+        Location: null,
+        RemoteMode: RemoteMode.Unknown,
+        Description: description,
+        Url: new Uri(url),
+        PostedAt: null,
+        FetchedAt: DateTimeOffset.UtcNow,
+        Raw: JsonDocument.Parse("{}").RootElement.Clone());
+
+    private static PortalConfig RssConfig(bool enrich) => new(
+        Name: "it-jobbank-rss",
+        Type: PortalType.Rss,
+        Enabled: true,
+        Endpoint: new Uri("https://example.com/feed.rss"),
+        EnrichBody: enrich);
+
+    [Fact]
+    public void MergeBodyHtml_NullBody_ReturnsOriginal()
+    {
+        var original = MakeListing("https://example.com/1", "short rss desc");
+        var result = RssAdapter.MergeBodyHtml(original, null);
+        Assert.Same(original, result);
+    }
+
+    [Fact]
+    public void MergeBodyHtml_EmptyBody_ReturnsOriginal()
+    {
+        var original = MakeListing("https://example.com/1", "short rss desc");
+        var result = RssAdapter.MergeBodyHtml(original, "   \n\t  ");
+        Assert.Same(original, result);
+    }
+
+    [Fact]
+    public void MergeBodyHtml_AppendsStrippedBody_ToExistingDescription()
+    {
+        var original = MakeListing("https://example.com/1", "RSS summary.");
+        var bodyHtml = "<html><body><h1>Job</h1><p>We use <b>C#</b> and <em>TypeScript</em>.</p></body></html>";
+        var result = RssAdapter.MergeBodyHtml(original, bodyHtml);
+
+        Assert.NotSame(original, result);
+        Assert.StartsWith("RSS summary.", result.Description);
+        Assert.Contains("C#", result.Description);
+        Assert.Contains("TypeScript", result.Description);
+    }
+
+    [Fact]
+    public void MergeBodyHtml_EmptyOriginalDescription_TakesBodyAsIs()
+    {
+        var original = MakeListing("https://example.com/1", string.Empty);
+        var bodyHtml = "<p>We use Azure.</p>";
+        var result = RssAdapter.MergeBodyHtml(original, bodyHtml);
+
+        Assert.Equal("We use Azure.", result.Description);
+    }
+
+    [Fact]
+    public void MergeBodyHtml_BodyOfOnlyMarkup_LeavesOriginalAlone()
+    {
+        var original = MakeListing("https://example.com/1", "RSS summary.");
+        var bodyHtml = "<html><body></body></html>";
+        var result = RssAdapter.MergeBodyHtml(original, bodyHtml);
+
+        Assert.Same(original, result);
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_FetchesEachListingsBody_AndMergesIntoDescription()
+    {
+        const string body = "<p>Job uses <strong>Azure</strong> and Kubernetes.</p>";
+        using var http = new HttpClient(new HtmlStub(HttpStatusCode.OK, body));
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = new[]
+        {
+            MakeListing("https://example.com/job1", "rss summary 1"),
+            MakeListing("https://example.com/job2", "rss summary 2"),
+        };
+
+        var enriched = await adapter.EnrichBodiesAsync(input, CancellationToken.None);
+
+        Assert.Equal(2, enriched.Count);
+        Assert.All(enriched, l => Assert.Contains("Azure", l.Description));
+        Assert.All(enriched, l => Assert.Contains("Kubernetes", l.Description));
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_BadResponse_KeepsOriginalListing()
+    {
+        // 500 from the listing host shouldn't drop the listing — we keep the RSS-only
+        // version and let the next signal (title / freshness / location) carry it.
+        using var http = new HttpClient(new HtmlStub(HttpStatusCode.InternalServerError, "boom"));
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = new[] { MakeListing("https://example.com/job1", "rss summary") };
+
+        var enriched = await adapter.EnrichBodiesAsync(input, CancellationToken.None);
+
+        Assert.Single(enriched);
+        Assert.Equal("rss summary", enriched[0].Description);
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_NonHtmlContent_LeavesOriginalAlone()
+    {
+        using var http = new HttpClient(new HtmlStub(HttpStatusCode.OK, "{\"x\":1}", "application/json"));
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = new[] { MakeListing("https://example.com/job1", "rss summary") };
+
+        var enriched = await adapter.EnrichBodiesAsync(input, CancellationToken.None);
+
+        Assert.Single(enriched);
+        Assert.Equal("rss summary", enriched[0].Description);
+    }
+
+    private sealed class HtmlStub(HttpStatusCode status, string body, string contentType = "text/html") : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent(body, Encoding.UTF8, contentType),
+            });
+    }
+}
