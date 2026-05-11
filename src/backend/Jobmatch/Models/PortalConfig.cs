@@ -1,6 +1,6 @@
 namespace Jobmatch.Models;
 
-public enum PortalType { Api, Rss, Html, Manual, TeamTailor }
+public enum PortalType { Api, Rss, Html, Manual, TeamTailor, HrManager }
 
 public sealed record PortalConfig(
     string Name,

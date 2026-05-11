@@ -49,6 +49,25 @@ Current status of work on `jobfinder`.
 
 ## Completed (recent)
 
+- **HR-Manager.net adapter (CHANGE Lingerie + Danmarks Radio).** New
+  `HrManagerAdapter` parses the hidden `PositionList` JSON server-rendered
+  on `candidate.hr-manager.net/vacancies/list.aspx?cid={cid}` — full
+  position list (Name, AdvertisementUrl, WorkPlace, DepartmentTree with
+  city/country/county, dates) without auth or JS. Body-fetch enabled;
+  each AdvertisementUrl is followed for the full description. Two
+  catalog entries: cid=1178 (CHANGE) and cid=1165 (Danmarks Radio).
+  Two collateral fixes: (a) HR-Manager adapter normalises Danish
+  country names back to English ("Danmark" → "Denmark", etc.) so the
+  ranker's substring match against user-declared `Country: Denmark`
+  works; (b) added "farum" to the Greater Copenhagen alias list (Farum
+  is a CHANGE HQ location). Outcome: **3 of top 5 shortlist entries
+  are user examples** — Sopra Steria #1 @ 0.74, CHANGE Full Stack
+  Developer #3 @ 0.64, DR Teknologi Erfaren softwareudvikler #4 @ 0.61.
+  7 of 8 example employers now appear in shortlist (only Promte +
+  Danske Bank missing — Promte is on TheHub but the listing may have
+  expired, Danske Bank uses Oracle Cloud HCM SPA which needs JS render).
+  198 backend tests still green.
+
 - **Jobindex preview location extraction — Sundhed.dk / DR / Dansk
   Sundhedssikring jump from 0.24-0.35 to 0.49-0.60.** Jobindex
   preview pages embed the location in

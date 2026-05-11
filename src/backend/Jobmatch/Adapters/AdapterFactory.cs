@@ -18,6 +18,7 @@ public static class AdapterFactory
             [PortalType.Html]       = (p, h, l, _, _)   => new HtmlAdapter(p, h, l),
             [PortalType.Manual]     = (p, h, l, dir, fs) => new ManualAdapter(p, h, l, dir, fs),
             [PortalType.TeamTailor] = (p, h, l, _, _)   => new TeamTailorAdapter(p, h, l),
+            [PortalType.HrManager]  = (p, h, l, _, _)   => new HrManagerAdapter(p, h, l),
         };
 
     public static IJobPortalAdapter? Create(
