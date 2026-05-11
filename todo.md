@@ -49,6 +49,18 @@ Current status of work on `jobfinder`.
 
 ## Completed (recent)
 
+- **Jobindex preview location extraction — Sundhed.dk / DR / Dansk
+  Sundhedssikring jump from 0.24-0.35 to 0.49-0.60.** Jobindex
+  preview pages embed the location in
+  `<span class="jix_robotjob--area">København Ø</span>`. Body
+  enrichment now extracts that into the listing's `Location` field
+  (when not already set), so Jobindex-sourced listings get City
+  tier instead of falling through to ELSE. Dramatic uplift on the
+  maintainer's run: top score 0.71 → 0.74 (Sopra Steria via Jobindex
+  edges past Sopra Steria via SmartRecruiters), DR Teknologi #3 at
+  0.60, Sundhed.dk + Dansk Sundhedssikring both at 0.49 (just below
+  the top 15 cutoff).
+
 - **Jobindex full-text queries — two new RSS providers + RssAdapter
   query-param + Jobindex preview "see-job" follow.** RssAdapter
   previously ignored `Config.QueryParams` entirely (FeedReader's
