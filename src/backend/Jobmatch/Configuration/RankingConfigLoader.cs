@@ -38,9 +38,14 @@ public static class RankingConfigLoader
         var minScore = ReadDouble(map, "min_score_to_include", 0.25);
         var maxAgeDays = ReadNullableInt(map, "max_age_days");
         var requirePrimaryStackHit = ReadBool(map, "require_primary_stack_hit", false);
+        var seniorityAdjacencyCredit = ReadDouble(map, "seniority_adjacency_credit", 1.0);
+        var nonEngineeringTitleMultiplier = ReadDouble(map, "non_engineering_title_multiplier", 0.2);
         var tierWeights = BuildTierWeights(map);
 
-        return new RankingConfig(weights, disqualifierPenalty, topN, halfLife, minScore, maxAgeDays, requirePrimaryStackHit)
+        return new RankingConfig(
+            weights, disqualifierPenalty, topN, halfLife, minScore,
+            maxAgeDays, requirePrimaryStackHit,
+            seniorityAdjacencyCredit, nonEngineeringTitleMultiplier)
         {
             LocationTierWeights = tierWeights,
         };

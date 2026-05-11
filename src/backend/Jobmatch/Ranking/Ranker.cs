@@ -36,9 +36,11 @@ public static class Ranker
             var secondaryFraction = Fraction(secondaryHits.Count, skillset.SecondaryStack.Count);
             var domainFraction = Fraction(domainHits.Count, skillset.Domains.Count);
 
-            var (seniorityScore, seniorityMatch) = ScoreSeniority(listing, skillset.Seniority);
+            var (seniorityScore, seniorityMatch, seniorityIsAdjacent) =
+                ScoreSeniority(listing, skillset.Seniority, ranking.SeniorityAdjacencyCredit);
             var (locationRemoteScore, locationMatch, remoteMatch) = ScoreLocationRemote(listing, skillset, ranking);
             var freshnessScore = ScoreFreshness(listing.PostedAt, ranking.FreshnessHalfLifeDays);
+            var nonEngineeringTitle = IsNonEngineeringTitle(listing.Title);
 
             var w = ranking.Weights;
             var primaryContribution = primaryFraction * w.PrimaryStack;
@@ -50,11 +52,15 @@ public static class Ranker
 
             var preBenchmark = primaryContribution + secondaryContribution + seniorityContribution
                 + locationContribution + domainContribution + freshnessContribution;
-            var postPenalty = disqualifierHits.Count > 0
+            var afterDisqualifier = disqualifierHits.Count > 0
                 ? preBenchmark * ranking.DisqualifierPenalty
                 : preBenchmark;
-            var disqualifierDelta = postPenalty - preBenchmark;
-            var score = Math.Clamp(postPenalty, 0.0, 1.0);
+            var disqualifierDelta = afterDisqualifier - preBenchmark;
+            var afterTitleGate = nonEngineeringTitle
+                ? afterDisqualifier * ranking.NonEngineeringTitleMultiplier
+                : afterDisqualifier;
+            var nonEngineeringTitleDelta = afterTitleGate - afterDisqualifier;
+            var score = Math.Clamp(afterTitleGate, 0.0, 1.0);
 
             var breakdown = new ScoreBreakdown(
                 PrimaryStack: primaryContribution,
@@ -63,10 +69,14 @@ public static class Ranker
                 LocationRemote: locationContribution,
                 Domain: domainContribution,
                 Freshness: freshnessContribution,
-                DisqualifierPenalty: disqualifierDelta);
+                DisqualifierPenalty: disqualifierDelta,
+                NonEngineeringTitlePenalty: nonEngineeringTitleDelta);
 
             var ageDays = AgeInDays(listing.PostedAt);
-            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityScore, locationMatch, remoteMatch, disqualifierHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
+            // Only mention the title gate in the notes when it actually changed the score —
+            // matching the regex with a multiplier of 1.0 means the user opted out of the gate.
+            var titleGateActive = nonEngineeringTitle && ranking.NonEngineeringTitleMultiplier < 1.0;
+            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, listing, ageDays, ranking.FreshnessHalfLifeDays);
 
             matches.Add(new Match(
                 Listing: listing,
@@ -129,13 +139,65 @@ public static class Ranker
 
     private static double Fraction(int hits, int total) => total == 0 ? 0.0 : (double)hits / total;
 
-    private static (double score, bool? match) ScoreSeniority(Listing listing, Seniority user)
+    private static (double score, bool? match, bool isAdjacent) ScoreSeniority(
+        Listing listing, Seniority user, double adjacencyCredit)
     {
         var inferred = InferSeniority(listing.Title, listing.Description);
-        if (user == Seniority.Any) return (1.0, true);
-        if (inferred is null) return (0.5, null);
-        if (inferred.Value == user) return (1.0, true);
-        return IsAdjacent(inferred.Value, user) ? (0.5, true) : (0.0, false);
+        if (user == Seniority.Any) return (1.0, true, false);
+        if (inferred is null) return (0.5, null, false);
+        if (inferred.Value == user) return (1.0, true, false);
+        return IsAdjacent(inferred.Value, user)
+            ? (adjacencyCredit, true, true)
+            : (0.0, false, false);
+    }
+
+    // Title looks clearly non-engineering even when the description happens to mention
+    // engineering keywords. The override pattern lets "Software Engineering Manager",
+    // "QA Engineer", "DevOps Lead", etc. through unscathed — they're still engineering.
+    private static readonly Regex EngineeringOverrideTitle = new(
+        @"\b(engineer|engineering|developer|architect|programmer|coder|sre|devops)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex NonEngineeringTitle = new(
+        @"\b(" +
+            // Product / project / account / sales — the manager titles that drag in C# / SQL incidentally
+            @"product\s+(manager|owner|director|lead)|project\s+manager|" +
+            @"technical\s+product\s+manager|" +
+            @"account\s+(manager|executive|director|representative)|" +
+            @"sales\s+(manager|representative|executive|director|lead|specialist)|" +
+            // Marketing / growth / content / strategy
+            @"marketing\s+(manager|specialist|lead|analyst|director|coordinator|operations)|" +
+            @"growth\s+(lead|manager|specialist|hacker|director)|" +
+            @"content\s+(operations|specialist|writer|strategist|manager)|" +
+            @"copywriter|technical\s+writer|" +
+            @"strategy\s+(lead|manager|director)|strategist|" +
+            // Operations / business — generic Operations Manager but not DevOps/SecOps/SRE
+            @"operations\s+(manager|specialist|analyst|coordinator|lead)|" +
+            @"business\s+(analyst|consultant|partner|developer)|" +
+            // Finance
+            @"financial?\s+(analyst|controller|specialist|manager|director|advisor)|" +
+            @"\b(controller|accountant|bookkeeper)\b|" +
+            @"central\s+finance|" +
+            // Standalone analyst roles (data/fraud/etc) — Engineer override still applies
+            @"data\s+analyst|fraud\s+(analyst|detection)|" +
+            // Customer-facing
+            @"customer\s+(success|support|service|experience)|" +
+            // People / recruiting
+            @"recruit(er|ing|ment)|talent\s+acquisition|" +
+            @"\bhr\b|human\s+resources|people\s+(operations|partner|manager|director)|" +
+            // QA without Engineer (e.g. QA Manager / QA Lead / QA Analyst)
+            @"qa\s+(manager|lead|analyst|director)|quality\s+(manager|lead|analyst|director)|" +
+            // Misc
+            @"executive\s+assistant|graphic\s+designer|compliance\s+officer|" +
+            @"counsel|attorney|paralegal" +
+        @")\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    public static bool IsNonEngineeringTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return false;
+        if (EngineeringOverrideTitle.IsMatch(title)) return false;
+        return NonEngineeringTitle.IsMatch(title);
     }
 
     private static Seniority? InferSeniority(string title, string? description)
@@ -342,10 +404,11 @@ public static class Ranker
         IReadOnlyList<string> secondaryHits,
         IReadOnlyList<string> domainHits,
         bool? seniorityMatch,
-        double seniorityScore,
+        bool seniorityIsAdjacent,
         bool? locationMatch,
         bool? remoteMatch,
         IReadOnlyList<string> disqualifierHits,
+        bool nonEngineeringTitle,
         Listing listing,
         double? ageDays,
         double halfLifeDays)
@@ -374,13 +437,18 @@ public static class Ranker
             parts.Add($"Domain: {string.Join(", ", domainHits)}.");
         }
 
-        parts.Add((seniorityMatch, seniorityScore) switch
+        parts.Add((seniorityMatch, seniorityIsAdjacent) switch
         {
-            (true, >= 0.99) => "Seniority fits.",
-            (true, _) => "Seniority adjacent (near-fit, half credit).",
+            (true, true) => "Seniority adjacent (near-fit).",
+            (true, false) => "Seniority fits.",
             (false, _) => "Seniority mismatch.",
             (null, _) => "Seniority not stated.",
         });
+
+        if (nonEngineeringTitle)
+        {
+            parts.Add("Title looks non-engineering — score multiplied down.");
+        }
 
         var locPart = (locationMatch, remoteMatch) switch
         {

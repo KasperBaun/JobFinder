@@ -26,17 +26,35 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-- **Quality pass after browser test of GUI 2026-05-11.** Two fixes
-  remaining from the original four; ranker tuning + RSS body
-  enrichment still open: (3) ranker tops out at 0.49 across the live
-  corpus — bias seniority match toward the user's actual seniority and
-  title-gate non-engineering roles (PM/Manager/Analyst/Specialist) so
-  incidental C#/SQL keyword hits stop dragging them into the shortlist;
-  (4) DK RSS feeds (it-jobbank, jobsearch-dk) carry only title + short
-  description, so stack-keyword matching is starved — add per-listing
-  HTML body fetch in `RssAdapter` so DK boards become competitive.
+- **RSS body-fetch enrichment (last item from 2026-05-11 quality pass).**
+  DK RSS feeds (it-jobbank, jobsearch-dk) carry only title + short
+  description, so stack-keyword matching is starved (best DK match
+  scored 0.37 in the 2026-05-11 run; everything else 0.12). Add an
+  optional per-listing HTML fetch in `RssAdapter` (or a follow-on
+  enrichment pass) that pulls the linked job page, extracts the body
+  text, and merges it into `Listing.Description` before ranking. Needs
+  design — concurrency cap, per-portal opt-in, error handling, caching
+  to avoid re-fetching across runs.
 
 ## Completed (recent)
+
+- **Ranker tuning — adjacent seniority full-credit + non-engineering
+  title gate.** Two changes addressing the "top score caps at 0.49"
+  observation. (a) `seniority_adjacency_credit` (RankingConfig +
+  ranking.yml, default 1.0) — adjacent seniority (mid↔senior, etc.)
+  now scores the same as exact match. The IT market overcounts
+  "Senior", so penalising adjacency was dragging down most real
+  matches for mid-with-experience users. Notes still distinguish
+  "adjacent" from "fits". (b) `non_engineering_title_multiplier`
+  (default 0.2) — listings whose title looks clearly non-engineering
+  (Product/Project/Account Manager, Marketing/Sales/Finance/Customer/
+  Recruit/HR roles, Data/Business/Fraud Analyst, etc.) get their
+  score multiplied down. Engineer/Engineering/Developer/Architect/
+  SRE/DevOps in the title overrides the gate (so QA Engineer,
+  Software Engineering Manager, DevOps Lead all pass through). New
+  `NonEngineeringTitlePenalty` field in `ScoreBreakdown` so the audit
+  view shows the delta. R-044 updated, R-087/R-088 added. 7 new
+  tests; 187 backend tests green (was 180).
 
 - **Provider toggle bug — symmetric opt-in/opt-out.** Discovered while
   enabling the DK feeds: the GUI toggle in `/providers` was silently no-op

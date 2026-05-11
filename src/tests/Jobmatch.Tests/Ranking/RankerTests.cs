@@ -259,10 +259,10 @@ public sealed class RankerTests
     [Fact]
     public void Rank_Adjacent_Seniority_Notes_Say_Adjacent_Not_Fits()
     {
-        // Mid is adjacent to Senior (the user). Score gets half credit (0.5),
-        // SeniorityMatch stays true (the level is recognised), but the human
-        // notes must say "adjacent" — not "fits", which previously misled
-        // the user into thinking the role's level matched theirs exactly.
+        // Mid is adjacent to Senior (the user). With the default
+        // SeniorityAdjacencyCredit of 1.0 the score still rewards adjacency
+        // fully, but the human notes must distinguish "adjacent" from "fits"
+        // so the user knows the level isn't an exact match.
         var listing = MakeListing("Mid-level Engineer", "C# .NET Azure SQL Server",
             location: "Copenhagen",
             remote: RemoteMode.Hybrid,
@@ -273,6 +273,116 @@ public sealed class RankerTests
         Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
         Assert.Contains("adjacent", matches[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Seniority fits", matches[0].Reasoning.Notes);
+    }
+
+    [Fact]
+    public void Rank_Adjacent_Seniority_Defaults_To_Full_Credit()
+    {
+        // Default SeniorityAdjacencyCredit = 1.0 means an adjacent listing scores
+        // the same as an exact match. Verifies the contribution math directly.
+        var adjacentListing = MakeListing("Mid-level Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid, postedAt: DateTimeOffset.UtcNow);
+        var exactListing = MakeListing("Senior Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid, postedAt: DateTimeOffset.UtcNow);
+
+        var adjacent = Ranker.Score([adjacentListing], MikkelPersona(), RankingCfg());
+        var exact = Ranker.Score([exactListing], MikkelPersona(), RankingCfg());
+
+        Assert.Equal(exact[0].Breakdown.Seniority, adjacent[0].Breakdown.Seniority, precision: 6);
+    }
+
+    [Fact]
+    public void Rank_Adjacent_Seniority_Half_Credit_When_Configured()
+    {
+        // Opting back into the legacy half-credit behaviour via config.
+        var listing = MakeListing("Mid-level Engineer", "C# .NET Azure SQL Server",
+            location: "Copenhagen", remote: RemoteMode.Hybrid, postedAt: DateTimeOffset.UtcNow);
+        var halfCredit = new RankingConfig(DefaultWeights, 0.0, 100, 14, 0.0,
+            SeniorityAdjacencyCredit: 0.5);
+
+        var scored = Ranker.Score([listing], MikkelPersona(), halfCredit);
+        var seniorityFraction = scored[0].Breakdown.Seniority / DefaultWeights.Seniority;
+
+        Assert.Equal(0.5, seniorityFraction, precision: 4);
+    }
+
+    [Fact]
+    public void IsNonEngineeringTitle_Catches_Common_Manager_Roles()
+    {
+        Assert.True(Ranker.IsNonEngineeringTitle("Senior Technical Product Manager, Core Engine"));
+        Assert.True(Ranker.IsNonEngineeringTitle("Lead Data Analyst - Marketing Analytics"));
+        Assert.True(Ranker.IsNonEngineeringTitle("Fraud Detection Analyst"));
+        Assert.True(Ranker.IsNonEngineeringTitle("Content Operations Specialist"));
+        Assert.True(Ranker.IsNonEngineeringTitle("Growth Lead"));
+        Assert.True(Ranker.IsNonEngineeringTitle("Customer Success Manager"));
+        Assert.True(Ranker.IsNonEngineeringTitle("Talent Acquisition Partner"));
+    }
+
+    [Fact]
+    public void IsNonEngineeringTitle_Engineering_Override_Wins()
+    {
+        // Anything containing engineer/engineering/developer/architect/SRE/DevOps
+        // is treated as engineering even if it also matches a non-engineering pattern.
+        Assert.False(Ranker.IsNonEngineeringTitle("Salesforce Senior Quality Assurance Engineer"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Software Engineering Manager"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Senior Sales Engineer"));
+        Assert.False(Ranker.IsNonEngineeringTitle("DevOps Lead"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Site Reliability Engineer"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Data Architect"));
+    }
+
+    [Fact]
+    public void IsNonEngineeringTitle_Pure_Engineering_Titles_Pass_Through()
+    {
+        Assert.False(Ranker.IsNonEngineeringTitle("Senior Software Engineer - Commerce Platform"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Backend Developer"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Cloud Architect"));
+        Assert.False(Ranker.IsNonEngineeringTitle("Mid-level .NET Developer"));
+    }
+
+    [Fact]
+    public void Rank_NonEngineering_Title_Multiplied_Down_By_Default()
+    {
+        // Two listings with identical signals but only one has a Manager-style title.
+        // The Manager listing should score 0.2x the engineering one (default multiplier).
+        var pm = MakeListing(
+            "Senior Technical Product Manager, Core Engine",
+            "We use C#, .NET, Azure and SQL Server to build internal tools.",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-1));
+        var swe = MakeListing(
+            "Senior .NET Engineer",
+            "We use C#, .NET, Azure and SQL Server to build internal tools.",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-1));
+
+        var pmScored = Ranker.Score([pm], MikkelPersona(), RankingCfg());
+        var sweScored = Ranker.Score([swe], MikkelPersona(), RankingCfg());
+
+        Assert.True(pmScored[0].Breakdown.NonEngineeringTitlePenalty < 0,
+            $"penalty must be < 0 when triggered, got {pmScored[0].Breakdown.NonEngineeringTitlePenalty:0.000}");
+        Assert.True(sweScored[0].Breakdown.NonEngineeringTitlePenalty == 0,
+            $"engineering title must not trigger penalty, got {sweScored[0].Breakdown.NonEngineeringTitlePenalty:0.000}");
+        Assert.Contains("non-engineering", pmScored[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0.2 * sweScored[0].Score, pmScored[0].Score, precision: 4);
+    }
+
+    [Fact]
+    public void Rank_NonEngineering_Title_Multiplier_Configurable()
+    {
+        var pm = MakeListing(
+            "Marketing Manager",
+            "We use C#, .NET, Azure and SQL Server.",
+            location: "Copenhagen", remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow);
+
+        var noPenalty = new RankingConfig(DefaultWeights, 0.0, 100, 14, 0.0,
+            NonEngineeringTitleMultiplier: 1.0);
+
+        var scored = Ranker.Score([pm], MikkelPersona(), noPenalty);
+
+        Assert.Equal(0, scored[0].Breakdown.NonEngineeringTitlePenalty, precision: 6);
+        Assert.DoesNotContain("non-engineering", scored[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -678,12 +788,12 @@ public sealed class RankerTests
     }
 
     [Fact]
-    public void ScoreBreakdown_EnumerateComponents_Returns_All_Seven_In_Stable_Order()
+    public void ScoreBreakdown_EnumerateComponents_Returns_All_Eight_In_Stable_Order()
     {
-        var b = new ScoreBreakdown(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, -0.7);
+        var b = new ScoreBreakdown(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, -0.7, -0.8);
         var labels = b.EnumerateComponents().Select(c => c.Label).ToList();
         Assert.Equal(
-            ["primary_stack", "secondary_stack", "seniority", "location_remote", "domain", "freshness", "disqualifier_penalty"],
+            ["primary_stack", "secondary_stack", "seniority", "location_remote", "domain", "freshness", "disqualifier_penalty", "non_engineering_title_penalty"],
             labels);
     }
 }
