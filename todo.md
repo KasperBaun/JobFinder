@@ -2,10 +2,6 @@
 
 Current status of work on `jobfinder`.
 
-## In progress
-
-_(none)_
-
 ## Backlog (next up)
 
 - **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
@@ -28,7 +24,35 @@ _(none)_
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
 
+## In progress
+
+- **Quality pass after browser test of GUI 2026-05-11.** Four fixes
+  surfaced when running the bundled host end-to-end against real DK
+  data: (1) Greenhouse Pleo returns 0 listings for 4+ days — diagnose
+  the failure; (2) provider toggle in `/providers` is silently no-op
+  for catalog-disabled providers (the merger does
+  `catalogPortal.Enabled && !state.Disabled.Contains(id)`, so flipping
+  the user-state toggle does nothing while catalog default is `false`);
+  (3) ranker tops out at 0.49 across the live corpus — bias seniority
+  match toward the user's actual seniority and title-gate
+  non-engineering roles (PM/Manager/Analyst/Specialist) so incidental
+  C#/SQL keyword hits stop dragging them into the shortlist;
+  (4) DK RSS feeds (it-jobbank, jobsearch-dk) carry only title + short
+  description, so stack-keyword matching is starved — add per-listing
+  HTML body fetch in `RssAdapter` so DK boards become competitive.
+
 ## Completed (recent)
+
+- **DK feeds enabled by default in the catalog.** `it-jobbank-rss` (id 15) and
+  `jobsearch-dk` (id 16) flipped from `enabled: false` to `enabled: true` in
+  `src/backend/Jobmatch/Configuration/portals.json`. Both were already
+  validated by the providers' Test endpoint (25 and 100 listings). Adding
+  them takes the active corpus from 783 → 940 raw / 777 → 850 deduped on
+  the maintainer machine, surfaces real Danish-language listings (best new
+  match: Everllence Software Engineer @ 0.37 via it-jobbank-rss). Discovery
+  triggered the four follow-up items above. The Jobindex (RSS) (id 14)
+  catalog default is intentionally left at `false` — same backend pool as
+  it-jobbank, would just waste calls.
 
 - **Code-review cleanup pass (K-G1 / K-G2 / K-G3 / K-C1 + SOLID/DRY full pass).**
   Resolved six review findings and a focused SOLID/DRY pass.
