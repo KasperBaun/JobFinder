@@ -23,24 +23,37 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         var method = ParseHttpMethod(Config.Method, PortalName);
         var mapping = Config.ResponseMapping ?? throw new ConfigException($"portal '{PortalName}': api adapter requires 'response_mapping'");
 
+        IReadOnlyList<Listing> result;
         if (Config.Pagination is null)
         {
-            return await FetchOnePageAsync(renderedEndpoint, baseQueryParams, Config.BodyTemplate, method, mapping, ct);
+            result = await FetchOnePageAsync(renderedEndpoint, baseQueryParams, Config.BodyTemplate, method, mapping, ct);
+        }
+        else
+        {
+            var p = Config.Pagination;
+            var isPost = method == HttpMethod.Post;
+            var all = new List<Listing>();
+            var current = p.Start;
+            for (var pageIdx = 0; pageIdx < p.MaxPages; pageIdx++, current += p.Step)
+            {
+                var (qp, body) = InjectPagination(baseQueryParams, Config.BodyTemplate, isPost, p, current);
+                var pageResults = await FetchOnePageAsync(renderedEndpoint, qp, body, method, mapping, ct);
+                if (pageResults.Count == 0) break;
+                all.AddRange(pageResults);
+                if (p.Size is int sz && pageResults.Count < sz) break;
+            }
+            result = all;
         }
 
-        var p = Config.Pagination;
-        var isPost = method == HttpMethod.Post;
-        var all = new List<Listing>();
-        var current = p.Start;
-        for (var pageIdx = 0; pageIdx < p.MaxPages; pageIdx++, current += p.Step)
+        // Many ATS list endpoints (SmartRecruiters, TeamTailor, etc.) don't return the
+        // job description inline — only title + location. EnrichBody fetches each
+        // listing's URL and merges the visible body text into Description so the ranker
+        // sees the full corpus. Same pattern as RssAdapter.
+        if (Config.EnrichBody && result.Count > 0)
         {
-            var (qp, body) = InjectPagination(baseQueryParams, Config.BodyTemplate, isPost, p, current);
-            var pageResults = await FetchOnePageAsync(renderedEndpoint, qp, body, method, mapping, ct);
-            if (pageResults.Count == 0) break;
-            all.AddRange(pageResults);
-            if (p.Size is int sz && pageResults.Count < sz) break;
+            return await EnrichBodiesAsync(result, ct);
         }
-        return all;
+        return result;
     }
 
     private async Task<IReadOnlyList<Listing>> FetchOnePageAsync(
