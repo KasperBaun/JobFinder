@@ -811,6 +811,31 @@ public sealed class RankerTests
     }
 
     [Fact]
+    public void Rank_Brondby_Matches_Greater_Copenhagen_Metro_Tier()
+    {
+        // Real-world: TeamTailor / Danske Spil location is "Brøndby, Denmark".
+        // User declares Metro including "Greater Copenhagen". Brøndby is one of the 14
+        // Greater Copenhagen municipalities — should match Metro tier (0.85), not fall
+        // through to Else / Country tier.
+        var skillset = MikkelPersona() with { Metro = ["Greater Copenhagen", "Frederiksberg", "Hellerup"] };
+        var listing = MakeListing(
+            "Softwareudvikler",
+            "C# .NET React work",
+            location: "Brøndby, Denmark",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-5));
+
+        var matches = Ranker.Rank([listing], skillset, RankingCfg());
+
+        Assert.Single(matches);
+        Assert.True(matches[0].Reasoning.LocationMatch == true,
+            $"Brøndby should match user metro 'Greater Copenhagen' via alias; LocationMatch={matches[0].Reasoning.LocationMatch}");
+        var locFraction = matches[0].Breakdown.LocationRemote / DefaultWeights.LocationRemote;
+        Assert.True(locFraction >= 0.85,
+            $"metro tier should give >= 0.85; got fraction {locFraction:0.000}");
+    }
+
+    [Fact]
     public void Rank_City_Alias_Symmetric_Copenhagen_To_Kobenhavn()
     {
         // Reverse direction: a user who declared "København" in their location should

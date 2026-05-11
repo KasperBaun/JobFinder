@@ -344,9 +344,28 @@ public static class Ranker
             ["københavn"] = ["copenhagen", "kbh", "cph"],
             ["kbh"] = ["copenhagen", "københavn", "cph"],
             ["cph"] = ["copenhagen", "københavn", "kbh"],
-            ["greater copenhagen"] = ["storkøbenhavn", "københavn", "copenhagen"],
-            ["storkøbenhavn"] = ["greater copenhagen", "københavn", "copenhagen"],
-            ["hovedstaden"] = ["capital region", "københavn", "copenhagen"],
+            // "Greater Copenhagen" maps to the 14 suburb municipalities that make up
+            // Statistics Denmark's Greater Copenhagen (plus the city itself). A listing
+            // located in any of these earns the Metro tier when the user has
+            // "Greater Copenhagen" or "Hovedstaden" in their metro list.
+            ["greater copenhagen"] = [
+                "storkøbenhavn", "københavn", "copenhagen",
+                "brøndby", "albertslund", "ballerup", "dragør", "gentofte",
+                "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
+                "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
+            ],
+            ["storkøbenhavn"] = [
+                "greater copenhagen", "københavn", "copenhagen",
+                "brøndby", "albertslund", "ballerup", "dragør", "gentofte",
+                "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
+                "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
+            ],
+            ["hovedstaden"] = [
+                "capital region", "københavn", "copenhagen",
+                "brøndby", "albertslund", "ballerup", "dragør", "gentofte",
+                "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
+                "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
+            ],
 
             // Aarhus / Århus / Aalborg / Ålborg — DK uses both spellings interchangeably
             ["aarhus"] = ["århus"],

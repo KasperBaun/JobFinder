@@ -13,10 +13,11 @@ public static class AdapterFactory
     private static readonly IReadOnlyDictionary<PortalType, Factory> Factories =
         new Dictionary<PortalType, Factory>
         {
-            [PortalType.Api]    = (p, h, l, _, _)   => new ApiAdapter(p, h, l),
-            [PortalType.Rss]    = (p, h, l, _, _)   => new RssAdapter(p, h, l),
-            [PortalType.Html]   = (p, h, l, _, _)   => new HtmlAdapter(p, h, l),
-            [PortalType.Manual] = (p, h, l, dir, fs) => new ManualAdapter(p, h, l, dir, fs),
+            [PortalType.Api]        = (p, h, l, _, _)   => new ApiAdapter(p, h, l),
+            [PortalType.Rss]        = (p, h, l, _, _)   => new RssAdapter(p, h, l),
+            [PortalType.Html]       = (p, h, l, _, _)   => new HtmlAdapter(p, h, l),
+            [PortalType.Manual]     = (p, h, l, dir, fs) => new ManualAdapter(p, h, l, dir, fs),
+            [PortalType.TeamTailor] = (p, h, l, _, _)   => new TeamTailorAdapter(p, h, l),
         };
 
     public static IJobPortalAdapter? Create(
