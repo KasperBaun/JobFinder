@@ -49,6 +49,29 @@ Current status of work on `jobfinder`.
 
 ## Completed (recent)
 
+- **Jobindex full-text queries — two new RSS providers + RssAdapter
+  query-param + Jobindex preview "see-job" follow.** RssAdapter
+  previously ignored `Config.QueryParams` entirely (FeedReader's
+  `ReadAsync` strips literal `+` characters from query strings, which
+  broke any AND query on Jobindex). Three fixes: (a) RssAdapter now
+  fetches the feed bytes via HttpClient and hands them to
+  `FeedReader.ReadFromString` so the encoded query survives;
+  (b) `AppendQueryParams` moved to BaseAdapter so RssAdapter shares
+  ApiAdapter's URI-assembly logic; (c) for Jobindex preview pages
+  (`jobindex.dk/vis-job/*`), the body-enrichment step now follows the
+  embedded "see-job" link to fetch the employer's actual ATS posting
+  rather than the Jobindex wrapper.
+  Two new catalog entries: `jobindex-rss-softwareudvikler`
+  (`q=+softwareudvikler`) and `jobindex-rss-net-udvikler`
+  (`q=+.net +udvikler`). The old single-query `jobindex-rss` and the
+  it-jobbank-rss `q=developer` both retuned for relevance.
+  `jobsearch-dk` disabled — its RSS feed is category-index pages
+  (Receptionist, Tjener, Maler), not real openings (confirmed
+  2026-05-11). Outcome on the maintainer's run: DR Teknologi
+  example surfaces at 0.35 (was missing entirely), Sundhed.dk +
+  Dansk Sundhedssikring surface at 0.24-0.27 (still title-only since
+  HR-Manager.net pages need a dedicated adapter — coming next).
+
 - **TeamTailor adapter (sitemap + JSON-LD) + Danske Spil board +
   Greater Copenhagen suburb aliases + ISO country normalisation.**
   Third batch of "fix the corpus" provider work. New

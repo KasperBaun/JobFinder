@@ -71,6 +71,24 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
         return WhitespaceRun.Replace(decoded, " ").Trim();
     }
 
+    // Appends Config.QueryParams to the endpoint URL, preserving any pre-existing
+    // query string. Used by RssAdapter and any other adapter that doesn't otherwise
+    // build a request URI itself.
+    protected static Uri AppendQueryParams(Uri endpoint, IReadOnlyDictionary<string, object?>? queryParams)
+    {
+        if (queryParams is null || queryParams.Count == 0) return endpoint;
+        var builder = new UriBuilder(endpoint);
+        var existing = string.IsNullOrEmpty(builder.Query) ? new List<string>() : new List<string> { builder.Query.TrimStart('?') };
+        foreach (var kvp in queryParams)
+        {
+            if (kvp.Value is null) continue;
+            var val = Convert.ToString(kvp.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+            existing.Add($"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(val)}");
+        }
+        builder.Query = string.Join("&", existing);
+        return builder.Uri;
+    }
+
     // Delay between body-enrichment fetches when EnrichBody is on. ~5rps so a 100-item
     // run takes ~20s of body fetching, which the user sees as the active provider phase
     // taking longer. Sequential, not concurrent — keeps a single host from getting hit
@@ -82,6 +100,10 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
     // with a small delay so we don't hammer the host. Failures are logged but don't drop
     // the listing — we keep the catalog-only version. Shared by RssAdapter (after feed
     // parse) and ApiAdapter (after items_path mapping) when Config.EnrichBody is true.
+    //
+    // For Jobindex preview pages (jobindex.dk/vis-job/*), the linked page is just a
+    // Jobindex-branded wrapper around the employer's actual ATS posting. We detect those
+    // and follow the embedded "see job" link to fetch the real description.
     internal async Task<IReadOnlyList<Listing>> EnrichBodiesAsync(IReadOnlyList<Listing> listings, CancellationToken ct)
     {
         var enriched = new List<Listing>(listings.Count);
@@ -92,6 +114,16 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
             {
                 if (i > 0) await Task.Delay(BodyFetchDelayMs, ct);
                 var bodyHtml = await FetchBodyHtmlAsync(listing.Url, ct);
+                var externalHref = ExtractJobindexExternalLink(listing.Url, bodyHtml);
+                if (externalHref is not null && Uri.TryCreate(externalHref, UriKind.Absolute, out var external))
+                {
+                    await Task.Delay(BodyFetchDelayMs, ct);
+                    var externalHtml = await FetchBodyHtmlAsync(external, ct);
+                    if (!string.IsNullOrWhiteSpace(externalHtml))
+                    {
+                        bodyHtml = externalHtml;
+                    }
+                }
                 enriched.Add(MergeBodyHtml(listing, bodyHtml));
             }
             catch (Exception ex)
@@ -101,6 +133,21 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
             }
         }
         return enriched;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex JobindexExternalLink = new(
+        @"<a[^>]*\bclass\s*=\s*[""'][^""']*seejobdesktop[^""']*[""'][^>]*\bhref\s*=\s*[""']([^""']+)[""']",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static string? ExtractJobindexExternalLink(Uri listingUrl, string? bodyHtml)
+    {
+        if (string.IsNullOrWhiteSpace(bodyHtml)) return null;
+        if (!listingUrl.Host.Contains("jobindex.dk", StringComparison.OrdinalIgnoreCase)
+            && !listingUrl.Host.Contains("it-jobbank.dk", StringComparison.OrdinalIgnoreCase))
+            return null;
+        var match = JobindexExternalLink.Match(bodyHtml);
+        if (!match.Success) return null;
+        return System.Net.WebUtility.HtmlDecode(match.Groups[1].Value);
     }
 
     private async Task<string?> FetchBodyHtmlAsync(Uri url, CancellationToken ct)

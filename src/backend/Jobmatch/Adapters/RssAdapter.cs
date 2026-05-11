@@ -15,7 +15,14 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
         }
 
         await ThrottleAsync(ct);
-        var feed = await FeedReader.ReadAsync(Config.Endpoint.ToString(), cancellationToken: ct);
+        var feedUrl = AppendQueryParams(Config.Endpoint, Config.QueryParams);
+        // FeedReader.ReadAsync silently re-encodes the URL — confirmed empirically that
+        // it strips literal `+` characters from the query string, breaking boolean AND
+        // queries on Jobindex.dk (`?q=+.net+udvikler` arrives at the server as just
+        // `.net udvikler`, which is an OR query). Fetch the bytes ourselves via the
+        // HttpClient (encoding-preserving) and hand FeedReader the parsed string.
+        var xml = await Http.GetStringAsync(feedUrl, ct);
+        var feed = FeedReader.ReadFromString(xml);
         var listings = new List<Listing>();
 
         foreach (var item in feed.Items)
