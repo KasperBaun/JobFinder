@@ -22,6 +22,22 @@ max_age_days: 60
 # happen to mention some of your keywords in passing.
 require_primary_stack_hit: true
 
+# How much credit a listing gets for being one seniority level off (mid↔senior,
+# senior↔lead, junior↔mid). 1.0 = full credit (treat adjacent as a fit), 0.5 =
+# half credit, 0.0 = adjacent counts the same as a mismatch. Default 1.0 because
+# the IT market overcounts "Senior" — being strict here drags down most matches
+# for users who are mid-with-experience.
+seniority_adjacency_credit: 1.0
+
+# Score multiplier applied when a listing's title looks clearly non-engineering
+# (Product/Project/Account Manager, Marketing/Sales/Finance roles, Customer
+# Success, Recruiter, Data/Business/Fraud Analyst, etc.) — even if the
+# description happens to mention engineering keywords. Engineer/Engineering/
+# Developer/Architect/SRE/DevOps in the title overrides this. 1.0 = no penalty,
+# 0.0 = drop entirely. Default 0.2 = heavy de-rank but keep visible in the
+# audit views.
+non_engineering_title_multiplier: 0.2
+
 # Per-tier multipliers applied to the location_remote signal.
 #   city    — listing is in your declared city
 #   metro   — listing is in one of your declared metro areas

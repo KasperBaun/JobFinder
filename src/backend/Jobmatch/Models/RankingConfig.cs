@@ -7,7 +7,9 @@ public sealed record RankingConfig(
     double FreshnessHalfLifeDays,
     double MinScoreToInclude,
     int? MaxAgeDays = null,
-    bool RequirePrimaryStackHit = false)
+    bool RequirePrimaryStackHit = false,
+    double SeniorityAdjacencyCredit = 1.0,
+    double NonEngineeringTitleMultiplier = 0.2)
 {
     public LocationTierWeights LocationTierWeights { get; init; } = LocationTierWeights.Default;
 }

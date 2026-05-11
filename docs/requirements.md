@@ -43,7 +43,9 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-041** The system should let a user declare deal-breaker keywords that match the listing's title or company name (description excluded — too many false positives like "junior-to-senior team" zeroing real senior roles) and zero its score on hit.
 - **R-042** The system should explain every ranked match: which signals fired, which didn't, and a one-line note — never invented reasoning.
 - **R-043** The system should never invent a positive signal; when a signal can't be evaluated (missing field), it should say so.
-- **R-044** The system should record a per-component score breakdown (weighted contribution of primary stack, secondary stack, seniority, location/remote, domain, freshness, and disqualifier penalty) for every ranked listing.
+- **R-044** The system should record a per-component score breakdown (weighted contribution of primary stack, secondary stack, seniority, location/remote, domain, freshness, disqualifier penalty, and non-engineering-title penalty) for every ranked listing.
+- **R-087** The system should multiply a listing's score by a configurable factor (default 0.2) when its title looks clearly non-engineering — Product/Project/Account Manager, Marketing/Sales/Finance roles, Customer Success, Recruiter, Data/Business/Fraud Analyst, etc. — to prevent incidental tech-keyword hits in the description from dragging non-engineering roles into the shortlist. Engineer/Engineering/Developer/Architect/SRE/DevOps in the title overrides this gate.
+- **R-088** The system should give full credit (configurable, default 1.0) to listings whose seniority is one level off from the user's (mid↔senior, senior↔lead, junior↔mid). The IT market overcounts "Senior" — strict matching drags down most matches for users who self-classify mid-with-experience. Reasoning notes still distinguish "adjacent" from "fits" so the user knows the level isn't an exact match.
 
 ## History & feedback
 

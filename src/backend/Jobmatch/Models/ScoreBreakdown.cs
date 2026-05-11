@@ -4,11 +4,12 @@ namespace Jobmatch.Models;
 /// Per-component contribution to a Match's final score. Each field is the
 /// weighted contribution of that signal — i.e. the raw component score
 /// already multiplied by the configured weight from ranking.yml. Summing all
-/// seven fields yields the pre-clamp score.
+/// fields yields the pre-clamp score.
 ///
-/// DisqualifierPenalty is the *delta* applied when a disqualifier keyword
-/// fires: it stores how much the pre-penalty sum was reduced (a non-positive
-/// number; 0 when no disqualifier hit).
+/// DisqualifierPenalty and NonEngineeringTitlePenalty store the *delta*
+/// applied when their respective gate fires: each is a non-positive number
+/// (0 when the gate didn't fire) representing how much the pre-penalty sum
+/// was reduced.
 /// </summary>
 public sealed record ScoreBreakdown(
     double PrimaryStack,
@@ -17,7 +18,8 @@ public sealed record ScoreBreakdown(
     double LocationRemote,
     double Domain,
     double Freshness,
-    double DisqualifierPenalty)
+    double DisqualifierPenalty,
+    double NonEngineeringTitlePenalty = 0.0)
 {
     public IEnumerable<(string Label, double Value)> EnumerateComponents()
     {
@@ -28,5 +30,6 @@ public sealed record ScoreBreakdown(
         yield return ("domain", Domain);
         yield return ("freshness", Freshness);
         yield return ("disqualifier_penalty", DisqualifierPenalty);
+        yield return ("non_engineering_title_penalty", NonEngineeringTitlePenalty);
     }
 }
