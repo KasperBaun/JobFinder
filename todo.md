@@ -26,9 +26,44 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-_(none)_
+- **Provider expansion to actually-DK employers (Phase 1 of "fix the
+  corpus before LLM scoring").** The 5 Greenhouse boards we have are
+  international tech with DK office (Unity / Wolt / Adyen / Trustpilot
+  / Pleo). The user's actual market — DK consultancies, public-sector
+  IT, regulated industries — sits on different ATS systems entirely.
+  This commit added 5 SmartRecruiters DK boards (Sopra Steria,
+  Netcompany, Deloitte Nordic, Devoteam, BEUMER). Still needed:
+  TeamTailor adapter (covers Danske Spil + many DK startups),
+  Emply / HR-Manager.net adapters (covers Sundhed.dk, Dansk
+  Sundhedssikring, DR Teknologi, CHANGE Lingerie),
+  Jobindex.dk full-text search (umbrella DK aggregator), and
+  body-fetch for ApiAdapter (SmartRecruiters list endpoint doesn't
+  include description, so Netcompany roles score 0.41 on title alone
+  but get dropped by `require_primary_stack_hit`).
+
+- **LLM-based judging via Ollama + Gemma 3 4B (Phase 2).** Once the
+  corpus contains the right kind of jobs, swap the keyword ranker for
+  (or augment with) an LLM judge that scores every deduped listing
+  using the user's skillset + curated examples as few-shot signal.
+  User has indicated this is the direction once provider work lands.
 
 ## Completed (recent)
+
+- **Five SmartRecruiters DK boards + Copenhagen alias + age cutoff
+  loosened.** First batch of "fix the corpus" provider work.
+  (a) Added catalog entries for SopraSteria1, Netcompany1,
+  DeloitteNordic, Devoteam, BEUMERGroup1 — all filtered to
+  `country=dk`, all using the existing ApiAdapter via `url_template`.
+  ~88 DK listings added across the five tenants. Sopra Steria's
+  "Senior .Net udvikler" example now lands at #4 in the shortlist
+  (0.46), up from "not in corpus at all". (b) New `CityAliases`
+  table in `Ranker.LocationTier` that matches Copenhagen ↔ København
+  / Kbh / Cph and a few other DK city pairs across language variants;
+  fixes the 0.6 → 1.0 location-tier jump for any DK-language listing.
+  (c) `max_age_days` bumped 60 → 180 in the bundled ranking.yml; the
+  freshness signal still soft-decays older listings, but B2B/consulting
+  roles often stay open 60-120 days. R-090 added; R-044 unchanged.
+  Two new alias tests; 197 backend tests green (was 195).
 
 - **RSS body enrichment — DK feeds get a real corpus.** New
   `enrichBody: true` field on `PortalConfig` (parsed from the catalog

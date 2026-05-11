@@ -15,7 +15,11 @@ freshness_half_life_days: 14
 min_score_to_include: 0.25
 
 # Hard filter: drop listings older than this many days (null/absent = no cutoff).
-max_age_days: 60
+# 180 fits the DK consulting / B2B market where senior roles often stay open
+# 60-120 days. The freshness signal still soft-decays older listings via
+# `freshness_half_life_days`, so the practical impact of stale-but-open roles
+# is bounded.
+max_age_days: 180
 
 # Hard filter: drop listings that don't hit any keyword from your primary stack.
 # Useful when search portals return non-engineering roles (marketing, sales, ops) that

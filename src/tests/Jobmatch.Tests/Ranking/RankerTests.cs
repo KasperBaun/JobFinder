@@ -788,6 +788,48 @@ public sealed class RankerTests
     }
 
     [Fact]
+    public void Rank_Copenhagen_City_Tier_Matches_Danish_Spelling_Kobenhavn()
+    {
+        // Real-world failure: SmartRecruiters returns "København, , Denmark" for DK postings.
+        // Mikkel's location is "Copenhagen, Denmark" — the literal substring check missed
+        // these. Cross-language city-alias mapping should rescue them.
+        var listing = MakeListing(
+            "Senior .Net udvikler",
+            "C# .NET Azure SQL Server",
+            location: "København, , Denmark",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-5));
+
+        var matches = Ranker.Rank([listing], MikkelPersona(), RankingCfg());
+
+        Assert.Single(matches);
+        Assert.True(matches[0].Reasoning.LocationMatch == true,
+            $"København should match user city Copenhagen via alias; LocationMatch={matches[0].Reasoning.LocationMatch}");
+        var locFraction = matches[0].Breakdown.LocationRemote / DefaultWeights.LocationRemote;
+        Assert.True(locFraction >= 0.99,
+            $"city tier should give full weight (1.0); got fraction {locFraction:0.000}");
+    }
+
+    [Fact]
+    public void Rank_City_Alias_Symmetric_Copenhagen_To_Kobenhavn()
+    {
+        // Reverse direction: a user who declared "København" in their location should
+        // also match an English-language listing that says "Copenhagen".
+        var skillset = MikkelPersona() with { Location = "København, Denmark" };
+        var listing = MakeListing(
+            "Senior .Net udvikler",
+            "C# .NET Azure SQL Server",
+            location: "Copenhagen, Denmark",
+            remote: RemoteMode.Hybrid,
+            postedAt: DateTimeOffset.UtcNow.AddDays(-5));
+
+        var matches = Ranker.Rank([listing], skillset, RankingCfg());
+
+        Assert.Single(matches);
+        Assert.True(matches[0].Reasoning.LocationMatch == true);
+    }
+
+    [Fact]
     public void ScoreBreakdown_EnumerateComponents_Returns_All_Eight_In_Stable_Order()
     {
         var b = new ScoreBreakdown(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, -0.7, -0.8);

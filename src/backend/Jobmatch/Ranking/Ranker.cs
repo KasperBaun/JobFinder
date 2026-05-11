@@ -297,14 +297,16 @@ public static class Ranker
         if (global.Any(t => l.Contains(t, StringComparison.Ordinal))) return (w.City, true);
 
         // City: substring match on the user's location string (last comma-piece treated as country, rest as city).
+        // Expanded with known cross-language aliases so "København" in a Danish-language listing matches a user
+        // who declared "Copenhagen" in English (and vice versa).
         var (userCity, derivedCountry) = SplitCityCountry(skillset.Location);
-        if (!string.IsNullOrWhiteSpace(userCity) && ContainsToken(l, userCity!.ToLowerInvariant()))
+        if (!string.IsNullOrWhiteSpace(userCity) && AnyAliasMatches(l, userCity!))
             return (w.City, true);
 
-        // Metro: any of the user's declared metro names.
+        // Metro: any of the user's declared metro names (also alias-expanded).
         foreach (var m in skillset.Metro)
         {
-            if (!string.IsNullOrWhiteSpace(m) && ContainsToken(l, m.ToLowerInvariant()))
+            if (!string.IsNullOrWhiteSpace(m) && AnyAliasMatches(l, m))
                 return (w.Metro, true);
         }
 
@@ -328,6 +330,48 @@ public static class Ranker
         }
 
         return (w.Else, false);
+    }
+
+    // Cross-language aliases for cities the user might declare in one language and a listing
+    // might use in another. Lowercase keys and values. Alphabetic order.
+    // Symmetric: each name maps to the *other* names that should also match. Add new entries
+    // sparingly — most cities don't need this and substring matching usually suffices.
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> CityAliases =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Greater Copenhagen
+            ["copenhagen"] = ["københavn", "kbh", "cph"],
+            ["københavn"] = ["copenhagen", "kbh", "cph"],
+            ["kbh"] = ["copenhagen", "københavn", "cph"],
+            ["cph"] = ["copenhagen", "københavn", "kbh"],
+            ["greater copenhagen"] = ["storkøbenhavn", "københavn", "copenhagen"],
+            ["storkøbenhavn"] = ["greater copenhagen", "københavn", "copenhagen"],
+            ["hovedstaden"] = ["capital region", "københavn", "copenhagen"],
+
+            // Aarhus / Århus / Aalborg / Ålborg — DK uses both spellings interchangeably
+            ["aarhus"] = ["århus"],
+            ["århus"] = ["aarhus"],
+            ["aalborg"] = ["ålborg"],
+            ["ålborg"] = ["aalborg"],
+            ["odense"] = [], // identical in EN/DA, here for completeness
+
+            // Other DK metros that get hit
+            ["helsingør"] = ["elsinore"],
+            ["elsinore"] = ["helsingør"],
+        };
+
+    // True when the listing location contains the user's city name OR any known alias.
+    // Substring + word-boundary check, same rules as ContainsToken.
+    private static bool AnyAliasMatches(string lowerListingLocation, string userCity)
+    {
+        var lower = userCity.ToLowerInvariant();
+        if (ContainsToken(lowerListingLocation, lower)) return true;
+        if (!CityAliases.TryGetValue(lower, out var aliases)) return false;
+        foreach (var a in aliases)
+        {
+            if (ContainsToken(lowerListingLocation, a)) return true;
+        }
+        return false;
     }
 
     // EU 27 + EEA non-EU (Iceland, Norway, Liechtenstein) + Switzerland.
