@@ -280,7 +280,7 @@
       "name": "it-jobbank-rss",
       "displayName": "IT Jobbank",
       "type": "rss",
-      "enabled": false,
+      "enabled": true,
       "endpoint": "https://www.it-jobbank.dk/jobsoegning.rss",
       "queryParams": {
         "q": "developer"
@@ -293,7 +293,7 @@
       "name": "jobsearch-dk",
       "displayName": "Jobsearch DK",
       "type": "rss",
-      "enabled": false,
+      "enabled": true,
       "endpoint": "https://www.jobsearch.dk/feed/job-annoncer",
       "rateLimitRps": 1.0,
       "notes": "Jobsearch.dk's public RSS feed — about 100 newest listings, no signup needed. Listings show only title and a short description; company and location aren't included."
