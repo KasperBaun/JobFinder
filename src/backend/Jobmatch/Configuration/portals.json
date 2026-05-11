@@ -409,6 +409,7 @@
       "displayName": "Sopra Steria (SmartRecruiters)",
       "type": "api",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://api.smartrecruiters.com/v1/companies/SopraSteria1/postings",
       "queryParams": { "country": "dk", "limit": "100" },
       "responseMapping": {
@@ -429,6 +430,7 @@
       "displayName": "Netcompany (SmartRecruiters)",
       "type": "api",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://api.smartrecruiters.com/v1/companies/Netcompany1/postings",
       "queryParams": { "country": "dk", "limit": "100" },
       "responseMapping": {
@@ -449,6 +451,7 @@
       "displayName": "Deloitte Nordic (SmartRecruiters)",
       "type": "api",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://api.smartrecruiters.com/v1/companies/DeloitteNordic/postings",
       "queryParams": { "country": "dk", "limit": "100" },
       "responseMapping": {
@@ -469,6 +472,7 @@
       "displayName": "Devoteam (SmartRecruiters)",
       "type": "api",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://api.smartrecruiters.com/v1/companies/Devoteam/postings",
       "queryParams": { "country": "dk", "limit": "100" },
       "responseMapping": {
@@ -489,6 +493,7 @@
       "displayName": "BEUMER Group (SmartRecruiters)",
       "type": "api",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://api.smartrecruiters.com/v1/companies/BEUMERGroup1/postings",
       "queryParams": { "country": "dk", "limit": "100" },
       "responseMapping": {

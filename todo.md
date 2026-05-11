@@ -49,6 +49,23 @@ Current status of work on `jobfinder`.
 
 ## Completed (recent)
 
+- **Body-fetch enrichment for ApiAdapter — Netcompany & friends now
+  rank with full body text.** Previous commit added 5 SmartRecruiters
+  DK boards but only Sopra Steria's .Net role surfaced (#4 at 0.46);
+  the other 80+ DK listings (47 Netcompany, 15 Deloitte Nordic, 8
+  Devoteam, 13 BEUMER) scored well on title alone (0.40-0.42) but got
+  dropped by `require_primary_stack_hit` because the SmartRecruiters
+  list endpoint omits descriptions. This commit extracts the
+  body-fetch helpers from `RssAdapter` to `BaseAdapter` (sequential
+  ~5rps fetch + StripHtml + merge into Description) and wires
+  `EnrichBody: true` on all 5 SmartRecruiters tenants. Result:
+  Sopra Steria .Net is now #1 at **0.71** (up from 0.46), top 25
+  is 18× SmartRecruiters DK consultancy roles, only 2 Greenhouse
+  entries (Unity Commerce, Trustpilot QA) survived. Total run time
+  ~95s (was 65s) — the +30s is body-fetch latency for ~88 SR
+  postings. 197 backend tests still green (helpers moved, not
+  changed; existing RssAdapter tests still call them via inheritance).
+
 - **Five SmartRecruiters DK boards + Copenhagen alias + age cutoff
   loosened.** First batch of "fix the corpus" provider work.
   (a) Added catalog entries for SopraSteria1, Netcompany1,

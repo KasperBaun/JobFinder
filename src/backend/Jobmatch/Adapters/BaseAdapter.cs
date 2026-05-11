@@ -71,6 +71,58 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
         return WhitespaceRun.Replace(decoded, " ").Trim();
     }
 
+    // Delay between body-enrichment fetches when EnrichBody is on. ~5rps so a 100-item
+    // run takes ~20s of body fetching, which the user sees as the active provider phase
+    // taking longer. Sequential, not concurrent — keeps a single host from getting hit
+    // too hard while staying faster than the portal's own RateLimitRps (which is set
+    // very low to avoid rate-limit on the catalog endpoint).
+    protected const int BodyFetchDelayMs = 200;
+
+    // Fetches each listing's URL and merges its visible text into Description. Sequential
+    // with a small delay so we don't hammer the host. Failures are logged but don't drop
+    // the listing — we keep the catalog-only version. Shared by RssAdapter (after feed
+    // parse) and ApiAdapter (after items_path mapping) when Config.EnrichBody is true.
+    internal async Task<IReadOnlyList<Listing>> EnrichBodiesAsync(IReadOnlyList<Listing> listings, CancellationToken ct)
+    {
+        var enriched = new List<Listing>(listings.Count);
+        for (var i = 0; i < listings.Count; i++)
+        {
+            var listing = listings[i];
+            try
+            {
+                if (i > 0) await Task.Delay(BodyFetchDelayMs, ct);
+                var bodyHtml = await FetchBodyHtmlAsync(listing.Url, ct);
+                enriched.Add(MergeBodyHtml(listing, bodyHtml));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "portal={Portal} body fetch failed for {Url}", PortalName, listing.Url);
+                enriched.Add(listing);
+            }
+        }
+        return enriched;
+    }
+
+    private async Task<string?> FetchBodyHtmlAsync(Uri url, CancellationToken ct)
+    {
+        using var response = await Http.GetAsync(url, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "text/html";
+        if (!contentType.Contains("html", StringComparison.OrdinalIgnoreCase)) return null;
+        return await response.Content.ReadAsStringAsync(ct);
+    }
+
+    internal static Listing MergeBodyHtml(Listing original, string? bodyHtml)
+    {
+        if (string.IsNullOrWhiteSpace(bodyHtml)) return original;
+        var bodyText = StripHtml(bodyHtml);
+        if (string.IsNullOrWhiteSpace(bodyText)) return original;
+        var combined = string.IsNullOrEmpty(original.Description)
+            ? bodyText
+            : original.Description + " " + bodyText;
+        return original with { Description = combined };
+    }
+
     protected static RemoteMode InferRemoteMode(string text)
     {
         if (string.IsNullOrEmpty(text)) return RemoteMode.Unknown;
