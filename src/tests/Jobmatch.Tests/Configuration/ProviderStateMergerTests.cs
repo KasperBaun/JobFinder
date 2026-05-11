@@ -8,15 +8,38 @@ public sealed class ProviderStateMergerTests
     private static PortalConfig Catalog(int id, string name, bool enabled = true, string? requiresSecret = null) =>
         new(Name: name, Type: PortalType.Manual, Enabled: enabled, Id: id, RequiresSecret: requiresSecret);
 
+    private static ProviderState State(int[]? disabled = null, int[]? enabled = null) =>
+        new(disabled ?? Array.Empty<int>(),
+            enabled ?? Array.Empty<int>(),
+            new Dictionary<int, IReadOnlyDictionary<string, string>>());
+
     [Fact]
     public void DisabledIdInState_OverridesEnabledTrue()
     {
         var catalog = new[] { Catalog(1, "a"), Catalog(2, "b") };
-        var state = new ProviderState(new[] { 2 }, new Dictionary<int, IReadOnlyDictionary<string, string>>());
-
-        var merged = ProviderStateMerger.Merge(catalog, state);
+        var merged = ProviderStateMerger.Merge(catalog, State(disabled: new[] { 2 }));
         Assert.True(merged.First(p => p.Id == 1).Enabled);
         Assert.False(merged.First(p => p.Id == 2).Enabled);
+    }
+
+    [Fact]
+    public void EnabledIdInState_OverridesCatalogDisabled()
+    {
+        // The toggle must be able to flip on a provider that ships off-by-default
+        // in the catalog. Without this, the GUI toggle is silently a no-op.
+        var catalog = new[] { Catalog(15, "it-jobbank-rss", enabled: false) };
+        var merged = ProviderStateMerger.Merge(catalog, State(enabled: new[] { 15 }));
+        Assert.True(merged[0].Enabled);
+    }
+
+    [Fact]
+    public void EnabledOptInBeatsDisabledOptOut_WhenBothPresent()
+    {
+        // Pathological state: id appears in both lists. Treat opt-in as authoritative —
+        // matches "I clicked enable last" intent.
+        var catalog = new[] { Catalog(1, "a", enabled: false) };
+        var merged = ProviderStateMerger.Merge(catalog, State(disabled: new[] { 1 }, enabled: new[] { 1 }));
+        Assert.True(merged[0].Enabled);
     }
 
     [Fact]
@@ -33,6 +56,7 @@ public sealed class ProviderStateMergerTests
         var catalog = new[] { Catalog(5, "jooble", requiresSecret: "api_key") };
         var state = new ProviderState(
             Array.Empty<int>(),
+            Array.Empty<int>(),
             new Dictionary<int, IReadOnlyDictionary<string, string>>
             {
                 [5] = new Dictionary<string, string> { ["api_key"] = "abc" },
@@ -46,6 +70,7 @@ public sealed class ProviderStateMergerTests
     {
         var catalog = new[] { Catalog(5, "jooble", requiresSecret: "api_key") };
         var state = new ProviderState(
+            Array.Empty<int>(),
             Array.Empty<int>(),
             new Dictionary<int, IReadOnlyDictionary<string, string>>
             {
@@ -66,6 +91,7 @@ public sealed class ProviderStateMergerTests
                 QueryParams: new Dictionary<string, object?> { ["api_key"] = "" }),
         };
         var state = new ProviderState(
+            Array.Empty<int>(),
             Array.Empty<int>(),
             new Dictionary<int, IReadOnlyDictionary<string, string>>
             {

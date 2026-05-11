@@ -73,10 +73,28 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
 
         var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
         var disabled = state.Disabled.ToHashSet();
-        if (enabled) disabled.Remove(id);
-        else disabled.Add(id);
+        var explicitEnabled = state.Enabled.ToHashSet();
 
-        var nextState = new ProviderState(disabled.OrderBy(i => i).ToArray(), state.Secrets);
+        // Symmetric overrides — the catalog default decides which list to flip:
+        //   catalog enabled=true  → toggle on  = clear opt-out;        toggle off = add opt-out
+        //   catalog enabled=false → toggle on  = add explicit opt-in;  toggle off = clear opt-in
+        if (portal.Enabled)
+        {
+            explicitEnabled.Remove(id);
+            if (enabled) disabled.Remove(id);
+            else disabled.Add(id);
+        }
+        else
+        {
+            disabled.Remove(id);
+            if (enabled) explicitEnabled.Add(id);
+            else explicitEnabled.Remove(id);
+        }
+
+        var nextState = new ProviderState(
+            disabled.OrderBy(i => i).ToArray(),
+            explicitEnabled.OrderBy(i => i).ToArray(),
+            state.Secrets);
         ProviderStateLoader.Save(ctx.ProviderStatePath, nextState);
     }
 

@@ -10,16 +10,18 @@ public sealed class ProviderStateTests
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
         var state = ProviderStateLoader.LoadOrEmpty(path);
         Assert.Empty(state.Disabled);
+        Assert.Empty(state.Enabled);
         Assert.Empty(state.Secrets);
     }
 
     [Fact]
-    public void RoundTrip_DisabledIdsAndSecrets()
+    public void RoundTrip_DisabledEnabledAndSecrets()
     {
         var dir = Directory.CreateTempSubdirectory("provider-state-test");
         var path = Path.Combine(dir.FullName, "provider-state.json");
         var input = new ProviderState(
             Disabled: new[] { 3, 7 },
+            Enabled: new[] { 15, 16 },
             Secrets: new Dictionary<int, IReadOnlyDictionary<string, string>>
             {
                 [5] = new Dictionary<string, string> { ["api_key"] = "abc123" },
@@ -29,13 +31,28 @@ public sealed class ProviderStateTests
         var loaded = ProviderStateLoader.LoadOrEmpty(path);
 
         Assert.Equal(new[] { 3, 7 }, loaded.Disabled);
+        Assert.Equal(new[] { 15, 16 }, loaded.Enabled);
         Assert.Equal("abc123", loaded.Secrets[5]["api_key"]);
+    }
+
+    [Fact]
+    public void LoadOrEmpty_LegacyFileWithoutEnabledField_LoadsAsEmptyEnabled()
+    {
+        // Existing user state files predate the symmetric opt-in/opt-out model;
+        // they only carry `disabled`. The loader must treat missing `enabled` as [].
+        var dir = Directory.CreateTempSubdirectory("provider-state-legacy");
+        var path = Path.Combine(dir.FullName, "provider-state.json");
+        File.WriteAllText(path, """{"disabled":[10,11],"secrets":{}}""");
+
+        var loaded = ProviderStateLoader.LoadOrEmpty(path);
+
+        Assert.Equal(new[] { 10, 11 }, loaded.Disabled);
+        Assert.Empty(loaded.Enabled);
     }
 
     [Fact]
     public void Save_AtomicWrite()
     {
-        // Saving over an existing file should not leave a .tmp artifact behind.
         var dir = Directory.CreateTempSubdirectory("provider-state-atomic");
         var path = Path.Combine(dir.FullName, "provider-state.json");
         ProviderStateLoader.Save(path, ProviderState.Empty);

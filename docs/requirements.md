@@ -78,4 +78,4 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## Provider catalog & per-user state
 
 - **R-085** The system should expose a filterable, sortable view of every deduped listing in a run, with at least: portal, score range, posting age, primary/secondary stack hit, mark state, shortlist membership, and free-text search across title and company.
-- **R-086** The system should ship the provider catalog as part of the application bundle (read-only at runtime) and store only per-user opt-outs and provider secrets under `data/<email>/`.
+- **R-086** The system should ship the provider catalog as part of the application bundle (read-only at runtime) and store only per-user enable-state overrides (opt-ins for catalog-disabled providers, opt-outs for catalog-enabled ones) and provider secrets under `data/<email>/`.

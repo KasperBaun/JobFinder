@@ -5,7 +5,12 @@ using Jobmatch.Models;
 public static class ProviderStateMerger
 {
     public static bool IsUserEnabled(PortalConfig catalogPortal, ProviderState state)
-        => catalogPortal.Enabled && !state.Disabled.Contains(catalogPortal.Id);
+    {
+        // Explicit user opt-in always wins over a catalog-disabled default.
+        // Otherwise: catalog default applies, with the user's opt-out list removing entries.
+        if (state.Enabled.Contains(catalogPortal.Id)) return true;
+        return catalogPortal.Enabled && !state.Disabled.Contains(catalogPortal.Id);
+    }
 
     public static bool HasSecretValue(PortalConfig catalogPortal, ProviderState state)
     {
