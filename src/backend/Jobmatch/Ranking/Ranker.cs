@@ -350,19 +350,19 @@ public static class Ranker
             // "Greater Copenhagen" or "Hovedstaden" in their metro list.
             ["greater copenhagen"] = [
                 "storkøbenhavn", "københavn", "copenhagen",
-                "brøndby", "albertslund", "ballerup", "dragør", "gentofte",
+                "brøndby", "albertslund", "ballerup", "dragør", "farum", "gentofte",
                 "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
                 "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
             ],
             ["storkøbenhavn"] = [
                 "greater copenhagen", "københavn", "copenhagen",
-                "brøndby", "albertslund", "ballerup", "dragør", "gentofte",
+                "brøndby", "albertslund", "ballerup", "dragør", "farum", "gentofte",
                 "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
                 "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
             ],
             ["hovedstaden"] = [
                 "capital region", "københavn", "copenhagen",
-                "brøndby", "albertslund", "ballerup", "dragør", "gentofte",
+                "brøndby", "albertslund", "ballerup", "dragør", "farum", "gentofte",
                 "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
                 "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
             ],

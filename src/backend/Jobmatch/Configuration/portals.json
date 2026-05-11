@@ -503,6 +503,28 @@
       "notes": "DK cloud / data engineering consultancy; ~8 DK roles. Cloud and data-focused, but most postings are senior IC engineering."
     },
     {
+      "id": 28,
+      "name": "hr-manager-change",
+      "displayName": "CHANGE Lingerie (HR-Manager.net)",
+      "type": "hrmanager",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://candidate.hr-manager.net/vacancies/list.aspx?cid=1178",
+      "rateLimitRps": 1.0,
+      "notes": "CHANGE of Scandinavia (lingerie / fashion) on HR-Manager.net. The list page server-renders a hidden 'PositionList' JSON with all 30+ open positions across DK / SE / NO retail + Farum HQ; the adapter parses it and follows AdvertisementUrl per listing for the full body."
+    },
+    {
+      "id": 29,
+      "name": "hr-manager-dr",
+      "displayName": "Danmarks Radio (HR-Manager.net)",
+      "type": "hrmanager",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://candidate.hr-manager.net/vacancies/list.aspx?cid=1165",
+      "rateLimitRps": 1.0,
+      "notes": "Danmarks Radio (DR) on HR-Manager.net — public broadcaster's tech division (DR Teknologi at DR Byen, Copenhagen). Same JSON-list pattern as CHANGE; ~10 open positions at a time."
+    },
+    {
       "id": 26,
       "name": "teamtailor-danske-spil",
       "displayName": "Danske Spil (TeamTailor)",
