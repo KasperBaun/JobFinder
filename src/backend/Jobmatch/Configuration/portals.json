@@ -279,12 +279,13 @@
       "displayName": "IT Jobbank",
       "type": "rss",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://www.it-jobbank.dk/jobsoegning.rss",
       "queryParams": {
         "q": "developer"
       },
       "rateLimitRps": 0.5,
-      "notes": "IT-jobbank's public RSS feed — same source pool as Jobindex but limited to IT roles. Heavy overlap with the Jobindex source — turn on one or the other, not both."
+      "notes": "IT-jobbank's public RSS feed — same source pool as Jobindex but limited to IT roles. Heavy overlap with the Jobindex source — turn on one or the other, not both. Body enrichment on: each item's linked page is fetched and merged into the description so stack-keyword matching has a real corpus to work with."
     },
     {
       "id": 16,
@@ -292,9 +293,10 @@
       "displayName": "Jobsearch DK",
       "type": "rss",
       "enabled": true,
+      "enrichBody": true,
       "endpoint": "https://www.jobsearch.dk/feed/job-annoncer",
       "rateLimitRps": 1.0,
-      "notes": "Jobsearch.dk's public RSS feed — about 100 newest listings, no signup needed. Listings show only title and a short description; company and location aren't included."
+      "notes": "Jobsearch.dk's public RSS feed — about 100 newest listings, no signup needed. The RSS itself only carries title + short description; body enrichment is on so each listing's page is fetched and merged in for ranking."
     },
     {
       "id": 17,

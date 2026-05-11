@@ -26,17 +26,22 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-- **RSS body-fetch enrichment (last item from 2026-05-11 quality pass).**
-  DK RSS feeds (it-jobbank, jobsearch-dk) carry only title + short
-  description, so stack-keyword matching is starved (best DK match
-  scored 0.37 in the 2026-05-11 run; everything else 0.12). Add an
-  optional per-listing HTML fetch in `RssAdapter` (or a follow-on
-  enrichment pass) that pulls the linked job page, extracts the body
-  text, and merges it into `Listing.Description` before ranking. Needs
-  design — concurrency cap, per-portal opt-in, error handling, caching
-  to avoid re-fetching across runs.
+_(none)_
 
 ## Completed (recent)
+
+- **RSS body enrichment — DK feeds get a real corpus.** New
+  `enrichBody: true` field on `PortalConfig` (parsed from the catalog
+  `enrichBody` key). When set, `RssAdapter` walks the feed items
+  sequentially after parsing, fetches each item's linked HTML page
+  (~5rps), strips the markup, and merges the body text into
+  `Listing.Description` so ranker stack-keyword matching has a real
+  corpus to work against. Failures don't drop the listing — RSS-only
+  version is kept, warning logged. Both DK feeds shipped with the flag
+  on (`it-jobbank-rss`, `jobsearch-dk`); other RSS-typed portals stay
+  off by default. Closes the last item from the 2026-05-11 quality pass.
+  R-089 added. 8 new RssAdapter tests; 195 backend tests green
+  (was 187).
 
 - **Ranker tuning — adjacent seniority full-credit + non-engineering
   title gate.** Two changes addressing the "top score caps at 0.49"

@@ -65,6 +65,7 @@ public static class PortalCatalogLoader
         var displayName = el.TryGetProperty("displayName", out var dnEl) && dnEl.ValueKind == JsonValueKind.String
             ? dnEl.GetString()
             : null;
+        var enrichBody = ReadBool(el, "enrichBody", false);
 
         var queryParams = ReadObjectDict(el, "queryParams");
         var headers = ReadStringDict(el, "headers");
@@ -91,7 +92,8 @@ public static class PortalCatalogLoader
             Pagination: pagination,
             Id: id,
             RequiresSecret: requiresSecret,
-            DisplayName: displayName);
+            DisplayName: displayName,
+            EnrichBody: enrichBody);
     }
 
     private static PaginationConfig? ReadPagination(JsonElement el, string portalName)

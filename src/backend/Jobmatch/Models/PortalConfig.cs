@@ -19,7 +19,8 @@ public sealed record PortalConfig(
     PaginationConfig? Pagination = null,
     int Id = 0,
     string? RequiresSecret = null,
-    string? DisplayName = null);
+    string? DisplayName = null,
+    bool EnrichBody = false);
 
 public sealed record PaginationConfig(
     string Param,
