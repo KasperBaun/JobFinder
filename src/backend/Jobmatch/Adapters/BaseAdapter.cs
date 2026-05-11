@@ -113,8 +113,17 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
             try
             {
                 if (i > 0) await Task.Delay(BodyFetchDelayMs, ct);
-                var bodyHtml = await FetchBodyHtmlAsync(listing.Url, ct);
-                var externalHref = ExtractJobindexExternalLink(listing.Url, bodyHtml);
+                var previewHtml = await FetchBodyHtmlAsync(listing.Url, ct);
+                // For Jobindex/it-jobbank preview pages, the area span ('jix_robotjob--area')
+                // carries the actual location; the original RSS feed item lacked one.
+                var fromPreview = ExtractJobindexLocation(listing.Url, previewHtml);
+                if (!string.IsNullOrWhiteSpace(fromPreview) && string.IsNullOrWhiteSpace(listing.Location))
+                {
+                    listing = listing with { Location = fromPreview };
+                }
+
+                var bodyHtml = previewHtml;
+                var externalHref = ExtractJobindexExternalLink(listing.Url, previewHtml);
                 if (externalHref is not null && Uri.TryCreate(externalHref, UriKind.Absolute, out var external))
                 {
                     await Task.Delay(BodyFetchDelayMs, ct);
@@ -133,6 +142,22 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
             }
         }
         return enriched;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex JobindexAreaSpan = new(
+        @"<span[^>]*\bclass\s*=\s*[""'][^""']*jix_robotjob--area[^""']*[""'][^>]*>([^<]+)</span>",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static string? ExtractJobindexLocation(Uri listingUrl, string? previewHtml)
+    {
+        if (string.IsNullOrWhiteSpace(previewHtml)) return null;
+        if (!listingUrl.Host.Contains("jobindex.dk", StringComparison.OrdinalIgnoreCase)
+            && !listingUrl.Host.Contains("it-jobbank.dk", StringComparison.OrdinalIgnoreCase))
+            return null;
+        var match = JobindexAreaSpan.Match(previewHtml);
+        if (!match.Success) return null;
+        var text = System.Net.WebUtility.HtmlDecode(match.Groups[1].Value).Trim();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 
     private static readonly System.Text.RegularExpressions.Regex JobindexExternalLink = new(
