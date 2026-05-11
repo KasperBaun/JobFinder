@@ -49,6 +49,28 @@ Current status of work on `jobfinder`.
 
 ## Completed (recent)
 
+- **TeamTailor adapter (sitemap + JSON-LD) + Danske Spil board +
+  Greater Copenhagen suburb aliases + ISO country normalisation.**
+  Third batch of "fix the corpus" provider work. New
+  `TeamTailorAdapter` parses sitemap.xml for job URLs, fetches each
+  page, extracts the schema.org JobPosting JSON-LD blob, maps to
+  Listing. No API key needed — works for any TeamTailor career site.
+  Danske Spil added as the seed tenant (5 listings). The adapter
+  also normalises ISO 3166-1 alpha-2 country codes (DK→Denmark etc.)
+  since TeamTailor stores `addressCountry` as the short code, which
+  the ranker's substring matcher missed. `CityAliases` extended:
+  Greater Copenhagen / Storkøbenhavn / Hovedstaden now expand to the
+  14 real Greater Copenhagen suburb municipalities (Brøndby,
+  Albertslund, Ballerup, Dragør, Gentofte, Gladsaxe, Glostrup, Herlev,
+  Hvidovre, Høje-Taastrup, Ishøj, Lyngby-Taarbæk, Rødovre, Tårnby,
+  Vallensbæk) so a listing in any of these earns the Metro tier for a
+  user who declared "Greater Copenhagen" or "Hovedstaden". Outcome:
+  Danske Spil's "Softwareudvikler" example moved from 0.32 → 0.50
+  (just outside top 10; bottleneck is now "Seniority not stated"
+  because the Danish title carries no level marker). New
+  `PortalType.TeamTailor`, wired into AdapterFactory. 198 backend
+  tests green (+1 Brøndby alias test).
+
 - **Body-fetch enrichment for ApiAdapter — Netcompany & friends now
   rank with full body text.** Previous commit added 5 SmartRecruiters
   DK boards but only Sopra Steria's .Net role surfaced (#4 at 0.46);

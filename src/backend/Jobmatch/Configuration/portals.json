@@ -488,6 +488,17 @@
       "notes": "DK cloud / data engineering consultancy; ~8 DK roles. Cloud and data-focused, but most postings are senior IC engineering."
     },
     {
+      "id": 26,
+      "name": "teamtailor-danske-spil",
+      "displayName": "Danske Spil (TeamTailor)",
+      "type": "teamtailor",
+      "enabled": true,
+      "endpoint": "https://karriere.danskespil.dk/sitemap.xml",
+      "staticFields": { "company": "Danske Spil" },
+      "rateLimitRps": 1.0,
+      "notes": "Danske Spil's TeamTailor career site. The adapter parses sitemap.xml for job URLs, then extracts schema.org JobPosting JSON-LD from each page (title, description, datePosted, location). Same pattern works for any TeamTailor site without an API key."
+    },
+    {
       "id": 25,
       "name": "smartrecruiters-beumer",
       "displayName": "BEUMER Group (SmartRecruiters)",
