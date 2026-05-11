@@ -157,20 +157,9 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
         }
     }
 
-    private static Uri BuildRequestUri(Uri endpoint, IReadOnlyDictionary<string, object?>? queryParams)
-    {
-        if (queryParams is null || queryParams.Count == 0) return endpoint;
-        var builder = new UriBuilder(endpoint);
-        var existing = string.IsNullOrEmpty(builder.Query) ? new List<string>() : new List<string> { builder.Query.TrimStart('?') };
-        foreach (var kvp in queryParams)
-        {
-            if (kvp.Value is null) continue;
-            var val = Convert.ToString(kvp.Value, CultureInfo.InvariantCulture) ?? string.Empty;
-            existing.Add($"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(val)}");
-        }
-        builder.Query = string.Join("&", existing);
-        return builder.Uri;
-    }
+    // Delegates to BaseAdapter.AppendQueryParams — same logic for query-string assembly.
+    private static Uri BuildRequestUri(Uri endpoint, IReadOnlyDictionary<string, object?>? queryParams) =>
+        AppendQueryParams(endpoint, queryParams);
 
     private static (Uri Endpoint, IReadOnlyDictionary<string, object?>? QueryParams) RenderEndpointTemplate(
         Uri endpoint, IReadOnlyDictionary<string, object?>? queryParams, string portalName)
