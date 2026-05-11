@@ -30,6 +30,7 @@ public static class ProviderStateLoader
             return ProviderState.Empty;
 
         var disabled = (IReadOnlyList<int>)(raw.Disabled ?? Array.Empty<int>());
+        var enabled = (IReadOnlyList<int>)(raw.Enabled ?? Array.Empty<int>());
 
         var secrets = new Dictionary<int, IReadOnlyDictionary<string, string>>();
         if (raw.Secrets is not null)
@@ -41,7 +42,7 @@ public static class ProviderStateLoader
             }
         }
 
-        return new ProviderState(disabled, secrets);
+        return new ProviderState(disabled, enabled, secrets);
     }
 
     public static void Save(string path, ProviderState state)
@@ -52,6 +53,7 @@ public static class ProviderStateLoader
 
         var raw = new RawProviderState(
             state.Disabled.ToArray(),
+            state.Enabled.ToArray(),
             state.Secrets.ToDictionary(
                 kvp => kvp.Key.ToString(),
                 kvp => kvp.Value.ToDictionary(s => s.Key, s => s.Value)));
@@ -64,14 +66,21 @@ public static class ProviderStateLoader
 
     private sealed class RawProviderState
     {
-        public RawProviderState(int[]? disabled, Dictionary<string, Dictionary<string, string>>? secrets)
+        public RawProviderState(
+            int[]? disabled,
+            int[]? enabled,
+            Dictionary<string, Dictionary<string, string>>? secrets)
         {
             Disabled = disabled;
+            Enabled = enabled;
             Secrets = secrets;
         }
 
         [JsonPropertyName("disabled")]
         public int[]? Disabled { get; }
+
+        [JsonPropertyName("enabled")]
+        public int[]? Enabled { get; }
 
         [JsonPropertyName("secrets")]
         public Dictionary<string, Dictionary<string, string>>? Secrets { get; }

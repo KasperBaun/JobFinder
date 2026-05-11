@@ -26,22 +26,44 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-- **Quality pass after browser test of GUI 2026-05-11.** Four fixes
-  surfaced when running the bundled host end-to-end against real DK
-  data: (1) Greenhouse Pleo returns 0 listings for 4+ days — diagnose
-  the failure; (2) provider toggle in `/providers` is silently no-op
-  for catalog-disabled providers (the merger does
-  `catalogPortal.Enabled && !state.Disabled.Contains(id)`, so flipping
-  the user-state toggle does nothing while catalog default is `false`);
-  (3) ranker tops out at 0.49 across the live corpus — bias seniority
-  match toward the user's actual seniority and title-gate
-  non-engineering roles (PM/Manager/Analyst/Specialist) so incidental
-  C#/SQL keyword hits stop dragging them into the shortlist;
+- **Quality pass after browser test of GUI 2026-05-11.** Two fixes
+  remaining from the original four; ranker tuning + RSS body
+  enrichment still open: (3) ranker tops out at 0.49 across the live
+  corpus — bias seniority match toward the user's actual seniority and
+  title-gate non-engineering roles (PM/Manager/Analyst/Specialist) so
+  incidental C#/SQL keyword hits stop dragging them into the shortlist;
   (4) DK RSS feeds (it-jobbank, jobsearch-dk) carry only title + short
   description, so stack-keyword matching is starved — add per-listing
   HTML body fetch in `RssAdapter` so DK boards become competitive.
 
 ## Completed (recent)
+
+- **Provider toggle bug — symmetric opt-in/opt-out.** Discovered while
+  enabling the DK feeds: the GUI toggle in `/providers` was silently no-op
+  for any provider where the catalog defaulted to `enabled: false`. The
+  merger did `catalogPortal.Enabled && !state.Disabled.Contains(id)`, so
+  flipping the user-state toggle on a catalog-disabled provider only
+  affected the opt-out side and did nothing. Fixed by adding an explicit
+  `Enabled` opt-in list to `ProviderState` (alongside the existing
+  `Disabled` opt-out list); `IsUserEnabled` now resolves to `enabled
+  ?? (catalog.enabled && !disabled)`. `ProvidersService.SetEnabled`
+  branches on `catalog.Enabled` to manipulate the right list:
+  catalog-on toggles flip Disabled, catalog-off toggles flip Enabled.
+  Backwards compatible — old state files without `enabled` load with an
+  empty opt-in list, no behaviour change. R-086 updated. Three new
+  tests (EnabledIdInState_OverridesCatalogDisabled, EnabledOptInBeats
+  DisabledOptOut_WhenBothPresent, LoadOrEmpty_LegacyFileWithoutEnabled
+  Field_LoadsAsEmptyEnabled). 180 backend tests green (was 177).
+
+- **Pleo migrated from Greenhouse (empty) to Ashby (37 jobs).**
+  Greenhouse Pleo board returned 200 with empty `jobs` array — Pleo
+  moved their hiring to Ashby. Switched id=1 to
+  `api.ashbyhq.com/posting-api/job-board/pleo` with one-to-one field
+  mapping (id, title, location, descriptionHtml, jobUrl, publishedAt).
+  Renamed `greenhouse-pleo` → `pleo`. Test comment updated; existing
+  run history that references `greenhouse-pleo` stays as historical
+  data. Closes one of the four follow-ups from the 2026-05-11 quality
+  pass.
 
 - **DK feeds enabled by default in the catalog.** `it-jobbank-rss` (id 15) and
   `jobsearch-dk` (id 16) flipped from `enabled: false` to `enabled: true` in

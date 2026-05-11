@@ -28,6 +28,7 @@ public static class PortalsMigrationShim
         }
         var newState = new ProviderState(
             Disabled: disabledIds.OrderBy(i => i).ToArray(),
+            Enabled: existing.Enabled,
             Secrets: existing.Secrets);
         ProviderStateLoader.Save(statePath, newState);
 
