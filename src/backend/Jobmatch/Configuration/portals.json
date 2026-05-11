@@ -3,27 +3,25 @@
   "providers": [
     {
       "id": 1,
-      "name": "greenhouse-pleo",
-      "displayName": "Greenhouse Pleo",
+      "name": "pleo",
+      "displayName": "Pleo",
       "type": "api",
       "enabled": true,
-      "endpoint": "https://boards-api.greenhouse.io/v1/boards/pleo/jobs",
-      "queryParams": {
-        "content": "true"
-      },
+      "endpoint": "https://api.ashbyhq.com/posting-api/job-board/pleo",
       "responseMapping": {
         "items_path": "jobs",
         "id": "id",
         "title": "title",
-        "location": "location.name",
-        "description": "content",
-        "url": "absolute_url",
-        "posted_at": "updated_at"
+        "location": "location",
+        "description": "descriptionHtml",
+        "url": "jobUrl",
+        "posted_at": "publishedAt"
       },
       "staticFields": {
         "company": "Pleo"
       },
-      "rateLimitRps": 1.0
+      "rateLimitRps": 1.0,
+      "notes": "Pleo migrated from Greenhouse to Ashby. Uses the public Ashby Job Board API; no auth or query params required."
     },
     {
       "id": 2,

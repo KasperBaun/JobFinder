@@ -11,7 +11,7 @@ public sealed class ProvidersHandlerSecretsTests : IDisposable
     private readonly string _tempRoot;
     private readonly string? _envBackup;
     private const int JoobleId = 18;          // requiresSecret == "api_key"
-    private const int NonSecretId = 1;        // greenhouse-pleo, requiresSecret == null
+    private const int NonSecretId = 1;        // pleo (Ashby), requiresSecret == null
     private const string ApiKeyName = "api_key";
 
     public ProvidersHandlerSecretsTests()
