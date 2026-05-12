@@ -149,4 +149,68 @@ public sealed class DeduperTests
         Assert.Equal(2, result.Deduped.Count);
         Assert.Empty(result.Merges);
     }
+
+    [Theory]
+    [InlineData("Sopra Steria A/S", "Sopra Steria")]
+    [InlineData("Sopra Steria ApS", "Sopra Steria")]
+    [InlineData("Danske Spil A/S", "Danske Spil")]
+    [InlineData("ACME GmbH", "ACME")]
+    [InlineData("Acme, Inc.", "Acme")]
+    [InlineData("Plain Company", "Plain Company")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void NormaliseCompany_StripsLegalForm(string? input, string expectedRaw)
+    {
+        Assert.Equal(Deduper.Normalise(expectedRaw), Deduper.NormaliseCompany(input));
+    }
+
+    [Theory]
+    [InlineData("København K og mulighed for hjemmearbejde", "københavn")]
+    [InlineData("Brøndby og mulighed for hjemmearbejde", "brøndby")]
+    [InlineData("Herlev og mulighed for fjernarbejde", "herlev")]
+    [InlineData("København, , Denmark", "københavn")]
+    [InlineData("Brøndby, Denmark", "brøndby")]
+    [InlineData("København Ø", "københavn")]
+    [InlineData("Copenhagen", "copenhagen")]
+    [InlineData("New York, NY", "new york")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void NormaliseLocation_StripsRemoteSuffixCommaSegmentsAndDistrictLetter(string? input, string expected)
+    {
+        Assert.Equal(expected, Deduper.NormaliseLocation(input));
+    }
+
+    [Fact]
+    public void Deduplicate_CrossPortal_JobindexAndSmartRecruiters_Collapse_When_LegalFormAndDistrictDiffer()
+    {
+        // The Jobindex side already had its trailing ", Sopra Steria A/S" split into the
+        // company field by RssAdapter — we simulate that post-extraction state here.
+        var jobindex = Make("jobindex-rss-net-udvikler",
+            title: "Senior .Net udvikler til afdeling i vækst",
+            company: "Sopra Steria A/S",
+            url: "https://www.jobindex.dk/vis-job/h1646496",
+            location: "København K og mulighed for hjemmearbejde");
+        var smartrecruiters = Make("smartrecruiters-soprasteria",
+            title: "Senior .Net udvikler til afdeling i vækst",
+            company: "Sopra Steria",
+            url: "https://jobs.smartrecruiters.com/SopraSteria1/744000113431214",
+            location: "København, , Denmark");
+        Assert.Single(Deduper.Deduplicate([jobindex, smartrecruiters]).Deduped);
+    }
+
+    [Fact]
+    public void Deduplicate_CrossPortal_JobindexAndTeamtailor_Collapse_When_LegalFormAndRemoteSuffixDiffer()
+    {
+        var jobindex = Make("jobindex-rss-net-udvikler",
+            title: "Softwareudvikler – byg fundamentet for Danske Spils digitale platform med AI-first udvikling",
+            company: "Danske Spil A/S",
+            url: "https://www.jobindex.dk/vis-job/h1662925",
+            location: "Brøndby og mulighed for hjemmearbejde");
+        var teamtailor = Make("teamtailor-danske-spil",
+            title: "Softwareudvikler – byg fundamentet for Danske Spils digitale platform med AI-first udvikling",
+            company: "Danske Spil",
+            url: "https://karriere.danskespil.dk/jobs/7690844",
+            location: "Brøndby, Denmark");
+        Assert.Single(Deduper.Deduplicate([jobindex, teamtailor]).Deduped);
+    }
 }
