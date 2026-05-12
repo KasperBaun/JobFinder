@@ -21,6 +21,10 @@
     <ProjectReference Include="..\..\backend\Jobmatch.Api\Jobmatch.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NReco.Logging.File" />
+  </ItemGroup>
+
   <Target Name="BuildFrontend"
           BeforeTargets="Build;Publish"
           Condition="'$(BuildGui)' == 'true'"
