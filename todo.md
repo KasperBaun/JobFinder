@@ -23,23 +23,76 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
-- **`LlmModelDownloader` SSL renegotiation failure against HuggingFace.**
-  Phase 2's "no manual GGUF placement" promise is currently broken: the
-  download endpoint fails with `"The SSL connection could not be established,
-  see inner exception."` on the first hop (`huggingface.co`). curl handles
-  it via SChannel renegotiation (`schannel: remote party requests
-  renegotiation`); .NET's `SocketsHttpHandler` does not, by default. Two
-  fix candidates: (a) configure `SocketsHttpHandler.SslOptions.AllowRenegotiation = true`
-  and/or fall back to `WinHttpHandler` on Windows; (b) follow the HF redirect
-  manually with a fresh client. Workaround until then: download via curl
-  to `data/<email>/models/`. Repro: `POST /api/llm/download-model`; smoke-test
-  on 2026-05-12 hit this on first attempt.
+- **DR Teknologi cross-portal duplicate (company alias).** Survivor from
+  the 2026-05-12 dedupe pass. Jobindex extracts `company: "DR"` from the
+  trailing title suffix; the hr-manager-dr adapter sets `company:
+  "Danmarks Radio"` from the upstream catalog. Both refer to the same
+  employer, so the `(title|company|location)` dedupe key diverges only
+  on company. Needs a small `CompanyAliases` table (analogous to the
+  existing `CityAliases`) so the deduper normalises "DR" / "Danmarks
+  Radio" → a single canonical key. Out of scope for the regex-only
+  dedupe fix.
+- **Source-specific remote-mode extraction (`ApiAdapter` /
+  `HrManagerAdapter`).** 5 of the current top-10 still tag `Unknown` —
+  the frontend hides the badge but the data is recoverable from source.
+  SmartRecruiters' JSON `customField` array commonly carries "Workplace
+  policy / Hybrid"; HR-Manager's JSON-LD often has `workLocation` /
+  `employmentType`. Per-adapter: pull the structured value first, fall
+  through to `BaseAdapter.InferRemoteMode` only when those fields are
+  silent.
+- **LLM judging speed-up — system-prompt KV caching.** Current run is
+  ~19 sec/listing on CPU → 50 listings ≈ 16 min. The system prompt is
+  identical across every call; only the user prompt varies. Pre-tokenise
+  the system prompt into a "warm" KV state once and rewind to it between
+  calls instead of `MemoryClear` (see `LLamaContext.SaveState` /
+  `LoadState` in LLamaSharp 0.27). Target ~5-10× speedup. Lower-hanging
+  follow-ups: GPU offload (already a documented `llm.gpu_layer_count`
+  knob — needs a `LLamaSharp.Backend.Cuda12` / `.Vulkan` swap in
+  `Directory.Packages.props`); lower `llm.top_n` 50 → 25.
 
 ## In progress
 
 _(none)_
 
 ## Completed (recent)
+
+- **Cross-portal Jobindex duplicate collapse.** Top-10 had two copies
+  each of Sopra Steria (#1+#2), Danske Spil (#4+#5), DR Teknologi
+  (#9+#10) — the Jobindex RSS feed appends `, <Company> [A/S|ApS|...]`
+  to every title while SmartRecruiters / Teamtailor / hr-manager
+  populate the bare Company field, so the dedupe key
+  `(title|company|location)` diverged on every component. Two changes:
+  (a) `RssAdapter` for jobindex.dk / it-jobbank.dk hosts splits the
+  trailing `, <suffix>` off the title and puts it in `Company` — fixes
+  display too; (b) `Deduper` normalises the Company key by stripping
+  legal-form suffixes (A/S, ApS, GmbH, Ltd, Inc, ...) and the Location
+  key by stripping the Danish remote tail `og mulighed for
+  hjemmearbejde / fjernarbejde`, taking the first comma segment, and
+  dropping a trailing 1-2-letter Copenhagen district code ("København K"
+  → "København"). Live smoke: Sopra Steria pair collapsed to one entry
+  at #1, Danske Spil pair collapsed to one at #3, mergedCount 994 →
+  984. Top-10 now shows 9 distinct jobs (was 7). DR Teknologi pair
+  ("DR" vs "Danmarks Radio") still survives — moved to Backlog as a
+  company-alias item. 27 new tests; 236 backend tests green.
+- **Host file logging for WARN+ at `data/<email>/logs/host.log`.**
+  Closes the silent-failure debugging gap flagged in the prior handoff
+  (terminal was suppressed for both info chatter and real errors).
+  Terminal stays quiet, but WARN / ERROR now flow to a rolling 5 MB
+  file under the user data dir via `NReco.Logging.File` (~30 KB).
+  Startup banner prints the log path so it's discoverable without
+  shelling around. Verified: 404'd `/api/history/<bad-id>` via curl,
+  host.log captured the `HistoryHandler` exception + full stack trace
+  while the terminal stayed clean.
+- **`LlmModelDownloader` SSL renegotiation against HuggingFace.**
+  Closed the Phase 2 "no manual GGUF placement" regression. .NET's
+  default `SocketsHttpHandler` refuses TLS renegotiation, which
+  `huggingface.co` requests on the first hop; configured the named
+  HttpClient with `SslOptions = new SslClientAuthenticationOptions {
+  AllowRenegotiation = true }`. Also surfaced `InnerException.Message`
+  in the SSE error event so future TLS/transport failures don't hide
+  behind the opaque outer message. Verified live: deleted the local
+  model, hit `/api/llm/download-model`, watched five progress events
+  stream from 4 MB to 20 MB before cancelling.
 
 - **LLM end-to-end smoke test.** First real run of the LLM judging layer
   (which had shipped untested in the prior session). Three issues
