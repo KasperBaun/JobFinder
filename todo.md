@@ -23,13 +23,53 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
+- **`LlmModelDownloader` SSL renegotiation failure against HuggingFace.**
+  Phase 2's "no manual GGUF placement" promise is currently broken: the
+  download endpoint fails with `"The SSL connection could not be established,
+  see inner exception."` on the first hop (`huggingface.co`). curl handles
+  it via SChannel renegotiation (`schannel: remote party requests
+  renegotiation`); .NET's `SocketsHttpHandler` does not, by default. Two
+  fix candidates: (a) configure `SocketsHttpHandler.SslOptions.AllowRenegotiation = true`
+  and/or fall back to `WinHttpHandler` on Windows; (b) follow the HF redirect
+  manually with a fresh client. Workaround until then: download via curl
+  to `data/<email>/models/`. Repro: `POST /api/llm/download-model`; smoke-test
+  on 2026-05-12 hit this on first attempt.
 
 ## In progress
 
-_(none — LLM Phase 1 + Phase 2 both shipped this session; remaining
-edge work is in Backlog below.)_
+_(none)_
 
 ## Completed (recent)
+
+- **LLM end-to-end smoke test.** First real run of the LLM judging layer
+  (which had shipped untested in the prior session). Three issues
+  surfaced and were fixed inline: (1) bumped `LLamaSharp` 0.21 → 0.27
+  because 0.21's bundled llama.cpp didn't recognise the `gemma3`
+  architecture (`unknown model architecture: 'gemma3'`); (2) cleared
+  the KV cache on each `LlamaSharpClient.ChatAsync` call —
+  `InteractiveExecutor` + reused `LLamaContext` was leaking state
+  across judgments, so call N+1 failed with `InvalidInputBatch` after
+  call N filled the cache to position 1252; (3) downloaded the GGUF
+  via curl as a workaround for the `LlmModelDownloader` HF SSL issue
+  (now in Backlog). After fixes: 50 listings judged in ~16 min on
+  CPU (~19 sec/listing on a Ryzen-class laptop, slower than the
+  estimate but fine for an on-demand tool). Top-10 result quality:
+  6/8 curated examples now in top 10 (was 5/8 keyword-only); Danske
+  Spil jumped from #19 → #4-5; Sundhed.dk #21 → #6; Dansk
+  Sundhedssikring #24 → #7; the four Netcompany "Associate Consultant"
+  entries the handoff specifically flagged are entirely absent from
+  the top-25; Trustpilot Salesforce QA and Unity Senior Graphics
+  Engineer also dropped out. Still missing: Promte (TheHub feed
+  rotation), Danske Bank (Oracle Cloud HCM, needs Playwright).
+
+- **Danish remote-mode keywords in `InferRemoteMode`.** The base
+  adapter's keyword inference was English-only, leaving 60% of the
+  fetched corpus tagged `Unknown` — mostly DK adapters whose listings
+  use `hjemmearbejde` / `hjemmefra` (Danish for work-from-home; the
+  cultural meaning is partial WFH, i.e. hybrid) or `fjernarbejde`
+  (full remote). Added all three. Frontend `ListingCard` also stopped
+  rendering the badge when value is `"unknown"`, mirroring what
+  `MarkdownReportWriter` already does for the markdown output.
 
 - **LLM model auto-download (Phase 2).** New `LlmModelDownloader`
   service streams the GGUF file from a configurable HuggingFace URL

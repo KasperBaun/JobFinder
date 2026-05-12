@@ -200,9 +200,12 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
         if (string.IsNullOrEmpty(text)) return RemoteMode.Unknown;
         var lower = text.ToLowerInvariant();
         if (lower.Contains("hybrid")) return RemoteMode.Hybrid;
-        if (lower.Contains("fully remote") || lower.Contains("100% remote") || lower.Contains("remote-only") || lower.Contains("remote only") || lower.Contains("work from home") || lower.Contains("wfh")) return RemoteMode.Remote;
+        if (lower.Contains("fully remote") || lower.Contains("100% remote") || lower.Contains("remote-only") || lower.Contains("remote only") || lower.Contains("work from home") || lower.Contains("wfh") || lower.Contains("fjernarbejde")) return RemoteMode.Remote;
         if (lower.Contains("onsite") || lower.Contains("on-site") || lower.Contains("in-office")) return RemoteMode.Onsite;
         if (lower.Contains("remote")) return RemoteMode.Remote;
+        // Danish: "hjemmearbejde" / "hjemmefra" appear as "mulighed for hjemmearbejde"
+        // (possibility of WFH) — Danish ads use this for hybrid setups, not full remote.
+        if (lower.Contains("hjemmearbejde") || lower.Contains("hjemmefra")) return RemoteMode.Hybrid;
         return RemoteMode.Unknown;
     }
 

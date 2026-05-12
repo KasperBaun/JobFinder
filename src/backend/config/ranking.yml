@@ -56,7 +56,7 @@ non_engineering_title_multiplier: 0.2
 #                power users who already run Ollama; uses model field as the
 #                model tag (e.g. "gemma3:4b").
 llm:
-  enabled: false
+  enabled: true
   provider: llamasharp
   model: gemma3:4b
   model_path: models/gemma-3-4b-it-q4_k_m.gguf
