@@ -62,4 +62,12 @@ public static class Routes
         public const string Base = $"{ApiConstants.RouteBase}/marks";
         public const string Set = Base;
     }
+
+    public static class Llm
+    {
+        public const string Tag = "Llm";
+        public const string Base = $"{ApiConstants.RouteBase}/llm";
+        public const string Status = $"{Base}/status";
+        public const string DownloadModel = $"{Base}/download-model";
+    }
 }

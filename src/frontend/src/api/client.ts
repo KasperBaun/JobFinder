@@ -103,6 +103,47 @@ export async function setMark(req: MarkRequest): Promise<MarkResponse> {
   })
 }
 
+export type LlmStatus = {
+  enabled: boolean
+  provider: string
+  modelPresent: boolean
+  modelPath: string
+  modelSizeBytes: number | null
+  downloadUrl: string
+}
+
+export async function getLlmStatus(): Promise<LlmStatus> {
+  return apiFetch<LlmStatus>('/api/llm/status')
+}
+
+export type LlmDownloadEvent =
+  | { type: 'progress'; downloadedBytes: number; totalBytes: number | null }
+  | { type: 'complete'; modelPath: string; bytes: number }
+  | { type: 'error'; message: string }
+
+export async function* downloadLlmModel(signal?: AbortSignal): AsyncGenerator<LlmDownloadEvent> {
+  const res = await fetch('/api/llm/download-model', {
+    method: 'POST',
+    headers: { Accept: 'text/event-stream' },
+    signal,
+  })
+  if (!res.ok || !res.body) throw new Error(`Download failed: ${res.status}`)
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const events = buffer.split('\n\n')
+    buffer = events.pop() ?? ''
+    for (const block of events) {
+      const dataLine = block.split('\n').find(l => l.startsWith('data: '))
+      if (dataLine) yield JSON.parse(dataLine.slice(6)) as LlmDownloadEvent
+    }
+  }
+}
+
 export async function* startSearch(
   req: SearchRequest,
   signal?: AbortSignal,

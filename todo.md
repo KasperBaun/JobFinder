@@ -26,19 +26,26 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-- **LLM model auto-download UX (Phase 2 of LLM judging).** The judge
-  now wires through `ILlmClient` with both LlamaSharp (in-process,
-  default) and Ollama (HTTP, power-user) backends, but the GGUF model
-  file is not yet downloaded automatically — the user has to place
-  `gemma-3-4b-it-q4_k_m.gguf` (~2.5 GB) under
-  `data/<email>/models/` manually. Need: a GUI banner on first run
-  when `llm.enabled = true` and the file is missing, with a
-  click-to-download button that streams the file from Hugging Face
-  with a progress bar. Plus a fallback notice in the search SSE
-  stream when the model is absent so the user knows judging is being
-  skipped.
+_(none — LLM Phase 1 + Phase 2 both shipped this session; remaining
+edge work is in Backlog below.)_
 
 ## Completed (recent)
+
+- **LLM model auto-download (Phase 2).** New `LlmModelDownloader`
+  service streams the GGUF file from a configurable HuggingFace URL
+  to disk with chunked progress reporting. Two new API endpoints —
+  `GET /api/llm/status` (returns `{ enabled, provider, modelPresent,
+  modelPath, modelSizeBytes, downloadUrl }`) and
+  `POST /api/llm/download-model` (SSE stream of `progress` /
+  `complete` / `error` events). Frontend `<LlmModelBanner />` mounts
+  on the Search page and shows when `llm.enabled = true` but the
+  model file is missing — single click triggers the download with a
+  live progress bar (~every 4 MB so SSE stays bounded), invalidates
+  the status query on completion so the banner disappears. Default
+  download URL is mradermacher's Q4_K_M Gemma 3 4B (~2.32 GB,
+  public, no auth). User-perceived experience: enable the LLM in
+  ranking.yml, restart, click "Download model" once, judging works
+  on the next search. No Docker, no Ollama install needed.
 
 - **LLM judging — pluggable backend (LlamaSharp default, Ollama
   alternate) + prompt + ExamplesLoader + SearchService integration.**

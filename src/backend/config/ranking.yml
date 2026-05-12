@@ -60,6 +60,9 @@ llm:
   provider: llamasharp
   model: gemma3:4b
   model_path: models/gemma-3-4b-it-q4_k_m.gguf
+  # mradermacher's Q4_K_M Gemma 3 4B GGUF — public, no auth, ~2.32 GB.
+  # The /api/llm/download-model endpoint streams from this URL to model_path.
+  model_download_url: https://huggingface.co/mradermacher/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it.Q4_K_M.gguf
   base_url: http://localhost:11434
   top_n: 50              # judge only the top-N from keyword ranker (0 = all deduped)
   weight: 0.5            # 0.0 = keyword-only, 1.0 = LLM-only
