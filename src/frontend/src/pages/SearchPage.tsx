@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getHistory, getProviders } from '../api/client'
 import { useSearchStream } from '../hooks/useSearchStream'
 import { ListingCard } from '../components/ListingCard'
+import { LlmModelBanner } from '../components/LlmModelBanner'
 import { formatRelative } from '../utils/time'
 import type { SearchProgressEvent, SearchRequest } from '../api/types'
 
@@ -98,6 +99,8 @@ export function SearchPage() {
           and writes a shortlist to <code>top-jobs.md</code>.
         </p>
       </header>
+
+      <LlmModelBanner />
 
       <div className="search-controls">
         <button

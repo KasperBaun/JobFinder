@@ -64,6 +64,7 @@ public static class RankingConfigLoader
             Provider: ReadString(n, "provider", d.Provider),
             Model: ReadString(n, "model", d.Model),
             ModelPath: ReadString(n, "model_path", d.ModelPath),
+            ModelDownloadUrl: ReadString(n, "model_download_url", d.ModelDownloadUrl),
             BaseUrl: ReadString(n, "base_url", d.BaseUrl),
             TopN: ReadInt(n, "top_n", d.TopN),
             Weight: ReadDouble(n, "weight", d.Weight),
