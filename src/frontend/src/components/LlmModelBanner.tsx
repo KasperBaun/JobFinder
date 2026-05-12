@@ -72,9 +72,9 @@ export function LlmModelBanner() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
         <div>
-          <strong>LLM judging is enabled, but the local model isn't downloaded yet.</strong>
+          <strong>AI review is enabled, but the local model hasn't been downloaded yet.</strong>
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            Provider <code>{status.provider}</code> expects {' '}
+            Engine <code>{status.provider}</code> expects {' '}
             <code style={{ wordBreak: 'break-all' }}>{status.modelPath}</code>.
           </div>
         </div>
@@ -118,7 +118,7 @@ export function LlmModelBanner() {
 
       {done && (
         <div style={{ marginTop: 12, fontSize: 13, color: '#0a7d3a' }}>
-          ✓ Model downloaded ({formatBytes(progress!.downloaded)}). LLM judging will run on the next search.
+          ✓ Model downloaded ({formatBytes(progress!.downloaded)}). AI review will run on the next search.
         </div>
       )}
 

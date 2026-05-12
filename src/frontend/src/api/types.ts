@@ -95,6 +95,7 @@ export type SearchRequest = {
 export type ListingMatch = {
   id: string
   portal: string
+  portalDisplayName?: string
   title: string
   company?: string
   location?: string
@@ -175,6 +176,7 @@ export type ScoredEntry = {
   url: string
   postedAt?: string
   portal: string
+  portalDisplayName?: string
   score: number
   breakdown: ScoreBreakdown
   primaryStackHits: string[]

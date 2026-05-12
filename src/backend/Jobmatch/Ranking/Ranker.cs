@@ -478,55 +478,55 @@ public static class Ranker
     {
         if (disqualifierHits.Count > 0)
         {
-            return $"Disqualified by: {string.Join(", ", disqualifierHits)}.";
+            return $"Removed because of: {string.Join(", ", disqualifierHits)}.";
         }
 
         var parts = new List<string>();
         if (primaryHits.Count > 0)
         {
-            parts.Add($"Primary stack hits: {string.Join(", ", primaryHits)}.");
+            parts.Add($"Must-have skill match: {string.Join(", ", primaryHits)}.");
         }
         else
         {
-            parts.Add("No primary-stack keywords matched.");
+            parts.Add("None of your must-have skills mentioned.");
         }
 
         if (secondaryHits.Count > 0)
         {
-            parts.Add($"Secondary: {string.Join(", ", secondaryHits)}.");
+            parts.Add($"Also matches: {string.Join(", ", secondaryHits)}.");
         }
         if (domainHits.Count > 0)
         {
-            parts.Add($"Domain: {string.Join(", ", domainHits)}.");
+            parts.Add($"Industry: {string.Join(", ", domainHits)}.");
         }
 
         parts.Add((seniorityMatch, seniorityIsAdjacent) switch
         {
-            (true, true) => "Seniority adjacent (near-fit).",
-            (true, false) => "Seniority fits.",
-            (false, _) => "Seniority mismatch.",
-            (null, _) => "Seniority not stated.",
+            (true, true) => "Experience level close fit.",
+            (true, false) => "Experience level matches.",
+            (false, _) => "Experience level doesn't match.",
+            (null, _) => "Experience level not stated.",
         });
 
         if (nonEngineeringTitle)
         {
-            parts.Add("Title looks non-engineering — score multiplied down.");
+            parts.Add("Title doesn't look like a developer role — rating reduced.");
         }
 
         var locPart = (locationMatch, remoteMatch) switch
         {
-            (true, _) => $"Location match ({listing.Location}).",
-            (_, true) => $"Remote-mode compatible ({listing.RemoteMode.ToString().ToLowerInvariant()}).",
-            (false, false) => "Neither location nor remote preference matches.",
-            (null, null) => "Location/remote details not stated.",
-            (false, null) => "Location doesn't match; remote mode unknown.",
-            (null, false) => "Location unknown; remote mode doesn't fit.",
+            (true, _) => $"Location: {listing.Location}.",
+            (_, true) => $"Remote work OK ({listing.RemoteMode.ToString().ToLowerInvariant()}).",
+            (false, false) => "Neither location nor remote setup matches.",
+            (null, null) => "Location and remote setup not stated.",
+            (false, null) => "Location doesn't match; remote setup not stated.",
+            (null, false) => "Location not stated; remote setup doesn't match.",
         };
         parts.Add(locPart);
 
         if (ageDays is double age && age > 2 * halfLifeDays)
         {
-            parts.Add($"Posted {(int)Math.Round(age)} days ago — freshness signal heavily decayed.");
+            parts.Add($"Posted {(int)Math.Round(age)} days ago — rating reduced for age.");
         }
 
         return string.Join(" ", parts);

@@ -51,24 +51,24 @@ export function ProviderDetailPage() {
     <div className="page">
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
-      <Link to="/providers" className="back-link">← all providers</Link>
+      <Link to="/providers" className="back-link">← all sources</Link>
 
       {isLoading && <div className="muted">Loading…</div>}
-      {error && <div className="error-text">Failed to load provider.</div>}
+      {error && <div className="error-text">Failed to load source.</div>}
 
       {data && (
         <>
           <header className="page__header">
             <div className="provider-detail__head">
               <div className="provider-detail__head-left">
-                <div className="page__eyebrow">provider · #{data.id}</div>
+                <div className="page__eyebrow">source</div>
                 <h1 className="page__heading provider-detail__heading">{data.displayName}</h1>
               </div>
               <Toggle
                 checked={data.enabled}
                 onChange={(v) => toggle.mutate(v)}
-                label={data.enabled ? 'Enabled' : 'Disabled'}
-                ariaLabel="enabled"
+                label={data.enabled ? 'On' : 'Off'}
+                ariaLabel="on"
               />
             </div>
           </header>
@@ -77,7 +77,7 @@ export function ProviderDetailPage() {
             <section className="card">
               <h2 className="card__title">About this source</h2>
               <dl className="provider-detail__readonly">
-                <ReadonlyField label="Source type" value={friendlyType(data.type)} />
+                <ReadonlyField label="Type" value={friendlyType(data.type)} />
                 {data.notes && <ReadonlyField label="Notes" value={data.notes} />}
               </dl>
             </section>
@@ -96,38 +96,38 @@ export function ProviderDetailPage() {
 
             <section className="card">
               <div className="row-spread">
-                <h2 className="card__title" style={{ marginBottom: 0 }}>Test connection</h2>
+                <h2 className="card__title" style={{ marginBottom: 0 }}>Test the source</h2>
                 <button
                   type="button"
                   className="btn btn--secondary"
                   onClick={() => test.mutate()}
                   disabled={test.isPending || data.type === 'manual'}
                 >
-                  {test.isPending ? <span className="spinner" /> : 'Run test'}
+                  {test.isPending ? <span className="spinner" /> : 'Test now'}
                 </button>
               </div>
               <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>
                 {data.type === 'manual'
                   ? "This source doesn't fetch automatically — there's nothing to test."
-                  : 'Runs a single test fetch and reports how many listings come back, how long it took, and one example title.'}
+                  : 'Pulls listings once and shows how many came back, how long it took, and one example title.'}
               </p>
               {testResult && (
                 <div className={`provider-test-result provider-test-result--${testResult.ok ? 'ok' : 'fail'}`}>
                   <div className="provider-test-result__head">
                     <span className="provider-test-result__dot" aria-hidden />
-                    <span>{testResult.ok ? 'Connection healthy' : 'Connection failed'}</span>
+                    <span>{testResult.ok ? 'Working' : 'Connection failed'}</span>
                     <span className="provider-test-result__meta">
                       {testResult.durationMs}ms · {formatRelative(testResult.testedAt)}
                     </span>
                   </div>
                   <dl className="provider-test-result__grid">
                     <div>
-                      <dt>fetched</dt>
+                      <dt>jobs found</dt>
                       <dd className="tabular">{testResult.fetchedCount}</dd>
                     </div>
                     {testResult.sampleTitle && (
                       <div>
-                        <dt>sample</dt>
+                        <dt>example</dt>
                         <dd>{testResult.sampleTitle}</dd>
                       </div>
                     )}
@@ -144,7 +144,7 @@ export function ProviderDetailPage() {
 
             {data.recentRuns.length > 0 && (
               <section className="card">
-                <h2 className="card__title">Recent runs</h2>
+                <h2 className="card__title">Recent searches</h2>
                 <ul className="provider-recent-runs">
                   {data.recentRuns.map((r) => (
                     <li key={r.runId} className={`provider-recent-runs__row provider-recent-runs__row--${r.status}`}>
@@ -153,7 +153,7 @@ export function ProviderDetailPage() {
                       <span className="provider-recent-runs__count tabular">
                         {typeof r.fetchedCount === 'number' ? r.fetchedCount : '—'}
                       </span>
-                      <Link to={`/history/${r.runId}`} className="provider-recent-runs__link">view run →</Link>
+                      <Link to={`/history/${r.runId}`} className="provider-recent-runs__link">view search →</Link>
                     </li>
                   ))}
                 </ul>
@@ -168,9 +168,9 @@ export function ProviderDetailPage() {
 
 function friendlyType(type: string): string {
   switch (type) {
-    case 'api':    return 'Job board API'
-    case 'rss':    return 'RSS feed'
-    case 'html':   return 'Web scraping'
+    case 'api':    return 'Auto-fetched'
+    case 'rss':    return 'News feed'
+    case 'html':   return 'Read from website'
     case 'manual': return 'Manual import'
     default:       return type
   }
@@ -241,7 +241,7 @@ function SecretsCard({
     <section className="card">
       <h2 className="card__title">{friendlySecretLabel(secretName)}</h2>
       <p className="field__hint">
-        Saved on this computer only. Until you save a value here, this source is skipped during searches.
+        Saved on this computer only. Until you save a value here, this source is skipped when you search.
       </p>
       <div className="secrets-form">
         <input

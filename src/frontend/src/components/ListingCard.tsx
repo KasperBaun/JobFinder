@@ -19,7 +19,7 @@ export function ListingCard({ match, runId, mark }: Props) {
         <div className="listing-card__badges">
           <span className="badge badge--score">{match.score.toFixed(2)}</span>
           {match.remoteMode && match.remoteMode !== 'unknown' && <span className="badge">{match.remoteMode}</span>}
-          <span className="badge badge--muted">{match.portal}</span>
+          <span className="badge badge--muted">{match.portalDisplayName ?? match.portal}</span>
         </div>
       </header>
 
@@ -39,7 +39,7 @@ export function ListingCard({ match, runId, mark }: Props) {
       <footer className="listing-card__footer">
         <MarkButton runId={runId} listingId={match.id} current={mark} />
         <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--primary">
-          Open listing →
+          Open job posting →
         </a>
       </footer>
     </article>

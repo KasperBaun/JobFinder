@@ -18,9 +18,16 @@ interface Props {
 }
 
 export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) {
-  if (!data.scored) return <div className="muted">No ranking data recorded for this run.</div>
+  if (!data.scored) return <div className="muted">No ratings recorded for this search.</div>
 
   const portalCounts = useMemo(() => countBy(data.scored ?? [], (e) => e.portal), [data.scored])
+  const portalDisplayNames = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const e of data.scored ?? []) {
+      if (!m.has(e.portal)) m.set(e.portal, e.portalDisplayName ?? e.portal)
+    }
+    return m
+  }, [data.scored])
   const stackCounts = useMemo(() => countStackHits(data.scored ?? []), [data.scored])
 
   const filtered = useMemo(
@@ -42,11 +49,12 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
         filters={filters}
         onChange={onChange}
         portalCounts={portalCounts}
+        portalDisplayNames={portalDisplayNames}
         stackCounts={stackCounts}
       />
       <div className="longlist__strip muted">
         {filtered.length} of {data.scored.length}
-        {' · sorted by '}{filters.sort.key}{' '}{filters.sort.dir === 'desc' ? '↓' : '↑'}
+        {' · sorted by '}{sortKeyLabel(filters.sort.key)}{' '}{filters.sort.dir === 'desc' ? '↓' : '↑'}
       </div>
       <div className="table-wrap">
         <table className="table longlist__table">
@@ -54,11 +62,11 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
             <tr>
               <SortableHeader sortKey="title" filters={filters} onClick={setSort}>Title</SortableHeader>
               <SortableHeader sortKey="company" filters={filters} onClick={setSort}>Company</SortableHeader>
-              <SortableHeader sortKey="portal" filters={filters} onClick={setSort}>Portal</SortableHeader>
+              <SortableHeader sortKey="portal" filters={filters} onClick={setSort}>Source</SortableHeader>
               <SortableHeader sortKey="location" filters={filters} onClick={setSort}>Location</SortableHeader>
               <SortableHeader sortKey="posted" filters={filters} onClick={setSort}>Posted</SortableHeader>
-              <SortableHeader sortKey="score" filters={filters} onClick={setSort}>Score</SortableHeader>
-              <th>Mark</th>
+              <SortableHeader sortKey="score" filters={filters} onClick={setSort}>Rating</SortableHeader>
+              <th>Your rating</th>
               <th aria-label="expand"></th>
             </tr>
           </thead>
@@ -70,7 +78,7 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
         </table>
         {filtered.length === 0 && (
           <div className="muted longlist__empty">
-            No listings match these filters.{' '}
+            No jobs match these filters.{' '}
             <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
               Reset
             </button>
@@ -106,11 +114,12 @@ function SortableHeader({
 }
 
 function FilterBar({
-  filters, onChange, portalCounts, stackCounts,
+  filters, onChange, portalCounts, portalDisplayNames, stackCounts,
 }: {
   filters: LonglistFilters
   onChange: (next: LonglistFilters) => void
   portalCounts: Map<string, number>
+  portalDisplayNames: Map<string, string>
   stackCounts: Map<string, number>
 }) {
   const togglePortal = (p: string) =>
@@ -142,12 +151,15 @@ function FilterBar({
       />
 
       {portalCounts.size > 0 && (
-        <ChipGroup label="portal">
-          {[...portalCounts].sort(([a], [b]) => a.localeCompare(b)).map(([p, n]) => (
-            <Chip key={p} active={filters.portals.includes(p)} onClick={() => togglePortal(p)}>
-              {p} <span className="chip__count">{n}</span>
-            </Chip>
-          ))}
+        <ChipGroup label="source">
+          {[...portalCounts]
+            .map(([p, n]) => ({ slug: p, label: portalDisplayNames.get(p) ?? p, count: n }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .map(({ slug, label, count }) => (
+              <Chip key={slug} active={filters.portals.includes(slug)} onClick={() => togglePortal(slug)}>
+                {label} <span className="chip__count">{count}</span>
+              </Chip>
+            ))}
         </ChipGroup>
       )}
 
@@ -160,7 +172,7 @@ function FilterBar({
       </PillGroup>
 
       <div className="longlist__score">
-        <label className="muted small">score {filters.scoreMin.toFixed(2)}–{filters.scoreMax.toFixed(2)}</label>
+        <label className="muted small">rating {filters.scoreMin.toFixed(2)}–{filters.scoreMax.toFixed(2)}</label>
         <input
           type="range" min={0} max={1} step={0.01}
           value={filters.scoreMin}
@@ -174,7 +186,7 @@ function FilterBar({
       </div>
 
       {stackCounts.size > 0 && (
-        <ChipGroup label="stack hit">
+        <ChipGroup label="skill match">
           {[...stackCounts].sort(([, a], [, b]) => b - a).map(([s, n]) => (
             <Chip key={s} active={filters.stackHits.includes(s)} onClick={() => toggleStack(s)}>
               {s} <span className="chip__count">{n}</span>
@@ -183,10 +195,10 @@ function FilterBar({
         </ChipGroup>
       )}
 
-      <PillGroup label="mark">
+      <PillGroup label="your rating">
         {(['all', 'good', 'bad', 'unmarked'] as const).map((k) => (
           <Pill key={k} active={filters.mark === k} onClick={() => onChange({ ...filters, mark: k })}>
-            {k}
+            {k === 'unmarked' ? 'not rated' : k}
           </Pill>
         ))}
       </PillGroup>
@@ -197,7 +209,7 @@ function FilterBar({
           checked={filters.shortlistOnly}
           onChange={(e) => onChange({ ...filters, shortlistOnly: e.target.checked })}
         />
-        <span>shortlist only</span>
+        <span>top jobs only</span>
       </label>
 
       {!isDefault && (
@@ -258,7 +270,7 @@ function Row({ entry, runId, mark }: { entry: ScoredEntry; runId: string; mark?:
       <tr>
         <td><a href={entry.url} target="_blank" rel="noreferrer">{entry.title}</a></td>
         <td>{entry.company ?? <span className="muted">—</span>}</td>
-        <td><span className="badge badge--muted">{entry.portal}</span></td>
+        <td><span className="badge badge--muted">{entry.portalDisplayName ?? entry.portal}</span></td>
         <td>{entry.location ?? <span className="muted">—</span>}</td>
         <td className="tabular mono">
           {entry.postedAt ? formatRelative(entry.postedAt) : <span className="muted">—</span>}
@@ -285,6 +297,14 @@ function Row({ entry, runId, mark }: { entry: ScoredEntry; runId: string; mark?:
       )}
     </>
   )
+}
+
+function sortKeyLabel(key: SortKey): string {
+  switch (key) {
+    case 'portal': return 'source'
+    case 'score':  return 'rating'
+    default:       return key
+  }
 }
 
 function clamp01(v: number) { return Math.max(0, Math.min(1, v)) }
@@ -334,7 +354,7 @@ function sortComparator(key: SortKey, dir: 'asc' | 'desc') {
     switch (key) {
       case 'title':    v = a.title.localeCompare(b.title); break
       case 'company':  v = (a.company ?? '').localeCompare(b.company ?? ''); break
-      case 'portal':   v = a.portal.localeCompare(b.portal); break
+      case 'portal':   v = (a.portalDisplayName ?? a.portal).localeCompare(b.portalDisplayName ?? b.portal); break
       case 'location': v = (a.location ?? '').localeCompare(b.location ?? ''); break
       case 'posted':   v = (a.postedAt ?? '').localeCompare(b.postedAt ?? ''); break
       case 'score':    v = a.score - b.score; break

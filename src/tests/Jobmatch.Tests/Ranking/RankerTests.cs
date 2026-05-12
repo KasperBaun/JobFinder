@@ -271,8 +271,8 @@ public sealed class RankerTests
 
         Assert.Single(matches);
         Assert.Equal(true, matches[0].Reasoning.SeniorityMatch);
-        Assert.Contains("adjacent", matches[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Seniority fits", matches[0].Reasoning.Notes);
+        Assert.Contains("close fit", matches[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Experience level matches", matches[0].Reasoning.Notes);
     }
 
     [Fact]
@@ -363,7 +363,7 @@ public sealed class RankerTests
             $"penalty must be < 0 when triggered, got {pmScored[0].Breakdown.NonEngineeringTitlePenalty:0.000}");
         Assert.True(sweScored[0].Breakdown.NonEngineeringTitlePenalty == 0,
             $"engineering title must not trigger penalty, got {sweScored[0].Breakdown.NonEngineeringTitlePenalty:0.000}");
-        Assert.Contains("non-engineering", pmScored[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("developer role", pmScored[0].Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0.2 * sweScored[0].Score, pmScored[0].Score, precision: 4);
     }
 

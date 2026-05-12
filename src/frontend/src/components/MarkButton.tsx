@@ -19,9 +19,9 @@ function nextState(value: MarkValue): MarkValue {
 }
 
 const TOOLTIPS: Record<'unset' | 'good' | 'bad', string> = {
-  unset: 'Rate this match. Marks teach which listings fit you and feed future ranking. Click: Good match.',
+  unset: 'Rate this job. Your ratings help jobfinder find better jobs next time. Click for a good match.',
   good:  'Marked as a Good match. Click to flip to Not a match.',
-  bad:   'Marked as Not a match. Click to clear the mark.',
+  bad:   'Marked as Not a match. Click to clear the rating.',
 }
 
 export function MarkButton({ runId, listingId, current, compact }: Props) {
@@ -72,7 +72,7 @@ export function MarkButton({ runId, listingId, current, compact }: Props) {
   const label =
     optimistic === 'good' ? 'Good match' :
     optimistic === 'bad' ? 'Not a match' :
-    'Rate match'
+    'Rate this job'
 
   const cls =
     optimistic === 'good' ? `mark-button mark-button--good${compact ? ' mark-button--compact' : ''}` :

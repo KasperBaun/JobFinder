@@ -24,10 +24,10 @@ function classifyHealth(p: ProviderSummary, sessionTest?: SessionTest): Health {
 }
 
 const HEALTH_LABEL: Record<Health, string> = {
-  working: 'working',
+  working: 'OK',
   failing: 'failing',
   stale: 'stale',
-  untested: 'untested',
+  untested: 'not tested yet',
 }
 
 export function ProvidersPage() {
@@ -102,27 +102,27 @@ export function ProvidersPage() {
       <header className="page__header page__header--with-action">
         <div>
           <div className="page__eyebrow">01 / sources</div>
-          <h1 className="page__heading">Job <em>portals</em></h1>
+          <h1 className="page__heading">Job <em>sites</em></h1>
           <p className="page__lede">
-            Where listings come from. Toggle, test, or edit any provider.
+            Where listings come from. Turn each one on or off, test it, or edit it.
           </p>
         </div>
       </header>
 
-      {isLoading && <div className="muted">Loading providers…</div>}
-      {error && <div className="error-text">Failed to load providers.</div>}
+      {isLoading && <div className="muted">Loading sources…</div>}
+      {error && <div className="error-text">Failed to load sources.</div>}
 
       {stats && (
         <div className="provider-stats">
           <Stat label="total" value={stats.total} />
-          <Stat label="enabled" value={stats.enabled} tone={stats.enabled > 0 ? 'good' : undefined} />
-          <Stat label="disabled" value={stats.disabled} tone="muted" />
+          <Stat label="on" value={stats.enabled} tone={stats.enabled > 0 ? 'good' : undefined} />
+          <Stat label="off" value={stats.disabled} tone="muted" />
         </div>
       )}
 
       {data && data.providers.length === 0 && (
         <div className="hint-card">
-          No providers configured yet.
+          No job sites set up yet.
         </div>
       )}
 
@@ -152,12 +152,12 @@ export function ProvidersPage() {
                   <span className="provider-tile__health-meta">
                     {session?.kind === 'done' ? (
                       session.result.ok
-                        ? `tested · ${session.result.fetchedCount} · ${session.result.durationMs}ms`
+                        ? `tested · ${session.result.fetchedCount} jobs · ${session.result.durationMs}ms`
                         : `tested · ${truncate(session.result.error ?? 'failed', 32)}`
                     ) : p.lastFetchedAt ? (
-                      `${formatRelative(p.lastFetchedAt)}${typeof p.lastFetchCount === 'number' ? ` · ${p.lastFetchCount}` : ''}`
+                      `${formatRelative(p.lastFetchedAt)}${typeof p.lastFetchCount === 'number' ? ` · ${p.lastFetchCount} jobs` : ''}`
                     ) : (
-                      'never run'
+                      'never used'
                     )}
                   </span>
                 </div>
@@ -174,7 +174,7 @@ export function ProvidersPage() {
                     className="btn btn--primary btn--sm"
                     onClick={() => test.mutate(p.id)}
                     disabled={testing || p.type === 'manual'}
-                    title={p.type === 'manual' ? 'Manual providers have no live endpoint to test' : undefined}
+                    title={p.type === 'manual' ? "Manual sources can't be tested automatically" : undefined}
                   >
                     {testing ? <span className="spinner" /> : 'Test'}
                   </button>
@@ -186,9 +186,9 @@ export function ProvidersPage() {
                     checked={p.enabled}
                     onChange={(e) => toggle.mutate({ p, enabled: e.target.checked })}
                     disabled={toggle.isPending}
-                    aria-label={`${p.displayName} enabled`}
+                    aria-label={`${p.displayName} on`}
                   />
-                  <span>{p.enabled ? 'enabled' : 'disabled'}</span>
+                  <span>{p.enabled ? 'On' : 'Off'}</span>
                 </label>
               </article>
             )
@@ -219,9 +219,9 @@ function truncate(s: string, max: number): string {
 
 function friendlyType(type: string): string {
   switch (type) {
-    case 'api':    return 'Job board API'
-    case 'rss':    return 'RSS feed'
-    case 'html':   return 'Web scraping'
+    case 'api':    return 'Auto-fetched'
+    case 'rss':    return 'News feed'
+    case 'html':   return 'Read from website'
     case 'manual': return 'Manual import'
     default:       return type
   }

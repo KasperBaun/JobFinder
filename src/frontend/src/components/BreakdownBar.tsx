@@ -1,11 +1,11 @@
 import type { ScoreBreakdown, ScoredEntry } from '../api/types'
 
 export const COMPONENT_LABELS: Array<{ key: keyof ScoreBreakdown; label: string }> = [
-  { key: 'primaryStack', label: 'primary' },
-  { key: 'secondaryStack', label: 'secondary' },
-  { key: 'seniority', label: 'seniority' },
+  { key: 'primaryStack', label: 'must-have skills' },
+  { key: 'secondaryStack', label: 'nice-to-have skills' },
+  { key: 'seniority', label: 'experience level' },
   { key: 'locationRemote', label: 'location' },
-  { key: 'domain', label: 'domain' },
+  { key: 'domain', label: 'industry' },
   { key: 'freshness', label: 'freshness' },
 ]
 
@@ -16,7 +16,7 @@ export function BreakdownBar({ b }: { b: ScoreBreakdown }) {
     return <span className="muted">—</span>
   }
   return (
-    <div className="bd-bar" aria-label="score breakdown">
+    <div className="bd-bar" aria-label="rating breakdown">
       {positives.map((c, i) => {
         if (c.value <= 0) return null
         const pct = (c.value / Math.max(totalPositive, 0.001)) * 100
@@ -33,7 +33,7 @@ export function BreakdownBar({ b }: { b: ScoreBreakdown }) {
         <span
           className="bd-bar__seg bd-bar__seg--penalty"
           style={{ width: '100%' }}
-          title={`disqualifier penalty: ${b.disqualifierPenalty.toFixed(3)}`}
+          title={`deal-breaker penalty: ${b.disqualifierPenalty.toFixed(3)}`}
         />
       )}
     </div>
@@ -53,14 +53,14 @@ export function BreakdownDetail({ entry }: { entry: ScoredEntry }) {
       ))}
       {entry.breakdown.disqualifierPenalty !== 0 && (
         <div className="bd-detail__row">
-          <span className="bd-detail__label" style={{ color: 'var(--c-bad)' }}>disqualifier penalty</span>
+          <span className="bd-detail__label" style={{ color: 'var(--c-bad)' }}>deal-breaker penalty</span>
           <span className="bd-detail__value mono tabular" style={{ color: 'var(--c-bad)' }}>
             {entry.breakdown.disqualifierPenalty.toFixed(3)}
           </span>
         </div>
       )}
       <div className="bd-detail__row bd-detail__row--total">
-        <span className="bd-detail__label">total (clamped)</span>
+        <span className="bd-detail__label">total rating</span>
         <span className="bd-detail__value mono tabular">{entry.score.toFixed(3)}</span>
       </div>
     </div>

@@ -15,4 +15,5 @@ public sealed record ListingMatch(
     double Score,
     string Reasoning,
     IReadOnlyList<string> PrimaryStackHits,
-    IReadOnlyList<string> SecondaryStackHits);
+    IReadOnlyList<string> SecondaryStackHits,
+    string? PortalDisplayName = null);
