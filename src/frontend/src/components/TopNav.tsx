@@ -2,9 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { shutdown } from '../api/client'
 
 const links: { to: string; label: string; end?: boolean }[] = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/providers', label: 'Providers' },
-  { to: '/skillset', label: 'Skillset' },
+  { to: '/', label: 'Overview', end: true },
+  { to: '/providers', label: 'Sources' },
+  { to: '/skillset', label: 'Profile' },
   { to: '/search', label: 'Search' },
   { to: '/history', label: 'History' },
 ]
@@ -13,7 +13,7 @@ export function TopNav() {
   const navigate = useNavigate()
 
   async function handleQuit() {
-    if (!confirm('Stop the jobfinder app?')) return
+    if (!confirm('Close jobfinder?')) return
     try {
       await shutdown()
     } catch {
@@ -60,8 +60,8 @@ export function TopNav() {
           type="button"
           className="top-nav__quit"
           onClick={handleQuit}
-          aria-label="Stop the jobfinder app"
-          data-tooltip="Stop the jobfinder app"
+          aria-label="Close jobfinder"
+          data-tooltip="Close jobfinder"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
                stroke="currentColor" strokeWidth="2"

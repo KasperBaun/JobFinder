@@ -66,7 +66,7 @@ export function SkillsetPage() {
     onSuccess: (saved) => {
       setOriginal(saved)
       void queryClient.invalidateQueries({ queryKey: ['skillset'] })
-      setToast({ kind: 'ok', message: 'Skillset saved' })
+      setToast({ kind: 'ok', message: 'Profile saved' })
     },
     onError: (err) => {
       setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
@@ -86,21 +86,21 @@ export function SkillsetPage() {
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
       <header className="page__header">
-        <div className="page__eyebrow">02 / criteria</div>
-        <h1 className="page__heading">Search <em>criteria</em></h1>
+        <div className="page__eyebrow">02 / profile</div>
+        <h1 className="page__heading">Your <em>profile</em></h1>
         <p className="page__lede">
-          Edit the skillset that scores every listing. Saved straight to <code>skillset.md</code>.
+          Edit what jobfinder uses to rate every listing. Saved automatically.
         </p>
       </header>
 
-      {isLoading && <div className="muted">Loading skillset…</div>}
-      {error && <div className="error-text">Failed to load skillset.</div>}
+      {isLoading && <div className="muted">Loading profile…</div>}
+      {error && <div className="error-text">Failed to load profile.</div>}
 
       {form && (
         <>
           <div className="card-stack">
             <section className="card">
-              <h2 className="card__title">Identity</h2>
+              <h2 className="card__title">About you</h2>
               <div className="field-grid">
                 <div className="field">
                   <label className="field__label" htmlFor="sk-name">Name</label>
@@ -135,10 +135,10 @@ export function SkillsetPage() {
                     placeholder="e.g. en, da" ariaLabel="Languages" />
                 </div>
                 <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Metro areas</label>
+                  <label className="field__label">Cities / areas</label>
                   <TagInput values={form.metro}
                     onChange={(v) => patch({ metro: v })}
-                    placeholder="optional — e.g. Copenhagen, Aarhus" ariaLabel="Metro areas" />
+                    placeholder="optional — e.g. Copenhagen, Aarhus" ariaLabel="Cities or areas" />
                 </div>
               </div>
             </section>
@@ -147,7 +147,7 @@ export function SkillsetPage() {
               <h2 className="card__title">Roles &amp; preferences</h2>
               <div className="field-grid">
                 <div className="field">
-                  <label className="field__label" htmlFor="sk-seniority">Seniority</label>
+                  <label className="field__label" htmlFor="sk-seniority">Experience level</label>
                   <select id="sk-seniority" className="select"
                     value={form.seniority}
                     onChange={(e) => patch({ seniority: e.target.value })}>
@@ -155,7 +155,7 @@ export function SkillsetPage() {
                   </select>
                 </div>
                 <div className="field">
-                  <label className="field__label" htmlFor="sk-remote">Remote preference</label>
+                  <label className="field__label" htmlFor="sk-remote">Where you want to work</label>
                   <select id="sk-remote" className="select"
                     value={form.remotePreference}
                     onChange={(e) => patch({ remotePreference: e.target.value })}>
@@ -163,10 +163,10 @@ export function SkillsetPage() {
                   </select>
                 </div>
                 <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Target roles</label>
+                  <label className="field__label">Roles you want</label>
                   <TagInput values={form.targetRoles}
                     onChange={(v) => patch({ targetRoles: v })}
-                    placeholder="e.g. Senior Backend Engineer" ariaLabel="Target roles" />
+                    placeholder="e.g. Senior Backend Engineer" ariaLabel="Roles you want" />
                 </div>
                 <div className="field" style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Employment types</label>
@@ -178,46 +178,46 @@ export function SkillsetPage() {
             </section>
 
             <section className="card">
-              <h2 className="card__title">Tech</h2>
+              <h2 className="card__title">Skills</h2>
               <div className="field-grid">
                 <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Primary stack — <span className="subtle">must-haves; multiple matches → high score</span></label>
+                  <label className="field__label">Must-have skills — <span className="subtle">the job has to mention these. More matches = higher rating</span></label>
                   <TagInput variant="primary"
                     values={form.primaryStack}
                     onChange={(v) => patch({ primaryStack: v })}
-                    placeholder="e.g. C#, .NET, Postgres" ariaLabel="Primary stack" />
+                    placeholder="e.g. C#, .NET, Postgres" ariaLabel="Must-have skills" />
                 </div>
                 <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Secondary stack — <span className="subtle">nice-to-haves; small score bumps</span></label>
+                  <label className="field__label">Nice-to-have skills — <span className="subtle">small bonus when mentioned</span></label>
                   <TagInput
                     values={form.secondaryStack}
                     onChange={(v) => patch({ secondaryStack: v })}
-                    placeholder="e.g. Docker, Kubernetes" ariaLabel="Secondary stack" />
+                    placeholder="e.g. Docker, Kubernetes" ariaLabel="Nice-to-have skills" />
                 </div>
               </div>
             </section>
 
             <section className="card">
-              <h2 className="card__title">Domains</h2>
-              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Industries and problem spaces you target.</p>
+              <h2 className="card__title">Industries</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Areas you'd like to work in.</p>
               <TagInput values={form.domains}
                 onChange={(v) => patch({ domains: v })}
-                placeholder="e.g. fintech, b2b saas" ariaLabel="Domains" />
+                placeholder="e.g. fintech, b2b saas" ariaLabel="Industries" />
             </section>
 
             <section className="card">
-              <h2 className="card__title">Disqualifiers</h2>
-              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>A listing matching any of these drops to score 0.</p>
+              <h2 className="card__title">Deal-breakers</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>A listing with any of these is removed.</p>
               <TagInput variant="warning"
                 values={form.disqualifiers}
                 onChange={(v) => patch({ disqualifiers: v })}
-                placeholder="e.g. on-site only, agency" ariaLabel="Disqualifiers" />
+                placeholder="e.g. on-site only, agency" ariaLabel="Deal-breakers" />
             </section>
           </div>
 
           <SaveBar
             visible={!!dirty}
-            message={dirty ? 'Unsaved changes to skillset.md' : ''}
+            message={dirty ? 'Unsaved changes' : ''}
             saving={save.isPending}
             onSave={() => save.mutate()}
             onRevert={revert}

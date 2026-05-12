@@ -95,8 +95,8 @@ export function SearchPage() {
         <div className="page__eyebrow">03 / search</div>
         <h1 className="page__heading">Run a <em>search</em></h1>
         <p className="page__lede">
-          Fetches the latest listings from your enabled providers, dedupes, ranks against your skillset,
-          and writes a shortlist to <code>top-jobs.md</code>.
+          Pulls the latest listings from your active sources, removes duplicates, rates them against your profile,
+          and shows you the top picks.
         </p>
       </header>
 
@@ -121,7 +121,7 @@ export function SearchPage() {
           className="link-button"
           onClick={() => setAdvancedOpen(o => !o)}
         >
-          {advancedOpen ? 'Hide advanced' : 'Advanced…'}
+          {advancedOpen ? 'Hide options' : 'More options…'}
         </button>
       </div>
 
@@ -129,24 +129,24 @@ export function SearchPage() {
         <section className="card advanced-panel">
           <div className="field-grid">
             <div className="field">
-              <label className="field__label" htmlFor="topN">Top N</label>
+              <label className="field__label" htmlFor="topN">Number of top jobs</label>
               <input
                 id="topN"
                 type="number"
                 className="input input--narrow input--mono tabular"
-                placeholder="from ranking.yml"
+                placeholder="default"
                 value={topN}
                 onChange={e => setTopN(e.target.value)}
                 min={1}
               />
             </div>
             <div className="field">
-              <label className="field__label" htmlFor="minScore">Min score</label>
+              <label className="field__label" htmlFor="minScore">Minimum rating</label>
               <input
                 id="minScore"
                 type="number"
                 className="input input--narrow input--mono tabular"
-                placeholder="from ranking.yml"
+                placeholder="default"
                 value={minScore}
                 onChange={e => setMinScore(e.target.value)}
                 min={0}
@@ -155,7 +155,7 @@ export function SearchPage() {
               />
             </div>
             <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label className="field__label">Providers</label>
+              <label className="field__label">Sources</label>
               <div className="chip-group">
                 {providersQuery.data?.providers.map(p => {
                   const active = effectiveProviders.includes(p.name)
@@ -166,9 +166,9 @@ export function SearchPage() {
                       className={active ? 'chip chip--active' : 'chip'}
                       onClick={() => toggleProvider(p.name)}
                       disabled={!p.enabled && !active}
-                      title={p.enabled ? '' : 'Disabled in portals.yml'}
+                      title={p.enabled ? '' : 'Turned off on the Sources page'}
                     >
-                      {p.name}
+                      {p.displayName}
                     </button>
                   )
                 })}
@@ -182,15 +182,15 @@ export function SearchPage() {
         <div className="hint-card">
           {lastRun ? (
             <>
-              Last run was <strong>{formatRelative(lastRun.startedAt)}</strong> —{' '}
-              <span className="tabular">{lastRun.shortlistCount}</span> shortlisted, top score{' '}
+              Last search was <strong>{formatRelative(lastRun.startedAt)}</strong> —{' '}
+              <span className="tabular">{lastRun.shortlistCount}</span> top jobs, best rating{' '}
               <span className="tabular mono">{lastRun.topScore.toFixed(2)}</span>.
               <br />
-              Click <strong>Run a search</strong> for a fresh batch, or{' '}
-              <Link to={`/history/${lastRun.runId}`}>view that run</Link>.
+              Click <strong>Run a search</strong> to refresh, or{' '}
+              <Link to={`/history/${lastRun.runId}`}>view that search</Link>.
             </>
           ) : (
-            <>Ready when you are. Click <strong>Run a search</strong> to fetch listings from your enabled providers.</>
+            <>Ready when you are. Click <strong>Run a search</strong> to pull the latest listings.</>
           )}
         </div>
       )}
@@ -208,9 +208,9 @@ export function SearchPage() {
               <span className="progress-summary__text">
                 <span className="tabular">{progress.rows.filter(r => r.status === 'ok').length}</span>
                 {' / '}
-                <span className="tabular">{progress.rows.length}</span> providers
-                {progress.dedupe !== undefined && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.dedupe}</span> deduped</>}
-                {progress.rank && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.rank.rankedCount}</span> ranked <span className="progress-summary__sep">·</span> top <span className="tabular mono">{progress.rank.topScore.toFixed(2)}</span></>}
+                <span className="tabular">{progress.rows.length}</span> sources
+                {progress.dedupe !== undefined && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.dedupe}</span> unique jobs</>}
+                {progress.rank && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.rank.rankedCount}</span> rated <span className="progress-summary__sep">·</span> best <span className="tabular mono">{progress.rank.topScore.toFixed(2)}</span></>}
               </span>
               <span className="progress-summary__toggle">
                 {progressExpanded ? 'hide steps' : 'show steps'} {progressExpanded ? '▴' : '▾'}
@@ -251,14 +251,14 @@ export function SearchPage() {
                 {stream.status === 'complete' && stream.runId ? (
                   <Link to={`/history/${stream.runId}#tab=dedupe`}>
                     <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">dedupe</span>
-                    <span className="progress-row__status">{progress.dedupe} after merge</span>
+                    <span className="progress-row__name">remove duplicates</span>
+                    <span className="progress-row__status">{progress.dedupe} unique jobs</span>
                   </Link>
                 ) : (
                   <>
                     <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">dedupe</span>
-                    <span className="progress-row__status">{progress.dedupe} after merge</span>
+                    <span className="progress-row__name">remove duplicates</span>
+                    <span className="progress-row__status">{progress.dedupe} unique jobs</span>
                   </>
                 )}
               </li>
@@ -268,17 +268,17 @@ export function SearchPage() {
                 {stream.status === 'complete' && stream.runId ? (
                   <Link to={`/history/${stream.runId}#tab=longlist`}>
                     <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rank</span>
+                    <span className="progress-row__name">rate jobs</span>
                     <span className="progress-row__status">
-                      {progress.rank.rankedCount} ranked · top {progress.rank.topScore.toFixed(2)}
+                      {progress.rank.rankedCount} rated · best {progress.rank.topScore.toFixed(2)}
                     </span>
                   </Link>
                 ) : (
                   <>
                     <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rank</span>
+                    <span className="progress-row__name">rate jobs</span>
                     <span className="progress-row__status">
-                      {progress.rank.rankedCount} ranked · top {progress.rank.topScore.toFixed(2)}
+                      {progress.rank.rankedCount} rated · best {progress.rank.topScore.toFixed(2)}
                     </span>
                   </>
                 )}
@@ -295,10 +295,10 @@ export function SearchPage() {
       {stream.status === 'complete' && stream.runId && (
         <section className="results">
           <h2 className="results__heading">
-            Shortlist <span className="muted serif" style={{ fontStyle: 'italic' }}>({stream.shortlist.length})</span>
+            Top jobs <span className="muted serif" style={{ fontStyle: 'italic' }}>({stream.shortlist.length})</span>
           </h2>
           {stream.shortlist.length === 0 && (
-            <div className="muted">No matches met the threshold.</div>
+            <div className="muted">No jobs met the minimum rating.</div>
           )}
           <div className="listing-list">
             {stream.shortlist.map(m => (

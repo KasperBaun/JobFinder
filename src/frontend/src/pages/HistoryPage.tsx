@@ -65,8 +65,8 @@ function HistoryListView() {
       void queryClient.invalidateQueries({ queryKey: ['history'] })
       const skipped = res.missing.length
       const msg = skipped > 0
-        ? `Deleted ${res.deleted} run${res.deleted === 1 ? '' : 's'} (${skipped} skipped)`
-        : `Deleted ${res.deleted} run${res.deleted === 1 ? '' : 's'}`
+        ? `Deleted ${res.deleted} search${res.deleted === 1 ? '' : 'es'} (${skipped} skipped)`
+        : `Deleted ${res.deleted} search${res.deleted === 1 ? '' : 'es'}`
       setToast({ kind: 'ok', message: msg })
     },
     onError: (err) => {
@@ -93,8 +93,8 @@ function HistoryListView() {
     const count = selected.size
     const ok = window.confirm(
       count === 1
-        ? 'Delete this run? Its marks will also be removed. This cannot be undone.'
-        : `Delete ${count} runs? Their marks will also be removed. This cannot be undone.`,
+        ? 'Delete this search? Your ratings will also be removed. This cannot be undone.'
+        : `Delete ${count} searches? Your ratings will also be removed. This cannot be undone.`,
     )
     if (!ok) return
     deleteMutation.mutate(Array.from(selected))
@@ -106,15 +106,15 @@ function HistoryListView() {
 
       <header className="page__header">
         <div className="page__eyebrow">04 / history</div>
-        <h1 className="page__heading">Past <em>runs</em></h1>
-        <p className="page__lede">Every search you've run, with the shortlist and your marks preserved.</p>
+        <h1 className="page__heading">Past <em>searches</em></h1>
+        <p className="page__lede">Every search you've run, with the top jobs and your ratings kept.</p>
       </header>
 
       {isLoading && <div className="muted">Loading history…</div>}
       {error && <div className="error-text">Failed to load history.</div>}
 
       {data && data.runs.length === 0 && (
-        <div className="hint-card">No runs yet. Start one from the <Link to="/search">Search</Link> page.</div>
+        <div className="hint-card">No searches yet. Start one from the <Link to="/search">Search</Link> page.</div>
       )}
 
       {data && data.runs.length > 0 && (
@@ -149,16 +149,16 @@ function HistoryListView() {
                     <input
                       ref={headerCheckboxRef}
                       type="checkbox"
-                      aria-label={allSelected ? 'Deselect all runs' : 'Select all runs'}
+                      aria-label={allSelected ? 'Deselect all searches' : 'Select all searches'}
                       checked={allSelected}
                       onChange={toggleAll}
                     />
                   </th>
-                  <th>Started</th>
-                  <th>Providers</th>
-                  <th>Shortlist</th>
-                  <th>Top score</th>
-                  <th>Good marks</th>
+                  <th>When</th>
+                  <th>Sources</th>
+                  <th>Top jobs</th>
+                  <th>Best rating</th>
+                  <th>Good matches</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,7 +179,7 @@ function HistoryListView() {
                       >
                         <input
                           type="checkbox"
-                          aria-label={`Select run from ${formatAbsolute(run.startedAt)}`}
+                          aria-label={`Select search from ${formatAbsolute(run.startedAt)}`}
                           checked={isSelected}
                           onChange={() => toggleRow(run.runId)}
                           onClick={e => e.stopPropagation()}
@@ -263,7 +263,7 @@ function ResultsToggle({
         className={`view-toggle__seg ${active === 'shortlist' ? 'view-toggle__seg--active' : ''}`}
         onClick={() => onChange('shortlist')}
       >
-        Shortlist <span className="view-toggle__count">{data.shortlist.length}</span>
+        Top jobs <span className="view-toggle__count">{data.shortlist.length}</span>
       </button>
       <button
         type="button"
@@ -272,9 +272,9 @@ function ResultsToggle({
         className={`view-toggle__seg ${active === 'longlist' ? 'view-toggle__seg--active' : ''}`}
         onClick={() => longlistAvailable && onChange('longlist')}
         disabled={!longlistAvailable}
-        title={longlistAvailable ? 'All ranked candidates, including those beyond top-N' : 'Not recorded for this run.'}
+        title={longlistAvailable ? 'All rated jobs — including those outside the top' : 'Not recorded for this search.'}
       >
-        Longlist {longlistCount !== undefined && <span className="view-toggle__count">{longlistCount}</span>}
+        All rated {longlistCount !== undefined && <span className="view-toggle__count">{longlistCount}</span>}
       </button>
     </div>
   )
@@ -290,13 +290,13 @@ function AuditTabs({
   data: RunDetail
 }) {
   const tabs: { key: TabKey; label: string; count?: number; available: boolean }[] = [
-    { key: 'raw',     label: 'raw fetch', count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
-    { key: 'dedupe',  label: 'dedupe',    count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
-    { key: 'dropped', label: 'dropped',   count: data.dropped?.length, available: !!data.dropped },
+    { key: 'raw',     label: 'all fetched', count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
+    { key: 'dedupe',  label: 'duplicates',  count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
+    { key: 'dropped', label: 'removed',     count: data.dropped?.length, available: !!data.dropped },
   ]
   return (
-    <nav className="audit-tabs" aria-label="Audit views">
-      <span className="audit-tabs__label">audit:</span>
+    <nav className="audit-tabs" aria-label="Details">
+      <span className="audit-tabs__label">show:</span>
       {tabs.map(t => (
         <button
           key={t.key}
@@ -304,7 +304,7 @@ function AuditTabs({
           className={`audit-tab ${active === t.key ? 'audit-tab--active' : ''} ${!t.available ? 'audit-tab--disabled' : ''}`}
           onClick={() => t.available && onChange(t.key)}
           disabled={!t.available}
-          title={t.available ? '' : 'Not recorded for this run.'}
+          title={t.available ? '' : 'Not recorded for this search.'}
         >
           {t.label}
           {t.count !== undefined && <span className="audit-tab__count">{t.count}</span>}
@@ -318,9 +318,9 @@ function ShortlistTab({ data }: { data: RunDetail }) {
   return (
     <section className="results">
       <h2 className="results__heading">
-        Shortlist <span className="muted serif" style={{ fontStyle: 'italic' }}>({data.shortlist.length})</span>
+        Top jobs <span className="muted serif" style={{ fontStyle: 'italic' }}>({data.shortlist.length})</span>
       </h2>
-      {data.shortlist.length === 0 && <div className="muted">No listings on this run's shortlist.</div>}
+      {data.shortlist.length === 0 && <div className="muted">No top jobs in this search.</div>}
       <div className="listing-list">
         {data.shortlist.map(m => (
           <ListingCard
@@ -352,7 +352,7 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
   }, [focusProvider])
 
   if (!data.raw) {
-    return <div className="muted">No raw fetch data recorded for this run.</div>
+    return <div className="muted">No fetched jobs recorded for this search.</div>
   }
   return (
     <section className="raw-fetch">
@@ -422,10 +422,10 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
 
 function DedupeTab({ data }: { data: RunDetail }) {
   if (!data.dedupeMerges) {
-    return <div className="muted">No dedupe data recorded for this run.</div>
+    return <div className="muted">No duplicate data recorded for this search.</div>
   }
   if (data.dedupeMerges.length === 0) {
-    return <div className="muted">No duplicates merged this run.</div>
+    return <div className="muted">No duplicates were merged in this search.</div>
   }
   // Build a lookup so we can show titles for canonical / merged listings.
   const titleById = new Map<string, string>()
@@ -437,11 +437,11 @@ function DedupeTab({ data }: { data: RunDetail }) {
       {data.dedupeMerges.map(g => (
         <div key={g.canonicalId} className="dedupe-group">
           <div className="dedupe-group__canonical">
-            <span className="dedupe-group__label">canonical</span>
+            <span className="dedupe-group__label">kept</span>
             <span className="dedupe-group__title">{titleById.get(g.canonicalId) ?? g.canonicalId}</span>
           </div>
           <div className="dedupe-group__merges">
-            <span className="dedupe-group__label">merged from {g.mergedFromIds.length}</span>
+            <span className="dedupe-group__label">also seen on {g.mergedFromIds.length}</span>
             <ul>
               {g.mergedFromIds.map(id => (
                 <li key={id}>
@@ -458,20 +458,20 @@ function DedupeTab({ data }: { data: RunDetail }) {
 
 
 const REASON_LABELS: Record<DropReason, string> = {
-  disqualifier: 'disqualifier',
-  below_min_score: 'below min score',
-  beyond_top_n: 'beyond top-N',
-  above_max_age: 'above max age',
-  missing_required_primary: 'no primary hit',
+  disqualifier: 'deal-breaker',
+  below_min_score: 'rating too low',
+  beyond_top_n: 'outside top list',
+  above_max_age: 'too old',
+  missing_required_primary: 'no must-have skill',
 }
 
 function DroppedTab({ data }: { data: RunDetail }) {
   const [filter, setFilter] = useState<DropReason | 'all'>('all')
   if (!data.dropped) {
-    return <div className="muted">No dropped data recorded for this run.</div>
+    return <div className="muted">No removed-job data recorded for this search.</div>
   }
   if (data.dropped.length === 0) {
-    return <div className="muted">Nothing was dropped this run.</div>
+    return <div className="muted">Nothing was removed in this search.</div>
   }
 
   const counts = data.dropped.reduce<Record<string, number>>((acc, d) => {
@@ -510,7 +510,7 @@ function DroppedTab({ data }: { data: RunDetail }) {
             <tr>
               <th>Title</th>
               <th>Company</th>
-              <th>Score</th>
+              <th>Rating</th>
               <th>Reason</th>
               <th>Why</th>
             </tr>
@@ -581,11 +581,11 @@ function RunDetailView({ runId }: { runId: string }) {
       <header className="page__header">
         <Link to="/history" className="back-link">← back to history</Link>
         <div className="page__eyebrow">04 / history / detail</div>
-        <h1 className="page__heading">Run <em>detail</em></h1>
+        <h1 className="page__heading">Search <em>detail</em></h1>
       </header>
 
-      {isLoading && <div className="muted">Loading run…</div>}
-      {error && <div className="error-text">Failed to load run.</div>}
+      {isLoading && <div className="muted">Loading search…</div>}
+      {error && <div className="error-text">Failed to load search.</div>}
 
       {data && (
         <>

@@ -159,12 +159,16 @@ public sealed class SearchService : ISearchService
         var mdTitle = $"Top matches — {skillset.Name} — {startedAt:yyyy-MM-dd HH:mm} UTC";
         MarkdownReportWriter.WriteMatches(shortlist, _ctx.TopJobsPath, mdTitle);
 
-        var listingMatches = shortlist.Select(ToListingMatch).ToList();
+        var portalDisplayNames = allPortals.ToDictionary(
+            p => p.Name,
+            p => string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name : p.DisplayName!,
+            StringComparer.Ordinal);
+        var listingMatches = shortlist.Select(m => ToListingMatch(m, portalDisplayNames)).ToList();
 
         var rawSection = rawByProvider
             .Select(kvp => new ProviderRaw(kvp.Key, kvp.Value.Select(ToRawListing).ToList()))
             .ToList();
-        var scoredSection = scoredAll.Select(ToScoredEntry).ToList();
+        var scoredSection = scoredAll.Select(m => ToScoredEntry(m, portalDisplayNames)).ToList();
 
         WriteHistory(
             runId,
@@ -210,7 +214,7 @@ public sealed class SearchService : ISearchService
                     var newScore = Math.Clamp(w * v.Score + (1 - w) * m.Score, 0.0, 1.0);
                     var notes = string.IsNullOrWhiteSpace(v.Reason)
                         ? m.Reasoning.Notes
-                        : $"{m.Reasoning.Notes} LLM judge: {v.Score:0.00} — {v.Reason}";
+                        : $"{m.Reasoning.Notes} AI review: {v.Score:0.00} — {v.Reason}";
                     blended.Add(m with
                     {
                         Score = newScore,
@@ -264,7 +268,7 @@ public sealed class SearchService : ISearchService
         return $"{stamp}-{suffix}";
     }
 
-    private static ListingMatch ToListingMatch(Match match)
+    private static ListingMatch ToListingMatch(Match match, IReadOnlyDictionary<string, string> portalDisplayNames)
     {
         var l = match.Listing;
         return new ListingMatch(
@@ -279,7 +283,8 @@ public sealed class SearchService : ISearchService
             Score: match.Score,
             Reasoning: match.Reasoning.Notes,
             PrimaryStackHits: match.Reasoning.PrimaryStackHits,
-            SecondaryStackHits: match.Reasoning.SecondaryStackHits);
+            SecondaryStackHits: match.Reasoning.SecondaryStackHits,
+            PortalDisplayName: portalDisplayNames.TryGetValue(l.Portal, out var dn) ? dn : l.Portal);
     }
 
     private static RawListing ToRawListing(Listing l) => new(
@@ -290,7 +295,7 @@ public sealed class SearchService : ISearchService
         Url: l.Url.ToString(),
         PostedAt: l.PostedAt);
 
-    private static ScoredEntry ToScoredEntry(Match m) => new(
+    private static ScoredEntry ToScoredEntry(Match m, IReadOnlyDictionary<string, string> portalDisplayNames) => new(
         Id: m.Listing.Id,
         Title: m.Listing.Title,
         Company: m.Listing.Company,
@@ -301,7 +306,8 @@ public sealed class SearchService : ISearchService
         Score: m.Score,
         Breakdown: m.Breakdown,
         PrimaryStackHits: m.Reasoning.PrimaryStackHits,
-        SecondaryStackHits: m.Reasoning.SecondaryStackHits);
+        SecondaryStackHits: m.Reasoning.SecondaryStackHits,
+        PortalDisplayName: portalDisplayNames.TryGetValue(m.Listing.Portal, out var dn) ? dn : m.Listing.Portal);
 
     private static DroppedEntry BuildDroppedEntry(Match m, string reason, string? context) => new(
         Id: m.Listing.Id,

@@ -18,4 +18,5 @@ public sealed record ScoredEntry(
     double Score,
     ScoreBreakdown Breakdown,
     IReadOnlyList<string> PrimaryStackHits,
-    IReadOnlyList<string> SecondaryStackHits);
+    IReadOnlyList<string> SecondaryStackHits,
+    string? PortalDisplayName = null);
