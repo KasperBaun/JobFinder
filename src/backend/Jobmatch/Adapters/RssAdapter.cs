@@ -36,11 +36,12 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
                 if (string.IsNullOrWhiteSpace(title)) continue;
 
                 var description = StripHtml(item.Content ?? item.Description ?? string.Empty);
+                var (cleanTitle, extractedCompany) = ExtractJobindexTrailingCompany(title.Trim(), uri);
 
                 listings.Add(BuildListing(
                     sourceId: string.IsNullOrWhiteSpace(item.Id) ? uri.ToString() : item.Id!,
-                    title: title.Trim(),
-                    company: null,
+                    title: cleanTitle,
+                    company: extractedCompany,
                     location: null,
                     description: description,
                     url: uri,
@@ -59,6 +60,24 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
         }
 
         return listings;
+    }
+
+    // Jobindex / it-jobbank RSS titles consistently append ", <Company>" (often with
+    // a legal form like " A/S" / " ApS"). Splitting that suffix into the company field
+    // cleans up the displayed title and lets the deduper match against portals that
+    // already populate Company correctly. Gated on host so unrelated RSS feeds aren't
+    // accidentally re-shaped.
+    internal static (string Title, string? Company) ExtractJobindexTrailingCompany(string title, Uri url)
+    {
+        if (!url.Host.Contains("jobindex.dk", StringComparison.OrdinalIgnoreCase)
+            && !url.Host.Contains("it-jobbank.dk", StringComparison.OrdinalIgnoreCase))
+            return (title, null);
+        var idx = title.LastIndexOf(", ", StringComparison.Ordinal);
+        if (idx <= 0 || idx >= title.Length - 2) return (title, null);
+        var suffix = title[(idx + 2)..].Trim();
+        var prefix = title[..idx].TrimEnd();
+        if (suffix.Length == 0 || prefix.Length == 0) return (title, null);
+        return (prefix, suffix);
     }
 
     private static DateTimeOffset? ToUtc(DateTime? dt)

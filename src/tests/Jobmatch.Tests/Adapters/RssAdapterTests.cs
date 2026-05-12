@@ -131,6 +131,46 @@ public sealed class RssAdapterTests
         Assert.Equal("rss summary", enriched[0].Description);
     }
 
+    [Theory]
+    [InlineData("https://www.jobindex.dk/vis-job/h1646496",
+                "Senior .Net udvikler til afdeling i vækst, Sopra Steria A/S",
+                "Senior .Net udvikler til afdeling i vækst", "Sopra Steria A/S")]
+    [InlineData("https://www.jobindex.dk/vis-job/h1662925",
+                "Softwareudvikler – byg fundamentet for Danske Spils digitale platform med AI-first udvikling, Danske Spil A/S",
+                "Softwareudvikler – byg fundamentet for Danske Spils digitale platform med AI-first udvikling", "Danske Spil A/S")]
+    [InlineData("https://www.it-jobbank.dk/jobannonce/123",
+                "Senior Dev, Acme ApS",
+                "Senior Dev", "Acme ApS")]
+    [InlineData("https://www.jobindex.dk/vis-job/h999",
+                "Erfaren softwareudvikler til DR Teknologi, DR",
+                "Erfaren softwareudvikler til DR Teknologi", "DR")]
+    public void ExtractJobindexTrailingCompany_OnJobindexHost_SplitsTrailingCompany(
+        string url, string title, string expectedTitle, string expectedCompany)
+    {
+        var (cleanTitle, company) = RssAdapter.ExtractJobindexTrailingCompany(title, new Uri(url));
+        Assert.Equal(expectedTitle, cleanTitle);
+        Assert.Equal(expectedCompany, company);
+    }
+
+    [Theory]
+    [InlineData("https://example.com/jobs/1", "Senior Engineer, Cloud Platform")]
+    [InlineData("https://other-rss.example/feed/item", "Lead Developer, Data & AI")]
+    public void ExtractJobindexTrailingCompany_OffJobindex_IsNoOp(string url, string title)
+    {
+        var (cleanTitle, company) = RssAdapter.ExtractJobindexTrailingCompany(title, new Uri(url));
+        Assert.Equal(title, cleanTitle);
+        Assert.Null(company);
+    }
+
+    [Fact]
+    public void ExtractJobindexTrailingCompany_NoComma_ReturnsOriginal()
+    {
+        var (cleanTitle, company) = RssAdapter.ExtractJobindexTrailingCompany(
+            "Backend Developer", new Uri("https://www.jobindex.dk/vis-job/h1"));
+        Assert.Equal("Backend Developer", cleanTitle);
+        Assert.Null(company);
+    }
+
     private sealed class HtmlStub(HttpStatusCode status, string body, string contentType = "text/html") : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
