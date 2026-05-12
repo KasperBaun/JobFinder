@@ -64,7 +64,10 @@ public sealed class LlmHandler(
         catch (Exception ex)
         {
             Logger.LogError(ex, "LLM model download failed");
-            try { await SseHelper.SendAsync(http, new { type = "error", message = ex.Message }).ConfigureAwait(false); }
+            var message = ex.InnerException is { Message: var inner }
+                ? $"{ex.Message} ({inner})"
+                : ex.Message;
+            try { await SseHelper.SendAsync(http, new { type = "error", message }).ConfigureAwait(false); }
             catch { /* connection may be torn down */ }
         }
     }
