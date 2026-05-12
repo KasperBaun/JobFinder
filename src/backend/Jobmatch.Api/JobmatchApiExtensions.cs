@@ -1,3 +1,4 @@
+using System.Net.Security;
 using Jobmatch.Api.Endpoints;
 using Jobmatch.Api.Handlers;
 using Jobmatch.Api.Infrastructure;
@@ -36,8 +37,18 @@ public static class JobmatchApiExtensions
 
         // LLM model downloader — singleton because it owns a process-wide lock
         // around the download. HttpClient injected from IHttpClientFactory so we
-        // get a long timeout suitable for the multi-GB stream.
-        services.AddHttpClient<LlmModelDownloader>(c => c.Timeout = TimeSpan.FromHours(2));
+        // get a long timeout suitable for the multi-GB stream. AllowRenegotiation
+        // is required because huggingface.co requests TLS renegotiation during
+        // the first hop; .NET's default SocketsHttpHandler refuses it.
+        services
+            .AddHttpClient<LlmModelDownloader>(c => c.Timeout = TimeSpan.FromHours(2))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                SslOptions = new SslClientAuthenticationOptions
+                {
+                    AllowRenegotiation = true,
+                },
+            });
 
         // Handlers
         services.AddScoped<ISystemHandler, SystemHandler>();
