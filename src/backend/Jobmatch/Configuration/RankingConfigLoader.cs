@@ -41,6 +41,7 @@ public static class RankingConfigLoader
         var seniorityAdjacencyCredit = ReadDouble(map, "seniority_adjacency_credit", 1.0);
         var nonEngineeringTitleMultiplier = ReadDouble(map, "non_engineering_title_multiplier", 0.2);
         var tierWeights = BuildTierWeights(map);
+        var llm = BuildLlmConfig(map);
 
         return new RankingConfig(
             weights, disqualifierPenalty, topN, halfLife, minScore,
@@ -48,7 +49,34 @@ public static class RankingConfigLoader
             seniorityAdjacencyCredit, nonEngineeringTitleMultiplier)
         {
             LocationTierWeights = tierWeights,
+            Llm = llm,
         };
+    }
+
+    private static LlmConfig BuildLlmConfig(IReadOnlyDictionary<string, object?> root)
+    {
+        if (!root.TryGetValue("llm", out var raw) || raw is not IDictionary<object, object?> map)
+            return LlmConfig.Disabled;
+        var n = Normalise(map);
+        var d = LlmConfig.Disabled;
+        return new LlmConfig(
+            Enabled: ReadBool(n, "enabled", d.Enabled),
+            Provider: ReadString(n, "provider", d.Provider),
+            Model: ReadString(n, "model", d.Model),
+            ModelPath: ReadString(n, "model_path", d.ModelPath),
+            BaseUrl: ReadString(n, "base_url", d.BaseUrl),
+            TopN: ReadInt(n, "top_n", d.TopN),
+            Weight: ReadDouble(n, "weight", d.Weight),
+            Temperature: ReadDouble(n, "temperature", d.Temperature),
+            ContextSize: ReadInt(n, "context_size", d.ContextSize),
+            GpuLayerCount: ReadInt(n, "gpu_layer_count", d.GpuLayerCount));
+    }
+
+    private static string ReadString(IReadOnlyDictionary<string, object?> map, string key, string defaultValue)
+    {
+        if (!map.TryGetValue(key, out var v) || v is null) return defaultValue;
+        var s = v.ToString();
+        return string.IsNullOrWhiteSpace(s) ? defaultValue : s;
     }
 
     private static LocationTierWeights BuildTierWeights(IReadOnlyDictionary<string, object?> root)

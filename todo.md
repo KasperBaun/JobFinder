@@ -26,28 +26,43 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-- **Provider expansion to actually-DK employers (Phase 1 of "fix the
-  corpus before LLM scoring").** The 5 Greenhouse boards we have are
-  international tech with DK office (Unity / Wolt / Adyen / Trustpilot
-  / Pleo). The user's actual market — DK consultancies, public-sector
-  IT, regulated industries — sits on different ATS systems entirely.
-  This commit added 5 SmartRecruiters DK boards (Sopra Steria,
-  Netcompany, Deloitte Nordic, Devoteam, BEUMER). Still needed:
-  TeamTailor adapter (covers Danske Spil + many DK startups),
-  Emply / HR-Manager.net adapters (covers Sundhed.dk, Dansk
-  Sundhedssikring, DR Teknologi, CHANGE Lingerie),
-  Jobindex.dk full-text search (umbrella DK aggregator), and
-  body-fetch for ApiAdapter (SmartRecruiters list endpoint doesn't
-  include description, so Netcompany roles score 0.41 on title alone
-  but get dropped by `require_primary_stack_hit`).
-
-- **LLM-based judging via Ollama + Gemma 3 4B (Phase 2).** Once the
-  corpus contains the right kind of jobs, swap the keyword ranker for
-  (or augment with) an LLM judge that scores every deduped listing
-  using the user's skillset + curated examples as few-shot signal.
-  User has indicated this is the direction once provider work lands.
+- **LLM model auto-download UX (Phase 2 of LLM judging).** The judge
+  now wires through `ILlmClient` with both LlamaSharp (in-process,
+  default) and Ollama (HTTP, power-user) backends, but the GGUF model
+  file is not yet downloaded automatically — the user has to place
+  `gemma-3-4b-it-q4_k_m.gguf` (~2.5 GB) under
+  `data/<email>/models/` manually. Need: a GUI banner on first run
+  when `llm.enabled = true` and the file is missing, with a
+  click-to-download button that streams the file from Hugging Face
+  with a progress bar. Plus a fallback notice in the search SSE
+  stream when the model is absent so the user knows judging is being
+  skipped.
 
 ## Completed (recent)
+
+- **LLM judging — pluggable backend (LlamaSharp default, Ollama
+  alternate) + prompt + ExamplesLoader + SearchService integration.**
+  Phase 1 of the LLM layer the user asked for. New
+  `Jobmatch.Llm` namespace: `ILlmClient` interface, `LlamaSharpClient`
+  (in-process llama.cpp, NuGet `LLamaSharp` + `LLamaSharp.Backend.Cpu`,
+  loads a GGUF model file from the user data dir; recommended Gemma 3
+  4B Q4_K_M ~2.5 GB), `OllamaClient` (HTTP, for power users with their
+  own Ollama install), `LlmClientFactory` (picks based on
+  `llm.provider` config), `LlmJudge` (per-match chat call: builds
+  system prompt from skillset + examples, asks for `{"score":0-1,
+  "reason":"..."}`, parses with strict JSON + loose-fallback regex),
+  `ExamplesLoader` (reads `data/<email>/examples/*.md` frontmatter
+  into typed `ExampleListing`, exposes `ToFewShotPrompt` for prompt
+  embedding). `SearchService` runs `JudgeAndBlend` between Ranker and
+  Filter when `ranking.Llm.Enabled = true` — judges top-N from
+  keyword ranker, blends `weight * llm + (1-weight) * keyword`,
+  re-sorts. Falls back transparently to keyword-only when the model
+  file isn't present (LlamaSharp) or Ollama is unreachable. New
+  `LlmJudgingEvent` SSE type. New `llm:` block in `ranking.yml`,
+  off by default. 11 new tests (verdict parsing edge cases,
+  examples-loader frontmatter, few-shot prompt rendering); 209
+  backend tests green (was 198). Phase 2 (model auto-download UX)
+  is the next commit.
 
 - **HR-Manager.net adapter (CHANGE Lingerie + Danmarks Radio).** New
   `HrManagerAdapter` parses the hidden `PositionList` JSON server-rendered

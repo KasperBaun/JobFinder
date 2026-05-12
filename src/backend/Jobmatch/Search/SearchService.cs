@@ -5,6 +5,7 @@ using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
 using Jobmatch.IO;
+using Jobmatch.Llm;
 using Jobmatch.Models;
 using Jobmatch.Output;
 using Jobmatch.Ranking;
@@ -114,6 +115,20 @@ public sealed class SearchService : ISearchService
 
         var scoredAll = Ranker.Score(deduped, skillset, ranking);
 
+        // Optional LLM re-rank layer. Picks the top-N from the keyword ranker, asks
+        // the model to score each one against the user's skillset + curated examples,
+        // then blends LLM and keyword scores. Falls back transparently to keyword-only
+        // when the model can't be loaded (file missing, Ollama not running, etc.).
+        // Sequential — gemma 3 4B on CPU does ~1-3 sec per call, so judging the
+        // default top 50 takes ~1-2 minutes; SSE stream stays open but silent.
+        if (ranking.Llm.Enabled)
+        {
+            var examples = ExamplesLoader.Load(_ctx.ExamplesDir);
+            var llmTopN = ranking.Llm.TopN <= 0 ? scoredAll.Count : Math.Min(ranking.Llm.TopN, scoredAll.Count);
+            yield return new LlmJudgingEvent(llmTopN);
+            scoredAll = await JudgeAndBlend(scoredAll, skillset, examples, ranking.Llm, llmTopN, http, ct).ConfigureAwait(false);
+        }
+
         var dropped = new List<DroppedEntry>();
         var passed = new List<Match>();
         foreach (var m in scoredAll)
@@ -165,6 +180,54 @@ public sealed class SearchService : ISearchService
             dropped);
 
         yield return new CompleteEvent(runId, listingMatches);
+    }
+
+    private async Task<IReadOnlyList<Match>> JudgeAndBlend(
+        IReadOnlyList<Match> scored,
+        Skillset skillset,
+        IReadOnlyList<ExampleListing> examples,
+        LlmConfig llmConfig,
+        int topN,
+        HttpClient http,
+        CancellationToken ct)
+    {
+        var client = LlmClientFactory.Create(llmConfig, _ctx.RootDir, http, _loggerFactory);
+        if (client is null) return scored;
+        try
+        {
+            var ordered = scored.OrderByDescending(m => m.Score).ToList();
+            var toJudge = ordered.Take(topN).ToList();
+            var judge = new LlmJudge(client, _loggerFactory.CreateLogger<LlmJudge>());
+            var verdicts = await judge.JudgeAsync(toJudge, skillset, examples, ct).ConfigureAwait(false);
+
+            var verdictById = verdicts.ToDictionary(v => v.Match.Listing.Id, v => v.Verdict);
+            var w = llmConfig.Weight;
+            var blended = new List<Match>(scored.Count);
+            foreach (var m in scored)
+            {
+                if (verdictById.TryGetValue(m.Listing.Id, out var v) && v is not null)
+                {
+                    var newScore = Math.Clamp(w * v.Score + (1 - w) * m.Score, 0.0, 1.0);
+                    var notes = string.IsNullOrWhiteSpace(v.Reason)
+                        ? m.Reasoning.Notes
+                        : $"{m.Reasoning.Notes} LLM judge: {v.Score:0.00} — {v.Reason}";
+                    blended.Add(m with
+                    {
+                        Score = newScore,
+                        Reasoning = m.Reasoning with { Notes = notes },
+                    });
+                }
+                else
+                {
+                    blended.Add(m);
+                }
+            }
+            return blended;
+        }
+        finally
+        {
+            (client as IDisposable)?.Dispose();
+        }
     }
 
     private async Task<(IReadOnlyList<Listing> Results, string? Error)> FetchSafe(
