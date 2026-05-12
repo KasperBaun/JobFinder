@@ -63,6 +63,10 @@ public sealed class LlamaSharpClient : ILlmClient, IDisposable
     public async Task<string> ChatAsync(string systemPrompt, string userPrompt, CancellationToken ct = default)
     {
         EnsureLoaded();
+        // Each judgment is independent — clear KV cache so call N+1 starts at position 0
+        // instead of inheriting call N's tokens. Without this, llama_decode rejects
+        // subsequent batches with "inconsistent sequence positions".
+        _context!.NativeHandle.MemoryClear(true);
         var executor = new InteractiveExecutor(_context!);
 
         var history = new ChatHistory();

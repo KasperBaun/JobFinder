@@ -18,7 +18,7 @@ export function ListingCard({ match, runId, mark }: Props) {
         </div>
         <div className="listing-card__badges">
           <span className="badge badge--score">{match.score.toFixed(2)}</span>
-          {match.remoteMode && <span className="badge">{match.remoteMode}</span>}
+          {match.remoteMode && match.remoteMode !== 'unknown' && <span className="badge">{match.remoteMode}</span>}
           <span className="badge badge--muted">{match.portal}</span>
         </div>
       </header>

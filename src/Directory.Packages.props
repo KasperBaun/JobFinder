@@ -23,8 +23,8 @@
          per backend; the user can swap Cpu → Cuda12 / Vulkan / etc. without
          touching code. The model file (Gemma 3 4B GGUF, ~2.5 GB) is downloaded
          on first run, not bundled. -->
-    <PackageVersion Include="LLamaSharp" Version="0.21.0" />
-    <PackageVersion Include="LLamaSharp.Backend.Cpu" Version="0.21.0" />
+    <PackageVersion Include="LLamaSharp" Version="0.27.0" />
+    <PackageVersion Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
 
     <!-- Test -->
     <PackageVersion Include="xunit" Version="2.9.3" />
