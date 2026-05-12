@@ -23,15 +23,6 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
-- **DR Teknologi cross-portal duplicate (company alias).** Survivor from
-  the 2026-05-12 dedupe pass. Jobindex extracts `company: "DR"` from the
-  trailing title suffix; the hr-manager-dr adapter sets `company:
-  "Danmarks Radio"` from the upstream catalog. Both refer to the same
-  employer, so the `(title|company|location)` dedupe key diverges only
-  on company. Needs a small `CompanyAliases` table (analogous to the
-  existing `CityAliases`) so the deduper normalises "DR" / "Danmarks
-  Radio" → a single canonical key. Out of scope for the regex-only
-  dedupe fix.
 - **Source-specific remote-mode extraction (`ApiAdapter` /
   `HrManagerAdapter`).** 5 of the current top-10 still tag `Unknown` —
   the frontend hides the badge but the data is recoverable from source.
@@ -55,6 +46,19 @@ Current status of work on `jobfinder`.
 _(none)_
 
 ## Completed (recent)
+
+- **DR Teknologi cross-portal duplicate collapsed (company alias).**
+  The pair the 2026-05-12 dedupe pass left behind. Jobindex extracts
+  `company: "DR"` from the trailing title suffix; the hr-manager-dr
+  adapter sets `company: "Danmarks Radio"`. Added a small
+  `CompanyCanonicalForm` map in `Deduper` (analogous to the existing
+  `CityAliases` in `Ranker`) — keys are the non-canonical form after
+  legal-form strip + lowercase, values are the canonical form they
+  collapse to. Currently one entry (`dr → danmarks radio`). The map is
+  consulted inside `NormaliseCompany` so the dedupe key matches across
+  portals; display data on each listing stays untouched. Four new tests
+  cover the alias resolution + the cross-portal collapse against the
+  real top-10 data.
 
 - **Cross-portal Jobindex duplicate collapse.** Top-10 had two copies
   each of Sopra Steria (#1+#2), Danske Spil (#4+#5), DR Teknologi

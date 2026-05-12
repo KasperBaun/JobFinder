@@ -26,6 +26,18 @@ public static class Deduper
         @"\s+\p{Lu}{1,2}\s*$",
         RegexOptions.Compiled);
 
+    // Same employer, different upstream conventions. Keys are the *non-canonical*
+    // forms (lowercased after legal-form strip + whitespace collapse); values are
+    // the canonical form they collapse to. Add sparingly — most companies don't
+    // need this and substring matching is too aggressive a default for dedupe.
+    private static readonly IReadOnlyDictionary<string, string> CompanyCanonicalForm =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Jobindex extracts "DR" from the trailing title suffix; the hr-manager-dr
+            // adapter sets "Danmarks Radio" from the upstream catalog. Same employer.
+            ["dr"] = "danmarks radio",
+        };
+
     public static DedupeResult Deduplicate(IEnumerable<Listing> listings)
     {
         var byUrl = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -86,7 +98,10 @@ public static class Deduper
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;
         var stripped = CompanyLegalFormSuffix.Replace(input.Trim(), string.Empty);
-        return Normalise(stripped);
+        var normalised = Normalise(stripped);
+        return CompanyCanonicalForm.TryGetValue(normalised, out var canonical)
+            ? canonical
+            : normalised;
     }
 
     internal static string NormaliseLocation(string? input)
