@@ -11,6 +11,9 @@
 
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+    <!-- File sink for host-side WARN+ logs at data/<email>/logs/host.log.
+         Tiny package (~30 KB) that plugs into the standard ILoggerProvider pipeline. -->
+    <PackageVersion Include="NReco.Logging.File" Version="1.2.2" />
 
     <!-- Phase 3+ (pinned now, referenced when needed) -->
     <PackageVersion Include="CodeHollow.FeedReader" Version="1.2.6" />
