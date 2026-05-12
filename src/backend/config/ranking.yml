@@ -42,6 +42,31 @@ seniority_adjacency_credit: 1.0
 # audit views.
 non_engineering_title_multiplier: 0.2
 
+# LLM-based judging layered on top of the keyword ranker. Off by default. When
+# enabled, the LlmJudge sends the user's skillset + curated examples (from
+# data/<email>/examples/) + the listing title/description to a local language
+# model and gets back a 0-1 fit score + brief reason. Final shortlist score is
+# `weight * llm_score + (1 - weight) * keyword_score`.
+#
+# Two providers:
+#   llamasharp — in-process via LLamaSharp/llama.cpp. Default. No external
+#                service. model_path points at a GGUF file (downloaded on
+#                first run). Recommended: Gemma 3 4B Q4_K_M (~2.5 GB).
+#   ollama     — HTTP to a user-managed Ollama install at base_url. For
+#                power users who already run Ollama; uses model field as the
+#                model tag (e.g. "gemma3:4b").
+llm:
+  enabled: false
+  provider: llamasharp
+  model: gemma3:4b
+  model_path: models/gemma-3-4b-it-q4_k_m.gguf
+  base_url: http://localhost:11434
+  top_n: 50              # judge only the top-N from keyword ranker (0 = all deduped)
+  weight: 0.5            # 0.0 = keyword-only, 1.0 = LLM-only
+  temperature: 0.0       # deterministic
+  context_size: 4096     # llamasharp only
+  gpu_layer_count: 0     # llamasharp only — 0 = CPU. Bump for GPU offload.
+
 # Per-tier multipliers applied to the location_remote signal.
 #   city    — listing is in your declared city
 #   metro   — listing is in one of your declared metro areas

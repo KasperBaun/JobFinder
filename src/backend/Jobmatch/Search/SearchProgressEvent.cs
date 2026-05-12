@@ -13,6 +13,7 @@ namespace Jobmatch.Search;
 [JsonDerivedType(typeof(ProviderFailedEvent), "provider_failed")]
 [JsonDerivedType(typeof(DedupeEvent), "dedupe")]
 [JsonDerivedType(typeof(RankEvent), "rank")]
+[JsonDerivedType(typeof(LlmJudgingEvent), "llm_judging")]
 [JsonDerivedType(typeof(CompleteEvent), "complete")]
 [JsonDerivedType(typeof(ErrorEvent), "error")]
 public abstract record SearchProgressEvent;
@@ -28,6 +29,8 @@ public sealed record ProviderFailedEvent(string Provider, string Error, int Inde
 public sealed record DedupeEvent(int MergedCount) : SearchProgressEvent;
 
 public sealed record RankEvent(int RankedCount, double TopScore) : SearchProgressEvent;
+
+public sealed record LlmJudgingEvent(int Total) : SearchProgressEvent;
 
 public sealed record CompleteEvent(string RunId, IReadOnlyList<ListingMatch> Shortlist) : SearchProgressEvent;
 
