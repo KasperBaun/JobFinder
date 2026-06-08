@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Jobmatch.Configuration;
 using Jobmatch.IO;
 using Jobmatch.Models;
@@ -492,6 +493,7 @@ public sealed class SearchServiceTests : IDisposable
     private static readonly JsonSerializerOptions HistoryReadOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
     [Fact]

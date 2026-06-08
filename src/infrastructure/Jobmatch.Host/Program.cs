@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Hangfire;
+using Hangfire.Dashboard;
 using Jobmatch;
 using Jobmatch.Api;
 using Microsoft.Extensions.FileProviders;
@@ -92,6 +94,13 @@ if (Directory.Exists(guiPath))
 }
 
 app.MapJobmatchApi();
+
+// Hangfire job dashboard — local-only (the host binds 127.0.0.1, and this filter rejects any
+// non-loopback request as defence in depth). Gives at-a-glance visibility of runs, retries, failures.
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new LocalRequestsOnlyAuthorizationFilter()],
+});
 
 // Host-owned endpoints — shutdown is not part of the standalone Api surface.
 new Jobmatch.Host.Endpoints.HostShutdownEndpoint().Register(app);

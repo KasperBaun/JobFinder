@@ -47,6 +47,29 @@ _(none)_
 
 ## Completed (recent)
 
+- **Searches run as durable background jobs (Hangfire) with a `JobSearch`
+  state model.** Fixes the bug where navigating away from the search page
+  killed the in-flight run and left "Past searches" empty (history was only
+  written at the very end of a synchronous in-request SSE run). Now `POST
+  /api/search` enqueues a Hangfire job (SQLite storage at
+  `data/<email>/hangfire.db`) that runs decoupled from the request, so it
+  survives in-app navigation, full reload, and host restart. A new
+  `JobSearch` aggregate (`Jobmatch/Jobs/`) with an explicit state machine
+  (queued → running → succeeded/failed/cancelled/interrupted) + timestamped
+  timeline is persisted per run under `data/<email>/jobsearch/<id>.json`;
+  every run — including abandoned/failed — now shows in history with a state
+  badge. Live progress streams over SSE (`/api/search/{id}/stream`, snapshot
+  replay + live) via an in-proc `JobSearchBus`; the GUI reconnects to an
+  active run on load via `/api/search/active`. Frontend: app-level
+  `SearchRunContext` (survives navigation, replaces the old
+  `useSearchStream`), a global running indicator + cancel on every page, and
+  history state badges + per-run timeline. Local-only Hangfire dashboard at
+  `/hangfire`. Background jobs are gated off in the "Testing" environment so
+  tests stay hermetic. 33 new tests (state machine, store + orphan
+  reconciliation, bus fan-out, job event-mapping + terminal states, service
+  enqueue/cancel, history merge). See R-036/037/038/055 and the
+  "Background search jobs" note in CLAUDE.md.
+
 - **DR Teknologi cross-portal duplicate collapsed (company alias).**
   The pair the 2026-05-12 dedupe pass left behind. Jobindex extracts
   `company: "DR"` from the trailing title suffix; the hr-manager-dr

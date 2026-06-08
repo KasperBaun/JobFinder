@@ -43,7 +43,13 @@ public static class Routes
     {
         public const string Tag = "Search";
         public const string Base = $"{ApiConstants.RouteBase}/search";
+        // POST: enqueue a background run, returns { id }. Repurposed from the old synchronous SSE run.
         public const string Run = Base;
+        // GET literal — must stay above ById so routing prefers it over the {id} parameter.
+        public const string Active = $"{Base}/active";
+        public const string ById = $"{Base}/{{id}}";
+        public const string Stream = $"{Base}/{{id}}/stream";
+        public const string Cancel = $"{Base}/{{id}}/cancel";
     }
 
     public static class History

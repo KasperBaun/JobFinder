@@ -1,4 +1,5 @@
 using Jobmatch.Deduplication;
+using Jobmatch.Jobs;
 
 namespace Jobmatch.Search;
 
@@ -23,4 +24,7 @@ public sealed record RunDetail(
     IReadOnlyList<ProviderRaw>? Raw = null,
     IReadOnlyList<DedupeGroup>? DedupeMerges = null,
     IReadOnlyList<ScoredEntry>? Scored = null,
-    IReadOnlyList<DroppedEntry>? Dropped = null);
+    IReadOnlyList<DroppedEntry>? Dropped = null,
+    JobSearchState? State = null,
+    JobSearchPhase? Phase = null,
+    IReadOnlyList<JobSearchEvent>? Timeline = null);

@@ -988,6 +988,90 @@ a.btn--danger:hover {
   font-size: 0.875rem;
 }
 
+.progress-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.progress-panel__head .progress-panel__heading { margin-bottom: 0; }
+
+/* ----- run timeline (what happened, when) ----- */
+.timeline { list-style: none; padding: 0; margin: var(--space-4) 0 0; }
+.timeline__item {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: 0.3rem 0;
+  font-size: 0.84rem;
+  border-top: 1px dotted var(--c-slate-200);
+}
+.timeline__item:first-child { border-top: none; }
+.timeline__time { color: var(--c-text-subtle); font-size: 0.72rem; }
+.timeline__msg { color: var(--c-text); }
+.timeline__item--warn .timeline__msg  { color: var(--c-bad); }
+.timeline__item--error .timeline__msg { color: var(--c-bad); font-weight: 500; }
+
+/* ----- run state badge ----- */
+.state-badge {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--c-slate-300);
+  background: var(--c-slate-100);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.state-badge--running,
+.state-badge--queued     { background: var(--c-action-bg, rgba(40,90,200,0.12)); color: var(--c-action); border-color: transparent; }
+.state-badge--succeeded  { background: var(--c-good-bg); color: var(--c-good); border-color: var(--c-good-border); }
+.state-badge--failed     { background: var(--c-bad-bg); color: var(--c-bad); border-color: var(--c-bad-border); }
+.state-badge--cancelled,
+.state-badge--interrupted { background: var(--c-slate-100); color: var(--c-text-muted); }
+
+/* ----- global running indicator (visible on every page while a run is active) ----- */
+.run-indicator {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.5rem 0.8rem;
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-slate-300);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  font-size: 0.84rem;
+}
+.run-indicator__spinner {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--c-slate-300);
+  border-top-color: var(--c-action);
+  animation: spin 0.8s linear infinite;
+  flex: none;
+}
+.run-indicator__text { color: var(--c-text); font-weight: 500; text-decoration: none; }
+.run-indicator__text:hover { color: var(--c-action); }
+.run-indicator__cancel {
+  border: none;
+  background: none;
+  color: var(--c-text-subtle);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.3rem;
+}
+.run-indicator__cancel:hover { color: var(--c-bad); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ============================================================
    listing card
    ============================================================ */
