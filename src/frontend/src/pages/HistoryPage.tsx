@@ -12,11 +12,19 @@ import {
   type LonglistFilters,
 } from '../components/longlist/filterState'
 import { formatAbsolute, formatRelative } from '../utils/time'
+import { STATE_LABEL } from '../utils/searchLabels'
+import { isTerminalState } from '../api/types'
 import type {
   DropReason,
   DroppedEntry,
+  JobSearchState,
   RunDetail,
 } from '../api/types'
+
+function StateBadge({ state }: { state?: JobSearchState }) {
+  const s = state ?? 'succeeded'
+  return <span className={`state-badge state-badge--${s}`}>{STATE_LABEL[s]}</span>
+}
 
 function HistoryListView() {
   const navigate = useNavigate()
@@ -24,6 +32,12 @@ function HistoryListView() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['history'],
     queryFn: getHistory,
+    // While a run is queued/running, poll so its row (state, counts) updates live.
+    refetchInterval: query => {
+      const runs = query.state.data?.runs
+      const anyActive = runs?.some(r => r.state !== undefined && !isTerminalState(r.state))
+      return anyActive ? 2000 : false
+    },
   })
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -155,6 +169,7 @@ function HistoryListView() {
                     />
                   </th>
                   <th>When</th>
+                  <th>Status</th>
                   <th>Sources</th>
                   <th>Top jobs</th>
                   <th>Best rating</th>
@@ -190,6 +205,7 @@ function HistoryListView() {
                           {formatRelative(run.startedAt)}
                         </Link>
                       </td>
+                      <td><StateBadge state={run.state} /></td>
                       <td className="tabular">
                         <span style={{ color: 'var(--c-good)' }}>{ok}</span>
                         <span className="subtle"> / </span>
@@ -562,6 +578,22 @@ function LonglistView({ data }: { data: RunDetail }) {
   )
 }
 
+function TimelineList({ data }: { data: RunDetail }) {
+  if (!data.timeline || data.timeline.length === 0) return null
+  return (
+    <ol className="timeline">
+      {data.timeline.map((ev, i) => (
+        <li key={i} className={`timeline__item timeline__item--${ev.level}`}>
+          <span className="timeline__time tabular mono" title={formatAbsolute(ev.timestamp)}>
+            {formatRelative(ev.timestamp)}
+          </span>
+          <span className="timeline__msg">{ev.message}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
 function RunDetailView({ runId }: { runId: string }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -570,11 +602,20 @@ function RunDetailView({ runId }: { runId: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['run', runId],
     queryFn: () => getRun(runId),
+    // A queued/running run has no results yet — poll until it's terminal.
+    refetchInterval: query => {
+      const state = query.state.data?.state
+      return state !== undefined && !isTerminalState(state) ? 2000 : false
+    },
   })
 
   function setTab(next: TabKey) {
     navigate(`/history/${runId}${buildHash(next)}`, { replace: false })
   }
+
+  // Legacy runs have no state and always carry results. New runs only have the rich result tabs
+  // once they've succeeded; otherwise we show the lifecycle timeline.
+  const hasResults = data != null && (data.state === undefined || data.state === 'succeeded')
 
   return (
     <div className="page page--wide">
@@ -590,13 +631,26 @@ function RunDetailView({ runId }: { runId: string }) {
       {data && (
         <>
           <RunSummaryCard run={data} />
-          <ResultsToggle active={tab} onChange={setTab} data={data} />
-          <AuditTabs active={tab} onChange={setTab} data={data} />
-          {tab === 'shortlist' && <ShortlistTab data={data} />}
-          {tab === 'longlist'  && <LonglistView data={data} />}
-          {tab === 'raw'       && <RawFetchTab data={data} focusProvider={provider} />}
-          {tab === 'dedupe'    && <DedupeTab data={data} />}
-          {tab === 'dropped'   && <DroppedTab data={data} />}
+          {hasResults ? (
+            <>
+              <ResultsToggle active={tab} onChange={setTab} data={data} />
+              <AuditTabs active={tab} onChange={setTab} data={data} />
+              {tab === 'shortlist' && <ShortlistTab data={data} />}
+              {tab === 'longlist'  && <LonglistView data={data} />}
+              {tab === 'raw'       && <RawFetchTab data={data} focusProvider={provider} />}
+              {tab === 'dedupe'    && <DedupeTab data={data} />}
+              {tab === 'dropped'   && <DroppedTab data={data} />}
+            </>
+          ) : (
+            <section className="progress-panel">
+              <div className="progress-panel__head">
+                <h2 className="progress-panel__heading">
+                  <StateBadge state={data.state} />
+                </h2>
+              </div>
+              <TimelineList data={data} />
+            </section>
+          )}
         </>
       )}
     </div>

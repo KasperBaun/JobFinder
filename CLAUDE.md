@@ -41,9 +41,33 @@ global.json                          SDK pin (.NET 10)
 - **What the system must do** → [`docs/requirements.md`](docs/requirements.md) (one-line requirements with `R-NNN` IDs)
 - **What's in flight** → [`todo.md`](todo.md)
 - **Why each DK portal got the verdict it did** → [`docs/tasks/T-007/`](docs/tasks/T-007/) — per-portal evaluation worksheets (api / rss / html / manual / dead) + the playbook for evaluating a new one. Reference data, not a task spec — keep when adding or reconsidering portals.
-- **How the backend should look** → read `src/backend/rules/` for the conventions (Endpoint → Handler → Service layering, HandlerBase + ExecuteAsync, IEndpointRegistration, typed Routes, custom exceptions, module pattern, file-size limits, coding conventions). Then read `src/backend/Jobmatch.Api/` to see the pattern applied. Auth/EF/Hangfire rules in `src/backend/rules/` do not apply — jobfinder is local single-user file-based.
+- **How the backend should look** → read `src/backend/rules/` for the conventions (Endpoint → Handler → Service layering, HandlerBase + ExecuteAsync, IEndpointRegistration, typed Routes, custom exceptions, module pattern, file-size limits, coding conventions). Then read `src/backend/Jobmatch.Api/` to see the pattern applied. The structural/quality rules are the standard here; a few infra rules are deliberately excepted — see **Backend rules: adopted vs. exceptions** below.
 
 When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, update `todo.md`.
+
+## Backend rules: adopted vs. exceptions
+
+`src/backend/rules/` was written for a multi-tenant SaaS (JWT auth, EF Core + SQL Server, GUID IDs). Jobfinder is local, single-user, file-based, no-auth. The split below is intentional: the **adopted** rules are the standard and bind all backend work; the **exceptions** are codified design decisions, not violations to "fix."
+
+**Adopted — these apply, no carve-out:**
+
+- Endpoint → Handler → Service layering; `HandlerBase` + `ExecuteAsync`; `IEndpointRegistration`; typed `Routes.*`; centralised OpenAPI metadata.
+- Custom exceptions (`ConfigException` / `InvalidRequestException` / `NotFoundException`) translated to HTTP by `ExecuteAsync`; the module pattern.
+- One concern per file; file/method size limits (300-line file / 50-line method hard limits); the partial-class refactoring strategy when a file outgrows the limit.
+- Coding conventions: collection expressions `[]`, `.Count > 0` over `.Any()`, primary constructors, enums for domain values, immutable records.
+- Testing conventions: xUnit, FluentAssertions, tests mirror the source tree, same size limits.
+
+**Deliberate exceptions — intentional for a local/single-user/file-based tool:**
+
+- **No auth / no `.RequirePermission()`.** Deferred; may be added later. (See "No auth" under *Things to avoid*.)
+- **No EF Core / migrations.** State is JSON files under `data/<email>/`.
+- **SQLite, not SQL Server**, for Hangfire storage (`data/<email>/hangfire.db`).
+- **String timestamp run-ids, not GUID primary keys** (id == the history run id).
+- **Hangfire dashboard local-only / unsecured by design** (no auth provider).
+
+`rules/infrastructure/background-jobs.md` **applies** to the sanctioned search job (see *Background search jobs*) **except** the storage backend (SQLite, not SQL Server) and dashboard auth.
+
+- **Retry policy (intentional):** the search job uses `[AutomaticRetry(Attempts = 1)]`, not the rule's default of 3. A full re-run is expensive, and per-provider failures are already handled gracefully inside the `SearchService` pipeline (each adapter wrapped in try/catch, logged, skipped). Do **not** "fix" this back to 3.
 
 ## Code conventions
 
@@ -72,11 +96,26 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 
 - **No hard-coded personal context in code.** No keywords, locations, employers, or stacks bake into binaries. Everything personal is data.
 - **No anti-bot bypassing.** Sites that block automation are supported only via the `manual` provider type.
-- **No background daemons or schedulers.** This is an on-demand tool.
+- **No background *schedulers* / recurring daemons.** Still no cron-like or always-on background work. The one sanctioned background *job* is the user-initiated search (see below) — transient, scoped to a single run, not recurring.
 - **No telemetry or external state.** Everything is local.
-- **No global state store / reducer pattern.** Jobfinder is stateless per call — sharing through the `Jobmatch/` library + DTO contracts is enough.
+- **No global state store / reducer pattern.** Jobfinder is stateless per call. Exception: the frontend `SearchRunContext` and the server `JobSearch` store track exactly one in-flight search's lifecycle — not general app state.
 - **No re-introduction of a CLI without product approval.** The CLI was removed when the GUI became the contract; revisit only with explicit user direction.
-- **No DB / auth / Hangfire.** The rules in `src/backend/rules/` reference these; they do not apply to jobfinder. State is files under `data/<email>/`; there is no auth.
+- **No auth.** State is files under `data/<email>/`; there is no auth. (Hangfire is used — see below — but its dashboard is local-only, no auth provider.)
+
+## Background search jobs (the one sanctioned exception)
+
+A search runs as a **Hangfire background job** (durable SQLite storage at `data/<email>/hangfire.db`),
+decoupled from the HTTP request, so it survives navigation, reload, and host restart (R-036/R-037/R-038/R-055).
+Do **not** "fix" this back to a synchronous in-request run.
+
+- Domain model: `Jobmatch/Jobs/JobSearch.cs` (immutable record + state machine), persisted per-run via
+  `JobSearchStore` under `data/<email>/jobsearch/<id>.json`. Id == the history run id.
+- Execution: `Jobmatch.Api/Jobs/SearchJob.cs` (the Hangfire job) drives the `SearchService` pipeline,
+  projects progress onto the `JobSearch` + timeline, and publishes snapshots to `JobSearchBus` for SSE.
+- API: `POST /api/search` enqueues and returns `{ id }`; `GET /api/search/{id}/stream` is the SSE feed;
+  `/api/search/active` for reconnect; `POST /api/search/{id}/cancel`.
+- DI gate: `AddJobmatchApi(enableBackgroundJobs)` — false in the "Testing" environment so tests don't
+  start a server or create a db. The `rules/infrastructure/background-jobs.md` conventions now apply.
 
 ## When in doubt
 

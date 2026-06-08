@@ -21,6 +21,7 @@ public sealed class UserContext
     public required string TopJobsPath { get; init; }
     public required string VerificationReportPath { get; init; }
     public required string HistoryDir { get; init; }
+    public required string JobSearchDir { get; init; }
     public required string MarksPath { get; init; }
     public required string ExamplesDir { get; init; }
     public required string ProviderStatePath { get; init; }
@@ -63,11 +64,13 @@ public sealed class UserContext
         var importsDir = Path.Combine(rootDir, "imports");
         var rawDir = Path.Combine(rootDir, "raw");
         var historyDir = Path.Combine(rootDir, "history");
+        var jobSearchDir = Path.Combine(rootDir, "jobsearch");
         var examplesDir = Path.Combine(rootDir, "examples");
 
         Directory.CreateDirectory(importsDir);
         Directory.CreateDirectory(rawDir);
         Directory.CreateDirectory(historyDir);
+        Directory.CreateDirectory(jobSearchDir);
         Directory.CreateDirectory(examplesDir);
 
         var userRanking = Path.Combine(rootDir, "ranking.yml");
@@ -89,6 +92,7 @@ public sealed class UserContext
             TopJobsPath = Path.Combine(rootDir, "top-jobs.md"),
             VerificationReportPath = Path.Combine(rootDir, "verification-report.md"),
             HistoryDir = historyDir,
+            JobSearchDir = jobSearchDir,
             MarksPath = Path.Combine(rootDir, "marks.json"),
             ExamplesDir = examplesDir,
             ProviderStatePath = Path.Combine(rootDir, "provider-state.json"),

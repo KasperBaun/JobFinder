@@ -2,6 +2,7 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { useServerConnection } from './hooks/useServerConnection'
 import { ServerDisconnectedOverlay } from './components/ServerDisconnectedOverlay'
 import { TopNav } from './components/TopNav'
+import { SearchRunIndicator } from './components/SearchRunIndicator'
 import { HomePage } from './pages/HomePage'
 import { ProvidersPage } from './pages/ProvidersPage'
 import { ProviderDetailPage } from './pages/ProviderDetailPage'
@@ -31,6 +32,7 @@ export function App() {
     <>
       {!isClosed && connectionStatus === 'disconnected' && <ServerDisconnectedOverlay />}
       {!isClosed && <TopNav />}
+      {!isClosed && <SearchRunIndicator />}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/providers" element={<ProvidersPage />} />
