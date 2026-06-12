@@ -108,6 +108,7 @@ export type ListingMatch = {
   reasoning: string
   primaryStackHits: string[]
   secondaryStackHits: string[]
+  favoriteCompany?: boolean
 }
 
 export type ProviderRunStatus = {

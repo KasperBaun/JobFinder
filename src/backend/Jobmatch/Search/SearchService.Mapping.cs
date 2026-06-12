@@ -21,7 +21,8 @@ public sealed partial class SearchService
             Reasoning: match.Reasoning.Notes,
             PrimaryStackHits: match.Reasoning.PrimaryStackHits,
             SecondaryStackHits: match.Reasoning.SecondaryStackHits,
-            PortalDisplayName: portalDisplayNames.TryGetValue(l.Portal, out var dn) ? dn : l.Portal);
+            PortalDisplayName: portalDisplayNames.TryGetValue(l.Portal, out var dn) ? dn : l.Portal,
+            FavoriteCompany: match.Breakdown.PreferredCompanyBonus > 0);
     }
 
     private static RawListing ToRawListing(Listing l) => new(

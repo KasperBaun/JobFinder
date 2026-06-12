@@ -85,7 +85,7 @@ public static class Ranker
             // Only mention the title gate in the notes when it actually changed the score —
             // matching the regex with a multiplier of 1.0 means the user opted out of the gate.
             var titleGateActive = nonEngineeringTitle && ranking.NonEngineeringTitleMultiplier < 1.0;
-            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, preferredCompanyHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
+            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, listing, ageDays, ranking.FreshnessHalfLifeDays);
 
             matches.Add(new Match(
                 Listing: listing,
@@ -481,7 +481,6 @@ public static class Ranker
         bool? remoteMatch,
         IReadOnlyList<string> disqualifierHits,
         bool nonEngineeringTitle,
-        IReadOnlyList<string> preferredCompanyHits,
         Listing listing,
         double? ageDays,
         double halfLifeDays)
@@ -491,11 +490,9 @@ public static class Ranker
             return $"Removed because of: {string.Join(", ", disqualifierHits)}.";
         }
 
+        // The preferred-company boost is deliberately absent here — it renders as a
+        // badge in the GUI (from Breakdown.PreferredCompanyBonus), not as note prose.
         var parts = new List<string>();
-        if (preferredCompanyHits.Count > 0)
-        {
-            parts.Add($"One of your favorite companies ({string.Join(", ", preferredCompanyHits)}) — rating boosted.");
-        }
         if (primaryHits.Count > 0)
         {
             parts.Add($"Must-have skill match: {string.Join(", ", primaryHits)}.");
