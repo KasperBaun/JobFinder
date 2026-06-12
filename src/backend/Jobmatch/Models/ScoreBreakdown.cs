@@ -9,7 +9,8 @@ namespace Jobmatch.Models;
 /// DisqualifierPenalty and NonEngineeringTitlePenalty store the *delta*
 /// applied when their respective gate fires: each is a non-positive number
 /// (0 when the gate didn't fire) representing how much the pre-penalty sum
-/// was reduced.
+/// was reduced. PreferredCompanyBonus is the non-negative delta added when
+/// the listing's company matches a preferred employer.
 /// </summary>
 public sealed record ScoreBreakdown(
     double PrimaryStack,
@@ -19,7 +20,8 @@ public sealed record ScoreBreakdown(
     double Domain,
     double Freshness,
     double DisqualifierPenalty,
-    double NonEngineeringTitlePenalty = 0.0)
+    double NonEngineeringTitlePenalty = 0.0,
+    double PreferredCompanyBonus = 0.0)
 {
     public IEnumerable<(string Label, double Value)> EnumerateComponents()
     {
@@ -31,5 +33,6 @@ public sealed record ScoreBreakdown(
         yield return ("freshness", Freshness);
         yield return ("disqualifier_penalty", DisqualifierPenalty);
         yield return ("non_engineering_title_penalty", NonEngineeringTitlePenalty);
+        yield return ("preferred_company_bonus", PreferredCompanyBonus);
     }
 }

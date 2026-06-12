@@ -15,6 +15,7 @@ public static class Ranker
         var secondaryRegexes = CompileKeywords(skillset.SecondaryStack);
         var domainRegexes = CompileKeywords(skillset.Domains);
         var disqualifierRegexes = CompileKeywords(skillset.Disqualifiers);
+        var preferredCompanyRegexes = CompileKeywords(skillset.PreferredCompanies);
 
         var matches = new List<Match>();
         foreach (var listing in listings)
@@ -31,6 +32,9 @@ public static class Ranker
             var secondaryHits = HitsOf(secondaryRegexes, corpus);
             var domainHits = HitsOf(domainRegexes, corpus);
             var disqualifierHits = HitsOf(disqualifierRegexes, disqualifierCorpus);
+            // Preferred employers match the company name only — a listing that merely
+            // mentions a dream company in its description isn't a job *at* that company.
+            var preferredCompanyHits = HitsOf(preferredCompanyRegexes, listing.Company ?? string.Empty);
 
             var primaryFraction = Fraction(primaryHits.Count, skillset.PrimaryStack.Count);
             var secondaryFraction = Fraction(secondaryHits.Count, skillset.SecondaryStack.Count);
@@ -60,7 +64,11 @@ public static class Ranker
                 ? afterDisqualifier * ranking.NonEngineeringTitleMultiplier
                 : afterDisqualifier;
             var nonEngineeringTitleDelta = afterTitleGate - afterDisqualifier;
-            var score = Math.Clamp(afterTitleGate, 0.0, 1.0);
+            var afterPreferredBoost = preferredCompanyHits.Count > 0
+                ? Math.Min(afterTitleGate * ranking.PreferredCompanyBoost, 1.0)
+                : afterTitleGate;
+            var preferredCompanyDelta = afterPreferredBoost - afterTitleGate;
+            var score = Math.Clamp(afterPreferredBoost, 0.0, 1.0);
 
             var breakdown = new ScoreBreakdown(
                 PrimaryStack: primaryContribution,
@@ -70,13 +78,14 @@ public static class Ranker
                 Domain: domainContribution,
                 Freshness: freshnessContribution,
                 DisqualifierPenalty: disqualifierDelta,
-                NonEngineeringTitlePenalty: nonEngineeringTitleDelta);
+                NonEngineeringTitlePenalty: nonEngineeringTitleDelta,
+                PreferredCompanyBonus: preferredCompanyDelta);
 
             var ageDays = AgeInDays(listing.PostedAt);
             // Only mention the title gate in the notes when it actually changed the score —
             // matching the regex with a multiplier of 1.0 means the user opted out of the gate.
             var titleGateActive = nonEngineeringTitle && ranking.NonEngineeringTitleMultiplier < 1.0;
-            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, listing, ageDays, ranking.FreshnessHalfLifeDays);
+            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, preferredCompanyHits, listing, ageDays, ranking.FreshnessHalfLifeDays);
 
             matches.Add(new Match(
                 Listing: listing,
@@ -472,6 +481,7 @@ public static class Ranker
         bool? remoteMatch,
         IReadOnlyList<string> disqualifierHits,
         bool nonEngineeringTitle,
+        IReadOnlyList<string> preferredCompanyHits,
         Listing listing,
         double? ageDays,
         double halfLifeDays)
@@ -482,6 +492,10 @@ public static class Ranker
         }
 
         var parts = new List<string>();
+        if (preferredCompanyHits.Count > 0)
+        {
+            parts.Add($"One of your favorite companies ({string.Join(", ", preferredCompanyHits)}) — rating boosted.");
+        }
         if (primaryHits.Count > 0)
         {
             parts.Add($"Must-have skill match: {string.Join(", ", primaryHits)}.");

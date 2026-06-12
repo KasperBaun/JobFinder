@@ -66,6 +66,7 @@ export type SkillsetResponse = {
   country?: string | null
   region?: string | null
   metro: string[]
+  preferredCompanies: string[]
 }
 
 export type SkillsetUpdateRequest = {
@@ -84,6 +85,7 @@ export type SkillsetUpdateRequest = {
   country?: string | null
   region?: string | null
   metro: string[]
+  preferredCompanies: string[]
 }
 
 export type SearchRequest = {

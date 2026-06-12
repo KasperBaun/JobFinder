@@ -19,7 +19,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## Search criteria & providers
 
 - **R-020** The system should let a user list job providers (e.g. JOBNET) they want to pull from, and let them enable or disable each without removing it.
-- **R-021** The system should accept four provider access types: public API, RSS/Atom feed, browser-rendered HTML, manual import.
+- **R-021** The system should accept six provider access types: public API, RSS/Atom feed, server-rendered HTML, manual import, TeamTailor career sites (sitemap + JSON-LD), and HR-Manager.net customer lists.
 - **R-022** The system should fetch only providers explicitly configured by the user — never the open web.
 - **R-023** The system should let a user view their currently configured providers and current search criteria from the GUI.
 - **R-024** The system should ship a curated provider catalog as part of the application bundle so a new user can run a search on first launch with no setup.
@@ -46,11 +46,12 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-041** The system should let a user declare deal-breaker keywords that match the listing's title or company name (description excluded — too many false positives like "junior-to-senior team" zeroing real senior roles) and zero its score on hit.
 - **R-042** The system should explain every ranked match: which signals fired, which didn't, and a one-line note — never invented reasoning.
 - **R-043** The system should never invent a positive signal; when a signal can't be evaluated (missing field), it should say so.
-- **R-044** The system should record a per-component score breakdown (weighted contribution of primary stack, secondary stack, seniority, location/remote, domain, freshness, disqualifier penalty, and non-engineering-title penalty) for every ranked listing.
+- **R-044** The system should record a per-component score breakdown (weighted contribution of primary stack, secondary stack, seniority, location/remote, domain, freshness, disqualifier penalty, non-engineering-title penalty, and preferred-company bonus) for every ranked listing.
 - **R-087** The system should multiply a listing's score by a configurable factor (default 0.2) when its title looks clearly non-engineering — Product/Project/Account Manager, Marketing/Sales/Finance roles, Customer Success, Recruiter, Data/Business/Fraud Analyst, etc. — to prevent incidental tech-keyword hits in the description from dragging non-engineering roles into the shortlist. Engineer/Engineering/Developer/Architect/SRE/DevOps in the title overrides this gate.
 - **R-088** The system should give full credit (configurable, default 1.0) to listings whose seniority is one level off from the user's (mid↔senior, senior↔lead, junior↔mid). The IT market overcounts "Senior" — strict matching drags down most matches for users who self-classify mid-with-experience. Reasoning notes still distinguish "adjacent" from "fits" so the user knows the level isn't an exact match.
 - **R-089** The system should support per-portal body enrichment for RSS feeds (`enrichBody: true` in the catalog): after parsing the feed, fetch each item's linked HTML page sequentially with a small delay (~5rps) and merge the visible text into the listing's description before ranking. Failures don't drop the listing — the RSS-only version is kept and the failure logged.
 - **R-090** The system should match the user's declared cities and metro areas across Danish/English language variants (Copenhagen ↔ København / Kbh / Cph; Aarhus ↔ Århus; Aalborg ↔ Ålborg; Greater Copenhagen ↔ Storkøbenhavn / Hovedstaden; Helsingør ↔ Elsinore) so a Danish-language listing for "København" still earns the City tier weight when the user declared "Copenhagen".
+- **R-091** The system should let a user declare preferred companies (employers they'd love to work for) in their skillset; a listing whose company name matches one gets its score multiplied by a configurable boost (`preferred_company_boost`, default 1.25, clamped at 1.0). Matching is against the company name only — a listing that merely mentions a preferred company in its description gets no boost — and a deal-breaker hit still zeroes the score. The preferred list is also surfaced to the LLM judge.
 
 ## History & feedback
 
