@@ -46,10 +46,20 @@ same playbook. Wired entries reference `src/backend/Jobmatch/Configuration/porta
 | Pandora | html (SuccessFactors SSR) | 42 | [company-pandora.md](company-pandora.md) |
 | PFA | html (own SSR page) | 43 | [company-pfa.md](company-pfa.md) |
 | Sopra Steria | api (SmartRecruiters) | 21 | already wired pre-batch |
-| Danske Bank | api, blocked | — | [company-danske-bank.md](company-danske-bank.md) — Oracle Recruiting works anonymously but needs numeric path segments in `JsonValueReader.Walk` (follow-up) |
+| Danske Bank | api (Oracle Recruiting) | 44 | [company-danske-bank.md](company-danske-bank.md) — unblocked via numeric path segments in `JsonValueReader.Walk` |
 | DFDS | not wired (JS app) | — | [company-dfds.md](company-dfds.md) |
 | Nykredit | not wired (JS app) | — | [company-nykredit.md](company-nykredit.md) — covered via Jobindex feeds + boost |
 | Epico Tech | not wired (JS SPA) | — | [company-epico-tech.md](company-epico-tech.md) — covered via Jobindex/The Hub + boost |
+
+## DK .NET employer sweep (2026-06, round 2)
+
+ATS-signature sweep over 13 additional DK .NET-heavy employers. Wired (catalog ids):
+**twoday** (TeamTailor `twodaydenmark`, id 45, 21 roles), **Templafy** (TeamTailor, id 46),
+**Milestone Systems** (Oracle Recruiting `fa-ewto-saasfaprod1`, id 47, 25 roles),
+**EG A/S** (HR-Manager `customer=eg`, id 48), **Stibo Systems** (Workday `stibosystems/wd3`, id 49).
+No machine-readable surface found (JS apps / own systems, static probes only):
+KMD, Trifork, Systematic, Siteimprove, 3Shape, Visma DK, Nexi/Nets, Cbrain — revisit
+with a browser network-tab session if needed.
 
 ## What shipped to portals.example.yml
 
