@@ -4,6 +4,13 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
+- **Danske Bank provider — numeric path segments in `JsonValueReader.Walk`.**
+  Oracle Recruiting's anonymous REST works (145 reqs, ISO dates) but the
+  items live at `items[0].requisitionList`; `Walk` only traverses object
+  properties. Small extension (array-index segments) + catalog entry —
+  see `docs/tasks/T-007/company-danske-bank.md` for the verified endpoint.
+- **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
+  currently user-disabled) — still the single widest DK net we have.
 - **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
   `recruit-it` portal stub uses `:scope` as `link_selector` to target the
   wrapping `<a>`. Verify Playwright resolves `:scope` inside
@@ -47,6 +54,34 @@ _(none)_
 
 ## Completed (recent)
 
+- **Source expansion — 5 RSS query feeds, 7 favorite-company providers,
+  manual-import docs.** New Jobindex/IT-Jobbank query feeds (ids 30-34:
+  backend udvikler / c# / azure / software engineer / it-jobbank .net,
+  each ~10-20 newest, enriched — adds ~3.5 min sequential fetch time per
+  run). Favorite-company career sites wired per T-007-style worksheets
+  (`docs/tasks/T-007/company-*.md`): LEGO/SimCorp/Maersk via Workday CXS
+  POST (ids 37-39, descriptions via JSON-LD enrichment), H1 via Lever
+  (id 40), Nordea/Pandora/PFA via server-rendered HTML (ids 41-43 —
+  HtmlAdapter learned `enrichBody` for this). Danske Bank blocked on a
+  `JsonValueReader.Walk` numeric-segment extension (backlogged); DFDS/
+  Nykredit/Epico are JS-only, covered via Jobindex feeds + boost.
+  Hardened `PortalCatalogLoader` nested-JSON cloning (disposed-document
+  bug); R-021 updated to six provider types. LinkedIn (id 11) + new
+  TechJob.dk (id 36) manual entries now carry concrete CSV-import
+  instructions; README gained a "Manual imports" paragraph. All new
+  providers live-tested via `POST /api/providers/{id}/test` on
+  2026-06-12: feeds 9-20 items, LEGO 39, SimCorp 60, Maersk 29, H1 20,
+  Nordea 100, Pandora 10, PFA 5.
+- **Preferred companies — skillset section + ranking boost (R-091).** New
+  `## Preferred companies` skillset section (GUI: "Favorite companies" card
+  on the profile page) listing employers the user wants to work for. The
+  ranker multiplies a listing's post-gate score by `preferred_company_boost`
+  (ranking.yml, default 1.25, capped at 1.0) when the listing's company name
+  matches an entry — company name only, so a listing merely mentioning a
+  dream company in its description gets nothing, and deal-breakers still
+  zero the score. Breakdown gains a `preferred_company_bonus` component;
+  notes say "One of your favorite companies (X) — rating boosted."; the LLM
+  judge prompt lists the preferred employers. Coverage caveat logged below.
 - **Searches run as durable background jobs (Hangfire) with a `JobSearch`
   state model.** Fixes the bug where navigating away from the search page
   killed the in-flight run and left "Past searches" empty (history was only

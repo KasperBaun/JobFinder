@@ -18,6 +18,8 @@ Everything stays on your machine. No sign-up, no cloud account, no telemetry. Yo
 
 Launch the binary and a local app opens in your browser. View your providers, your search criteria, and your search history at a glance. Run searches and mark good matches with a click. The browser closes when you're done; nothing keeps running in the background.
 
+**Manual imports.** Some sources (LinkedIn, TechJob.dk, Stepstone) can't be fetched automatically. For those, save the roles you care about as `data/<your-email>/imports/<provider>-<anything>.csv` (e.g. `linkedin-2026-06.csv`) — the file name must start with the provider's name. Required columns: `url`, `title`; optional: `company`, `location`, `description`, `posted_at`. Turn the matching provider on and the next search run ingests every file.
+
 ## Where your data lives
 
 Everything personal lives under `data/<your-email>/` on your own machine. That folder is never committed to git, never sent anywhere, never shared. If you delete it, the tool forgets everything about you and starts fresh.
