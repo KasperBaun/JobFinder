@@ -31,6 +31,26 @@ Status legend: `open` (no work yet) · `wip` (claimed) · `done`
 | The Hub | done | api | already wired in `src/config/portals.example.yml` |
 | Stack Overflow / GitHub Jobs | done | dead | both shut down 2022; nothing to wire |
 
+## Favorite-company career sites (2026-06)
+
+Per-company evaluation of the user's preferred employers (R-091), driven by the
+same playbook. Wired entries reference `src/backend/Jobmatch/Configuration/portals.json` ids.
+
+| Company | Verdict | Catalog id | Worksheet / note |
+|---|---|---|---|
+| LEGO | api (Workday CXS) | 37 | [company-lego.md](company-lego.md) |
+| SimCorp | api (Workday CXS) | 38 | [company-simcorp.md](company-simcorp.md) |
+| Maersk | api (Workday CXS) | 39 | [company-maersk.md](company-maersk.md) |
+| H1 (h1.co) | api (Lever) | 40 | [company-h1.md](company-h1.md) |
+| Nordea | html (SuccessFactors SSR) | 41 | [company-nordea.md](company-nordea.md) |
+| Pandora | html (SuccessFactors SSR) | 42 | [company-pandora.md](company-pandora.md) |
+| PFA | html (own SSR page) | 43 | [company-pfa.md](company-pfa.md) |
+| Sopra Steria | api (SmartRecruiters) | 21 | already wired pre-batch |
+| Danske Bank | api, blocked | — | [company-danske-bank.md](company-danske-bank.md) — Oracle Recruiting works anonymously but needs numeric path segments in `JsonValueReader.Walk` (follow-up) |
+| DFDS | not wired (JS app) | — | [company-dfds.md](company-dfds.md) |
+| Nykredit | not wired (JS app) | — | [company-nykredit.md](company-nykredit.md) — covered via Jobindex feeds + boost |
+| Epico Tech | not wired (JS SPA) | — | [company-epico-tech.md](company-epico-tech.md) — covered via Jobindex/The Hub + boost |
+
 ## What shipped to portals.example.yml
 
 7 new disabled stub blocks under a "T-007 — DK research findings" section:

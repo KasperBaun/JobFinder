@@ -231,7 +231,7 @@
       "displayName": "LinkedIn",
       "type": "manual",
       "enabled": false,
-      "notes": "LinkedIn requires a logged-in account, so it can't be queried automatically. Use LinkedIn's email job alerts, or save manual exports to your data/imports/ folder."
+      "notes": "LinkedIn requires a logged-in account and gates its API behind the partner-only Talent Solutions program, so it can't be queried automatically. To include LinkedIn listings: set up LinkedIn job-alert emails for your searches, then save the roles you care about as a CSV in your data/imports/ folder named linkedin-<anything>.csv (e.g. linkedin-2026-06.csv). Required columns: url, title. Optional: company, location, description, posted_at (ISO date). Headers are case-insensitive. Turn this provider on and the next search run ingests every linkedin-*.csv file."
     },
     {
       "id": 12,
@@ -555,6 +555,218 @@
       "staticFields": { "company": "BEUMER Group" },
       "rateLimitRps": 1.0,
       "notes": "DK industrial automation; ~13 DK roles. Includes some software engineering roles around their conveyor / sortation control systems."
+    },
+    {
+      "id": 30,
+      "name": "jobindex-rss-backend-udvikler",
+      "displayName": "Jobindex (Backend udvikler)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+backend +udvikler" },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, AND-query requiring 'backend' and 'udvikler'. Catches Danish-titled backend roles (Nykredit, Norlys etc.) that the 'softwareudvikler' and '.net udvikler' queries miss. Verified 2026-06-12 (22 items). Body enrichment on."
+    },
+    {
+      "id": 31,
+      "name": "jobindex-rss-csharp",
+      "displayName": "Jobindex (C#)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+c#" },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, single AND-term 'c#'. Surfaces C#-tagged roles regardless of title language ('Software Engineer', 'Systemudvikler' etc.) that title-word queries miss; the '#' is URL-encoded automatically. Verified 2026-06-12 (20 items, incl. PFA and Arla .NET roles). Body enrichment on."
+    },
+    {
+      "id": 32,
+      "name": "jobindex-rss-azure",
+      "displayName": "Jobindex (Azure)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+azure" },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, single AND-term 'azure'. Catches cloud/platform/DevOps roles built on the Azure stack that developer-title queries miss. Expect some infrastructure-only noise — the ranker's title gate and stack weights handle it. Verified 2026-06-12 (20 items). Body enrichment on."
+    },
+    {
+      "id": 33,
+      "name": "jobindex-rss-software-engineer",
+      "displayName": "Jobindex (Software Engineer)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+software +engineer" },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, AND-query for the English title 'software engineer'. International companies hiring in Copenhagen post English titles the Danish queries never match. Verified 2026-06-12 (20 items). Body enrichment on."
+    },
+    {
+      "id": 34,
+      "name": "it-jobbank-rss-dotnet",
+      "displayName": "IT Jobbank (.NET)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.it-jobbank.dk/jobsoegning.rss",
+      "queryParams": { "q": "+.net" },
+      "rateLimitRps": 0.5,
+      "notes": "IT-jobbank public RSS (same Jobindex backend, pre-filtered to IT roles), single AND-term '.net'. Complements the 'softwareudvikler' it-jobbank feed; cross-feed duplicates are collapsed by the deduper. Verified 2026-06-12 (9 items). Body enrichment on."
+    },
+    {
+      "id": 36,
+      "name": "techjob",
+      "displayName": "TechJob.dk",
+      "type": "manual",
+      "enabled": false,
+      "notes": "Teknologiens Mediehus' tech job board (~400 DK engineering/IT roles; jobfinder.dk redirects here). No public jobs RSS or API, and robots.txt explicitly blocks AI crawlers, so automated ingestion is off the table. To include its listings: browse https://techjob.dk/jobs, copy the roles you care about into a CSV in your data/imports/ folder named techjob-<anything>.csv (e.g. techjob-2026-06.csv). Required columns: url, title. Optional: company, location, description, posted_at (ISO date). Headers are case-insensitive. Turn this provider on and the next search run ingests every techjob-*.csv file."
+    },
+    {
+      "id": 37,
+      "name": "workday-lego",
+      "displayName": "LEGO (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://lego.wd103.myworkdayjobs.com/wday/cxs/lego/LEGO_External/jobs",
+      "bodyTemplate": { "searchText": "software", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 3 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://lego.wd103.myworkdayjobs.com/en-US/LEGO_External{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "LEGO" },
+      "rateLimitRps": 1.0,
+      "notes": "LEGO's Workday career site via the public CXS JSON endpoint (POST, no auth). The list response has no description, so body enrichment fetches each job page and pulls the posting text from its embedded JSON-LD. postedOn is relative text, so the posting date stays unknown. searchText 'software' pre-filters ~40 global engineering roles (Billund-heavy); location ranking handles the rest. Some postings omit locationsText. Verified 2026-06-12."
+    },
+    {
+      "id": 38,
+      "name": "workday-simcorp",
+      "displayName": "SimCorp (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://simcorp.wd3.myworkdayjobs.com/wday/cxs/simcorp/SimCorp_Jobs/jobs",
+      "bodyTemplate": { "searchText": "developer", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 3 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://simcorp.wd3.myworkdayjobs.com/en-US/SimCorp_Jobs{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "SimCorp" },
+      "rateLimitRps": 1.0,
+      "notes": "SimCorp's Workday career site via the public CXS JSON endpoint (POST, no auth). ~270 global roles unfiltered — searchText 'developer' narrows to engineering; Copenhagen HQ roles rank up via location. Body enrichment pulls each posting's text from the job page's embedded JSON-LD; no posting date (relative text only). Verified 2026-06-12."
+    },
+    {
+      "id": 39,
+      "name": "workday-maersk",
+      "displayName": "Maersk (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://maersk.wd3.myworkdayjobs.com/wday/cxs/maersk/Maersk_Careers/jobs",
+      "bodyTemplate": { "searchText": "software engineer", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 3 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://maersk.wd3.myworkdayjobs.com/en-US/Maersk_Careers{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "Maersk" },
+      "rateLimitRps": 1.0,
+      "notes": "Maersk's Workday career site via the public CXS JSON endpoint (POST, no auth). Site name is 'Maersk_Careers' — 'Maersk' alone 404s; the 6-job 'PT_Careers' side board is ignored. ~70 software roles globally, large Copenhagen tech hub. Body enrichment pulls each posting's text from the job page's embedded JSON-LD; no posting date (relative text only). Verified 2026-06-12."
+    },
+    {
+      "id": 40,
+      "name": "lever-h1",
+      "displayName": "H1 (Lever)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.lever.co/v0/postings/h1",
+      "queryParams": { "mode": "json" },
+      "responseMapping": {
+        "id": "id",
+        "title": "text",
+        "location": "categories.location",
+        "description": "descriptionPlain",
+        "url": "hostedUrl"
+      },
+      "staticFields": { "company": "H1" },
+      "rateLimitRps": 1.0,
+      "notes": "H1 (h1.co, healthcare-data platform) on Lever's public postings API — no auth, full plain-text descriptions inline. The response is a bare array, so no items_path. ~20 global roles incl. Copenhagen hybrid positions; createdAt is epoch millis which the date parser ignores, so the posting date stays unknown. Verified 2026-06-12."
+    },
+    {
+      "id": 41,
+      "name": "html-nordea",
+      "displayName": "Nordea (careers site)",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://careers.nordea.com/search-jobs",
+      "html": {
+        "listSelector": "tr.data-row",
+        "titleSelector": "a.jobTitle-link",
+        "linkSelector": "a.jobTitle-link",
+        "locationSelector": ".jobLocation",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "Nordea" },
+      "rateLimitRps": 1.0,
+      "notes": "Nordea's SuccessFactors career site — the search page server-renders 100 openings per page (global; Copenhagen roles rank up via location). robots.txt permits the search and job pages. Body enrichment fetches each server-rendered job page for the full description. Verified 2026-06-12."
+    },
+    {
+      "id": 42,
+      "name": "html-pandora",
+      "displayName": "Pandora (careers site)",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://careers.pandoragroup.com/jobs",
+      "html": {
+        "listSelector": "li.results-list__item",
+        "titleSelector": "a.results-list__item-title--link",
+        "linkSelector": "a.results-list__item-title--link",
+        "locationSelector": ".results-list__item-street--label",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "Pandora" },
+      "rateLimitRps": 1.0,
+      "notes": "Pandora Group's careers site (SuccessFactors behind a server-rendered list) — 10 openings per page across all functions; most tech roles sit in Copenhagen HQ. Body enrichment fetches each job page for the full description. Verified 2026-06-12."
+    },
+    {
+      "id": 43,
+      "name": "html-pfa",
+      "displayName": "PFA (job site)",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.pfa.dk/om-pfa/job-i-pfa/ledige-job/",
+      "html": {
+        "listSelector": "li.jobs-listing__list-item:not(.jobs-listing__list-item--header)",
+        "titleSelector": "button",
+        "linkSelector": "a.cta-btn",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "PFA", "location": "København, Danmark" },
+      "rateLimitRps": 1.0,
+      "notes": "PFA Pension's own job page, which server-renders the open positions (the underlying SuccessFactors ATS has no public API). All PFA roles are at the Copenhagen HQ, so location is set statically. robots.txt only disallows /soegning/. Body enrichment fetches each SuccessFactors job page for the full description. Verified 2026-06-12."
     }
   ]
 }
