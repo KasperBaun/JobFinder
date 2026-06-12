@@ -46,7 +46,8 @@ public sealed class SkillsetHandler(ISkillsetService skillset, ILogger<SkillsetH
                 EmploymentTypes: request.EmploymentTypes,
                 Country: request.Country,
                 Region: request.Region,
-                Metro: request.Metro);
+                Metro: request.Metro,
+                PreferredCompanies: request.PreferredCompanies);
 
             skillset.Update(input);
             return Task.FromResult<IResult>(Results.Ok(new SaveResponse(true)));
@@ -67,5 +68,6 @@ public sealed class SkillsetHandler(ISkillsetService skillset, ILogger<SkillsetH
         EmploymentTypes: s.EmploymentTypes,
         Country: s.Country,
         Region: s.Region,
-        Metro: s.Metro);
+        Metro: s.Metro,
+        PreferredCompanies: s.PreferredCompanies);
 }

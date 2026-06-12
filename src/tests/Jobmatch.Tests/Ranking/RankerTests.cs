@@ -855,12 +855,12 @@ public sealed class RankerTests
     }
 
     [Fact]
-    public void ScoreBreakdown_EnumerateComponents_Returns_All_Eight_In_Stable_Order()
+    public void ScoreBreakdown_EnumerateComponents_Returns_All_Nine_In_Stable_Order()
     {
-        var b = new ScoreBreakdown(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, -0.7, -0.8);
+        var b = new ScoreBreakdown(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, -0.7, -0.8, 0.05);
         var labels = b.EnumerateComponents().Select(c => c.Label).ToList();
         Assert.Equal(
-            ["primary_stack", "secondary_stack", "seniority", "location_remote", "domain", "freshness", "disqualifier_penalty", "non_engineering_title_penalty"],
+            ["primary_stack", "secondary_stack", "seniority", "location_remote", "domain", "freshness", "disqualifier_penalty", "non_engineering_title_penalty", "preferred_company_bonus"],
             labels);
     }
 }

@@ -9,7 +9,8 @@ public sealed record RankingConfig(
     int? MaxAgeDays = null,
     bool RequirePrimaryStackHit = false,
     double SeniorityAdjacencyCredit = 1.0,
-    double NonEngineeringTitleMultiplier = 0.2)
+    double NonEngineeringTitleMultiplier = 0.2,
+    double PreferredCompanyBoost = 1.25)
 {
     public LocationTierWeights LocationTierWeights { get; init; } = LocationTierWeights.Default;
     public LlmConfig Llm { get; init; } = LlmConfig.Disabled;

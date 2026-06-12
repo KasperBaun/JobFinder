@@ -18,7 +18,8 @@ public sealed record SkillsetUpdate(
     IReadOnlyList<string>? EmploymentTypes,
     string? Country,
     string? Region,
-    IReadOnlyList<string>? Metro);
+    IReadOnlyList<string>? Metro,
+    IReadOnlyList<string>? PreferredCompanies = null);
 
 public interface ISkillsetService
 {
@@ -73,6 +74,7 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
             Country = NullIfBlank(input.Country),
             Region = NullIfBlank(input.Region),
             Metro = input.Metro is null ? existing.Metro : CleanList(input.Metro),
+            PreferredCompanies = input.PreferredCompanies is null ? existing.PreferredCompanies : CleanList(input.PreferredCompanies),
         };
     }
 

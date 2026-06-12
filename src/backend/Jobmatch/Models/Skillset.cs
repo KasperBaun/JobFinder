@@ -21,4 +21,5 @@ public sealed record Skillset(
     public string? Country { get; init; }
     public string? Region { get; init; }
     public IReadOnlyList<string> Metro { get; init; } = [];
+    public IReadOnlyList<string> PreferredCompanies { get; init; } = [];
 }

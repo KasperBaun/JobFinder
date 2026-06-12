@@ -11,6 +11,7 @@ public static class SkillsetParser
     private const string SecondarySection = "Secondary stack";
     private const string DomainsSection = "Domains";
     private const string DisqualifiersSection = "Disqualifiers";
+    private const string PreferredCompaniesSection = "Preferred companies";
 
     private static readonly Regex FrontmatterRegex = new(
         @"\A---\s*\r?\n(?<fm>.*?)\r?\n---\s*\r?\n(?<body>.*)\Z",
@@ -70,6 +71,7 @@ public static class SkillsetParser
         AppendSection(sb, SecondarySection, skillset.SecondaryStack, "Nice-to-have. Bumps the score modestly.");
         AppendSection(sb, DomainsSection, skillset.Domains, "Industries or problem spaces to target.");
         AppendSection(sb, DisqualifiersSection, skillset.Disqualifiers, "Listings matching any of these drop to score 0.");
+        AppendSection(sb, PreferredCompaniesSection, skillset.PreferredCompanies, "Employers you'd love to work for. Their listings get a rating boost. Matched against the company name only.");
         return sb.ToString();
     }
 
@@ -151,6 +153,7 @@ public static class SkillsetParser
             Country = country,
             Region = region,
             Metro = metro,
+            PreferredCompanies = ReadSection(sections, PreferredCompaniesSection),
         };
     }
 
