@@ -16,4 +16,5 @@ public sealed record ListingMatch(
     string Reasoning,
     IReadOnlyList<string> PrimaryStackHits,
     IReadOnlyList<string> SecondaryStackHits,
-    string? PortalDisplayName = null);
+    string? PortalDisplayName = null,
+    bool FavoriteCompany = false);

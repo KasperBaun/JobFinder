@@ -61,7 +61,8 @@ public sealed class RankerPreferredCompanyTests
             $"expected boost: baseline={baseline.Score:0.000}, boosted={boosted.Score:0.000}");
         Assert.True(boosted.Breakdown.PreferredCompanyBonus > 0);
         Assert.Equal(0.0, baseline.Breakdown.PreferredCompanyBonus);
-        Assert.Contains("LEGO", boosted.Reasoning.Notes);
+        // The boost surfaces as a badge in the GUI (from the breakdown), not as note prose.
+        Assert.DoesNotContain("favorite companies", boosted.Reasoning.Notes, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

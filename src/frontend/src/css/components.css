@@ -369,6 +369,8 @@ a.btn--danger:hover {
 
 .badge--enabled  { background: var(--c-good-bg); color: var(--c-good); border-color: var(--c-good-border); }
 .badge--disabled { background: var(--c-surface-alt); color: var(--c-text-subtle); border-color: var(--c-slate-200); }
+/* Favorite-company boost — text-transform: none so the star and "Favorite" keep their casing. */
+.badge--fav      { background: var(--c-good-bg); color: var(--c-good); border-color: var(--c-good-border); text-transform: none; font-weight: 600; }
 
 .badge--score {
   background: var(--c-navy-800);
