@@ -767,6 +767,112 @@
       "staticFields": { "company": "PFA", "location": "København, Danmark" },
       "rateLimitRps": 1.0,
       "notes": "PFA Pension's own job page, which server-renders the open positions (the underlying SuccessFactors ATS has no public API). All PFA roles are at the Copenhagen HQ, so location is set statically. robots.txt only disallows /soegning/. Body enrichment fetches each SuccessFactors job page for the full description. Verified 2026-06-12."
+    },
+    {
+      "id": 44,
+      "name": "oracle-danskebank",
+      "displayName": "Danske Bank (Oracle)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://ejqi.fa.ocs.oraclecloud.eu/hcmRestApi/resources/latest/recruitingCEJobRequisitions",
+      "queryParams": {
+        "onlyData": "true",
+        "expand": "requisitionList.secondaryLocations",
+        "finder": "findReqs;siteNumber=CX_1001,limit=100,sortBy=POSTING_DATES_DESC"
+      },
+      "responseMapping": {
+        "items_path": "items.0.requisitionList",
+        "id": "Id",
+        "title": "Title",
+        "location": "PrimaryLocation",
+        "url_template": "https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/job/{Id}",
+        "posted_at": "PostedDate"
+      },
+      "staticFields": { "company": "Danske Bank" },
+      "rateLimitRps": 1.0,
+      "notes": "Danske Bank's Oracle Recruiting Cloud via the anonymous REST endpoint (no auth). The 'expand' param is required or the list comes back empty; requisitions sit at items[0].requisitionList (numeric path segments). ~145 open roles across DK/LT/IN — newest 100 fetched, location ranking sorts the rest. Real ISO posting dates. Body enrichment pulls description text from each job page. Verified 2026-06-12."
+    },
+    {
+      "id": 45,
+      "name": "teamtailor-twoday",
+      "displayName": "twoday (TeamTailor)",
+      "type": "teamtailor",
+      "enabled": true,
+      "endpoint": "https://twodaydenmark.teamtailor.com/sitemap.xml",
+      "staticFields": { "company": "twoday" },
+      "rateLimitRps": 1.0,
+      "notes": "twoday Denmark (large DK .NET/data consultancy, ex-NetCompany Group A/S sibling) on TeamTailor. Sitemap carried 22 open DK roles on 2026-06-12 — architects, DBAs, .NET consultants. Same sitemap + JSON-LD pattern as Danske Spil."
+    },
+    {
+      "id": 46,
+      "name": "teamtailor-templafy",
+      "displayName": "Templafy (TeamTailor)",
+      "type": "teamtailor",
+      "enabled": true,
+      "endpoint": "https://templafy.teamtailor.com/sitemap.xml",
+      "staticFields": { "company": "Templafy" },
+      "rateLimitRps": 1.0,
+      "notes": "Templafy (Copenhagen B2B SaaS, .NET/Azure stack) on TeamTailor. Few openings at a time (3 on 2026-06-12) but squarely in the user's market when they hire."
+    },
+    {
+      "id": 47,
+      "name": "oracle-milestone",
+      "displayName": "Milestone Systems (Oracle)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://fa-ewto-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions",
+      "queryParams": {
+        "onlyData": "true",
+        "expand": "requisitionList.secondaryLocations",
+        "finder": "findReqs;siteNumber=CX_1001,limit=50,sortBy=POSTING_DATES_DESC"
+      },
+      "responseMapping": {
+        "items_path": "items.0.requisitionList",
+        "id": "Id",
+        "title": "Title",
+        "location": "PrimaryLocation",
+        "url_template": "https://fa-ewto-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/{Id}",
+        "posted_at": "PostedDate"
+      },
+      "staticFields": { "company": "Milestone Systems" },
+      "rateLimitRps": 1.0,
+      "notes": "Milestone Systems (Brøndby video-software house, big C#/.NET org) on Oracle Recruiting Cloud — same anonymous REST pattern as Danske Bank. ~25 open roles on 2026-06-12 incl. engineering squads. Body enrichment pulls description text from each job page."
+    },
+    {
+      "id": 48,
+      "name": "hr-manager-eg",
+      "displayName": "EG A/S (HR-Manager.net)",
+      "type": "hrmanager",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://candidate.hr-manager.net/vacancies/list.aspx?customer=eg",
+      "rateLimitRps": 1.0,
+      "notes": "EG A/S (major DK vertical-software house, heavy .NET) on HR-Manager.net — same PositionList JSON pattern as DR and CHANGE, addressed by customer=eg. ~60 open positions across DK/NO/SE on 2026-06-12."
+    },
+    {
+      "id": 49,
+      "name": "workday-stibo",
+      "displayName": "Stibo Systems (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://stibosystems.wd3.myworkdayjobs.com/wday/cxs/stibosystems/careers-at-stibo-systems/jobs",
+      "bodyTemplate": { "searchText": "", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 2 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://stibosystems.wd3.myworkdayjobs.com/en-US/careers-at-stibo-systems{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "Stibo Systems" },
+      "rateLimitRps": 1.0,
+      "notes": "Stibo Systems (Aarhus-HQ MDM software, .NET/Java) on Workday — same CXS pattern as LEGO/SimCorp/Maersk. Only ~15 roles globally so no searchText filter; location ranking handles the US offices. Body enrichment via job-page JSON-LD."
     }
   ]
 }

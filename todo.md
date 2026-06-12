@@ -4,11 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Danske Bank provider — numeric path segments in `JsonValueReader.Walk`.**
-  Oracle Recruiting's anonymous REST works (145 reqs, ISO dates) but the
-  items live at `items[0].requisitionList`; `Walk` only traverses object
-  properties. Small extension (array-index segments) + catalog entry —
-  see `docs/tasks/T-007/company-danske-bank.md` for the verified endpoint.
 - **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
   currently user-disabled) — still the single widest DK net we have.
 - **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
@@ -54,6 +49,18 @@ _(none)_
 
 ## Completed (recent)
 
+- **Source expansion round 2 — Danske Bank unblocked + 5 DK .NET
+  employers (ids 44-49).** `JsonValueReader.Walk` learned numeric path
+  segments (array indexing, TDD) which unblocked Danske Bank's Oracle
+  Recruiting REST (id 44 — 100 listings live). ATS sweep over 13 more DK
+  .NET employers wired twoday (TeamTailor, 45), Templafy (TeamTailor,
+  46), Milestone Systems (Oracle, 47), EG A/S (HR-Manager, 48), Stibo
+  Systems (Workday, 49) — ~172 extra listings/run; KMD/Trifork/
+  Systematic/Siteimprove/3Shape/Visma/Nexi/Cbrain have no machine-
+  readable surface (see T-007 INDEX sweep note). Favorite-company boost
+  now renders as a green "★ Favorite" badge on listing cards
+  (ListingMatch.FavoriteCompany flag; legacy note sentence stripped
+  client-side).
 - **Source expansion — 5 RSS query feeds, 7 favorite-company providers,
   manual-import docs.** New Jobindex/IT-Jobbank query feeds (ids 30-34:
   backend udvikler / c# / azure / software engineer / it-jobbank .net,
