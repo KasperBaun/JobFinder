@@ -110,6 +110,61 @@ public sealed class ConfigTransferServiceTests : IDisposable
     }
 
     [Fact]
+    public void Export_ExcludesHangfireQueue()
+    {
+        var ctx = NewCtx(_tempRoot);
+        Write(ctx.SkillsetPath, "# skills");
+        Write(Path.Combine(ctx.RootDir, "hangfire.db"), "sqlite");
+        Write(Path.Combine(ctx.RootDir, "hangfire.db-wal"), "wal");
+        Write(Path.Combine(ctx.RootDir, "hangfire.db-shm"), "shm");
+
+        var names = EntryNames(new ConfigTransferService(ctx).Export());
+
+        Assert.DoesNotContain(names, n => n.StartsWith("hangfire.db", StringComparison.Ordinal));
+        Assert.Contains("skillset.md", names);
+    }
+
+    [Fact]
+    public void Import_LeavesLiveHangfireQueueInPlace_AndRestoresJobHistory()
+    {
+        var sourceCtx = NewCtx(_tempRoot);
+        Write(sourceCtx.SkillsetPath, "# my skills");
+        Write(Path.Combine(sourceCtx.JobSearchDir, "job1.json"), "{\"id\":\"job1\"}");
+        var bytes = new ConfigTransferService(sourceCtx).Export();
+
+        var destRoot = Path.Combine(_tempRoot, "dest");
+        var destCtx = NewCtx(destRoot, email: "other@z");
+        var hangfire = Path.Combine(destCtx.RootDir, "hangfire.db");
+        Write(hangfire, "live-queue");
+
+        new ConfigTransferService(destCtx).Import(new MemoryStream(bytes));
+
+        // The live (possibly locked) queue is left untouched — not moved to backup, so import can't throw on it.
+        Assert.True(File.Exists(hangfire));
+        Assert.Equal("live-queue", File.ReadAllText(hangfire));
+        var backups = Directory.EnumerateDirectories(destCtx.RootDir, ".backup-*").ToList();
+        Assert.Single(backups);
+        Assert.False(File.Exists(Path.Combine(backups[0], "hangfire.db")));
+
+        // Job history (jobsearch/*.json) rides along normally.
+        Assert.Equal("{\"id\":\"job1\"}", File.ReadAllText(Path.Combine(destCtx.JobSearchDir, "job1.json")));
+    }
+
+    [Fact]
+    public void Import_SkipsHangfireEntriesInArchive()
+    {
+        var ctx = NewCtx(_tempRoot);
+        var live = Path.Combine(ctx.RootDir, "hangfire.db");
+        Write(live, "live");
+        var bytes = BuildZip(includeManifest: true, ("hangfire.db", "STALE"), ("skillset.md", "ok"));
+
+        new ConfigTransferService(ctx).Import(new MemoryStream(bytes));
+
+        Assert.Equal("live", File.ReadAllText(live)); // a transported queue never overwrites the live one
+        Assert.Equal("ok", File.ReadAllText(ctx.SkillsetPath));
+    }
+
+    [Fact]
     public void Import_RejectsArchiveWithoutManifest()
     {
         var ctx = NewCtx(_tempRoot);
