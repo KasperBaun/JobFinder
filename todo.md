@@ -33,6 +33,22 @@ _(none)_
 
 ## Completed (recent)
 
+- **LLM model download — retry + Range resume (survives transient TLS resets).** The
+  `AllowRenegotiation` fix (`d7907eb`) handled the HuggingFace handshake, but the download was
+  still a single non-resumable `GetAsync` of 2.49 GB with no retry: one connection reset anywhere
+  in the multi-minute stream failed the whole thing with *"The SSL connection could not be
+  established … connection forcibly closed"* and every retry restarted from zero. Reproduced the
+  network path as healthy (all repros + the real endpoint stream fine on demand), so the defect was
+  the downloader's zero tolerance for the intermittent resets real/corporate networks throw.
+  `LlmModelDownloader` now retries transient failures (TLS/socket/IO reset, 5xx/408/429) and resumes
+  from the partial `.download` file via an HTTP `Range` request (the HF CDN returns `206`), using the
+  file length on disk as the source of truth for the resume offset. Backs off on *consecutive*
+  no-progress stalls only (5), so a flaky link that keeps advancing completes; 4xx are terminal (no
+  retry). Restructured around a `Channel` producer so the retry `try/catch` never wraps a `yield`.
+  3 new tests (resume-after-mid-stream-reset, retry-after-connect-failure, no-retry-on-404); 259
+  backend tests green (was 256). Verified end-to-end streaming against the live CDN with the rebuilt
+  Host.
+
 - **Guided first-run profile (no generic seed).** First-run setup no longer copies the "Alex
   Example" template into `skillset.md`. Instead the setup screen is a 2-step wizard — data location,
   then an essentials profile step (name, location, years, level, work-location, target roles,
