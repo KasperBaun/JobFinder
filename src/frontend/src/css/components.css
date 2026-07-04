@@ -2251,3 +2251,149 @@ a.btn--danger:hover {
   font-size: 0.72rem;
 }
 
+/* ============================================================
+   settings / backup & restore
+   ============================================================ */
+
+.settings-section {
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-1);
+  max-width: 42rem;
+}
+
+.settings-section__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--c-text);
+  margin: 0 0 var(--space-4);
+}
+
+.settings-section__body {
+  color: var(--c-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0 0 var(--space-4);
+}
+
+.settings-section__warning {
+  background: var(--c-warn-bg);
+  color: var(--c-warn);
+  border: 1px solid var(--c-warn);
+  border-radius: var(--radius-lg);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.86rem;
+  margin: 0 0 var(--space-4);
+}
+
+/* ============================================================
+   first-run setup screen
+   ============================================================ */
+
+.app-boot { min-height: 100vh; }
+
+.setup {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.setup__card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-6);
+  max-width: 34rem;
+  width: 100%;
+}
+
+.setup__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.setup__heading {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--c-text);
+  margin: 0 0 var(--space-4);
+}
+
+.setup__lede {
+  color: var(--c-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 var(--space-5);
+}
+
+.setup__field {
+  display: block;
+  margin-bottom: var(--space-5);
+}
+
+.setup__label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--c-text);
+  margin-bottom: 0.4rem;
+}
+
+.setup__input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+.setup__input:focus {
+  outline: none;
+  border-color: var(--c-text-muted);
+}
+
+.setup__note {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  margin-top: 0.35rem;
+}
+
+.setup__ack {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  color: var(--c-text);
+  margin-bottom: var(--space-5);
+  cursor: pointer;
+}
+
+.setup__error {
+  background: var(--c-bad-bg);
+  color: var(--c-bad);
+  border: 1px solid var(--c-bad-border);
+  border-radius: var(--radius-lg);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+  margin-bottom: var(--space-4);
+}
+
+.setup__hint {
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  margin: var(--space-4) 0 0;
+  word-break: break-all;
+}
+

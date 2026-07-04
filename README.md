@@ -114,6 +114,22 @@ npm run install:tool   # installs `jobfinder` as a global .NET tool
 jobfinder              # launch it from anywhere
 ```
 
+**On Windows, just want the installer?** Every push to `main` builds a self-contained
+`jobfinder-setup-*.exe` (no .NET or Node needed) and attaches it to the rolling
+[**latest** release](../../releases/tag/latest). Download it, run it, and launch jobfinder from the
+Start menu. (It's unsigned, so SmartScreen may say "unknown publisher" — choose **More info → Run anyway**.)
+
+Want to build that Windows package yourself without GitHub?
+
+```bash
+npm run package:win    # self-contained publish + a portable .zip in installer/Output/
+                       # …and the Setup.exe too, if Inno Setup (ISCC) is installed
+```
+
+Copy the resulting folder/zip to a Windows machine and run `Jobmatch.Host.exe`. On first launch
+jobfinder asks you to confirm where to store your data (it suggests a folder; you choose) — nothing
+is written until you agree.
+
 Other scripts: `npm run build` (release build), `npm test` (backend suite), `npm run test:client` (frontend), `npm run test:e2e` (Playwright).
 
 ### Optional: the local AI judge
@@ -125,6 +141,8 @@ jobfinder ranks with keywords out of the box. To enable the on-device LLM judge,
 ## Where your data lives
 
 Everything personal lives under `data/<your-email>/` on your own machine — skillset, provider list, run history, and good-match marks. That folder is gitignored, never sent anywhere, never shared. Delete it and jobfinder forgets everything about you and starts fresh.
+
+Want to back it up or move to a new computer? The **Settings** screen exports everything (job sites, profile, marks, and full search history) to a single `.zip`, and imports one back. The export includes any saved site API keys, so keep the file private; the large AI model isn't included (it re-downloads on demand). Importing backs up your current data automatically first.
 
 ---
 
