@@ -34,11 +34,13 @@ public sealed class UserContext
     /// <param name="repoRoot">Optional repo root; defaults to walking up from cwd looking for <c>.git</c>, falling back to <c>%LOCALAPPDATA%/jobfinder</c> if none found.</param>
     /// <param name="seedExamples">When true (default), copy example configs into a freshly created RootDir.</param>
     /// <param name="cwdOverride">Optional cwd override used as the start of the <c>.git</c> walk-up; defaults to <see cref="Directory.GetCurrentDirectory"/>.</param>
+    /// <param name="dataDirOverride">Optional explicit data directory; when set it becomes <see cref="RootDir"/> verbatim (used once the user has chosen a location during first-run setup), bypassing the <c>{repoRoot}/data/{email}</c> layout.</param>
     public static UserContext Resolve(
         string? emailOverride = null,
         string? repoRoot = null,
         bool seedExamples = true,
-        string? cwdOverride = null)
+        string? cwdOverride = null,
+        string? dataDirOverride = null)
     {
         var email = ResolveEmail(emailOverride)
             ?? throw new ConfigException(
@@ -47,8 +49,9 @@ public sealed class UserContext
                 + "Set one of these and try again.");
 
         var cwd = cwdOverride ?? Directory.GetCurrentDirectory();
-        var root = repoRoot ?? FindRepoRootOrStableFallback(cwd);
-        var rootDir = Path.Combine(root, "data", email);
+        var rootDir = !string.IsNullOrWhiteSpace(dataDirOverride)
+            ? Path.GetFullPath(dataDirOverride)
+            : Path.Combine(repoRoot ?? FindRepoRootOrStableFallback(cwd), "data", email);
 
         var firstRun = !Directory.Exists(rootDir);
         if (firstRun)
@@ -118,6 +121,22 @@ public sealed class UserContext
                 + "user-profile directory is available.");
         }
         return Path.Combine(localAppData, "jobfinder");
+    }
+
+    /// <summary>Best-effort email resolution (override → env → git), returning null instead of throwing.</summary>
+    public static string? TryResolveEmail(string? emailOverride = null) => ResolveEmail(emailOverride);
+
+    /// <summary>
+    /// The default data directory to <em>suggest</em> to the user during first-run setup:
+    /// <c>{repoRoot|stable-fallback}/data/{email}</c>. Used as a pre-filled hint only — the user
+    /// confirms or changes it before anything is written.
+    /// </summary>
+    public static string SuggestDefaultDataDir(string? email, string? cwdOverride = null)
+    {
+        var cwd = cwdOverride ?? Directory.GetCurrentDirectory();
+        var root = FindRepoRootOrStableFallback(cwd);
+        var folder = string.IsNullOrWhiteSpace(email) ? "me" : email.Trim();
+        return Path.Combine(root, "data", folder);
     }
 
     private static string? ResolveEmail(string? emailOverride)

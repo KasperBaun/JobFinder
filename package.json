@@ -14,6 +14,7 @@
     "test:client": "npm --prefix src/frontend run test",
     "test:e2e": "npm --prefix src/tests/playwright test",
     "package": "node scripts/package.mjs",
+    "package:win": "node scripts/package-installer.mjs",
     "install:tool": "node scripts/install-tool.mjs",
     "uninstall:tool": "node scripts/uninstall-tool.mjs",
     "refresh": "node scripts/refresh.mjs",
