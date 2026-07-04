@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getSkillset, updateSkillset } from '../api/client'
+import { getSetupStatus, getSkillset, updateSkillset } from '../api/client'
 import type { SkillsetResponse, SkillsetUpdateRequest } from '../api/types'
 import { TagInput } from '../components/TagInput'
 import { SaveBar } from '../components/SaveBar'
@@ -10,6 +10,13 @@ type Form = SkillsetUpdateRequest
 
 const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote', 'any'] as const
 const SENIORITY_OPTIONS = ['junior', 'mid', 'senior', 'lead', 'any'] as const
+
+const EMPTY_FORM: Form = {
+  name: '', location: '', experienceYears: 0, targetRoles: [],
+  remotePreference: 'any', seniority: 'mid', primaryStack: [], secondaryStack: [],
+  domains: [], disqualifiers: [], languages: [], employmentTypes: [],
+  country: '', region: '', metro: [],
+}
 
 function toForm(s: SkillsetResponse): Form {
   return {
@@ -37,19 +44,32 @@ function isDirty(a: Form, b: Form): boolean {
 
 export function SkillsetPage() {
   const queryClient = useQueryClient()
-  const { data, isLoading, error } = useQuery({ queryKey: ['skillset'], queryFn: getSkillset })
+  const setup = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
+  const profileExists = setup.data?.profileExists
+  // Only load an existing profile in edit mode; in create mode we start from a blank form.
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['skillset'],
+    queryFn: getSkillset,
+    enabled: profileExists === true,
+  })
+
+  const creating = profileExists === false
 
   const [form, setForm] = useState<Form | null>(null)
   const [original, setOriginal] = useState<Form | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
 
   useEffect(() => {
-    if (data && original === null) {
+    if (original !== null) return
+    if (profileExists === false) {
+      setForm(EMPTY_FORM)
+      setOriginal(EMPTY_FORM)
+    } else if (data) {
       const f = toForm(data)
       setForm(f)
       setOriginal(f)
     }
-  }, [data, original])
+  }, [data, original, profileExists])
 
   const dirty = useMemo(
     () => form && original ? isDirty(form, original) : false,
@@ -65,8 +85,10 @@ export function SkillsetPage() {
     },
     onSuccess: (saved) => {
       setOriginal(saved)
+      // Invalidate setup too: a first save flips profileExists true (clears create-mode + nudges).
       void queryClient.invalidateQueries({ queryKey: ['skillset'] })
-      setToast({ kind: 'ok', message: 'Profile saved' })
+      void queryClient.invalidateQueries({ queryKey: ['setup'] })
+      setToast({ kind: 'ok', message: creating ? 'Profile created' : 'Profile saved' })
     },
     onError: (err) => {
       setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
@@ -87,9 +109,11 @@ export function SkillsetPage() {
 
       <header className="page__header">
         <div className="page__eyebrow">02 / profile</div>
-        <h1 className="page__heading">Your <em>profile</em></h1>
+        <h1 className="page__heading">{creating ? <>Set up your <em>profile</em></> : <>Your <em>profile</em></>}</h1>
         <p className="page__lede">
-          Edit what jobfinder uses to rate every listing. Saved automatically.
+          {creating
+            ? "You skipped this during setup. Fill it in so jobfinder can rate listings for you — at least a name and location to start."
+            : 'Edit what jobfinder uses to rate every listing. Saved automatically.'}
         </p>
       </header>
 

@@ -61,6 +61,23 @@ public sealed class UserContextProviderTests : IDisposable
     }
 
     [Fact]
+    public void Complete_DoesNotSeedProfile_AndProfileExistsReflectsFile()
+    {
+        var dataDir = Path.Combine(_tempRoot, "chosen");
+        var provider = NewProvider();
+
+        var ctx = provider.Complete("me@example.com", dataDir);
+
+        // No generic profile is seeded on first-run setup anymore.
+        Assert.False(File.Exists(ctx.SkillsetPath));
+        Assert.False(provider.State().ProfileExists);
+
+        // Once a profile file exists, State reflects it.
+        File.WriteAllText(ctx.SkillsetPath, "placeholder");
+        Assert.True(provider.State().ProfileExists);
+    }
+
+    [Fact]
     public void Complete_RequiresEmailAndDataDir()
     {
         var provider = NewProvider();

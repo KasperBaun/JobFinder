@@ -2,6 +2,7 @@ namespace Jobmatch.Api.Models;
 
 public sealed record SetupStatusResponse(
     bool Configured,
+    bool ProfileExists,
     string? Email,
     string? DataDir,
     string SuggestedEmail,

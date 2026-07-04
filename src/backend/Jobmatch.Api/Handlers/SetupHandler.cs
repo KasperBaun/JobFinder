@@ -32,6 +32,7 @@ public sealed class SetupHandler(IUserContextProvider provider, ILogger<SetupHan
 
     private static SetupStatusResponse ToResponse(SetupState state) => new(
         Configured: state.IsConfigured,
+        ProfileExists: state.ProfileExists,
         Email: state.Email,
         DataDir: state.DataDir,
         SuggestedEmail: state.SuggestedEmail,

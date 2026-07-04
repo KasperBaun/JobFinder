@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getHistory, getProviders, getWhoami } from '../api/client'
+import { getHistory, getProviders, getSetupStatus, getWhoami } from '../api/client'
 import { StatCard } from '../components/StatCard'
 import { formatRelative } from '../utils/time'
 
@@ -8,6 +8,7 @@ export function HomePage() {
   const whoami = useQuery({ queryKey: ['whoami'], queryFn: getWhoami })
   const providers = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const history = useQuery({ queryKey: ['history'], queryFn: getHistory })
+  const setup = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
 
   const enabledCount = providers.data?.providers.filter(p => p.enabled).length
   const totalCount = providers.data?.providers.length
@@ -81,8 +82,13 @@ export function HomePage() {
         />
         <StatCard
           label="Profile"
-          value={<span className="serif" style={{ fontSize: '1.4rem' }}>ready</span>}
-          subtitle="skills, industries, deal-breakers"
+          value={
+            setup.isLoading ? <span className="muted">…</span> :
+            setup.data?.profileExists
+              ? <span className="serif" style={{ fontSize: '1.4rem' }}>ready</span>
+              : <span className="serif" style={{ fontSize: '1.4rem' }}>not set up</span>
+          }
+          subtitle={setup.data?.profileExists ? 'skills, industries, deal-breakers' : 'finish setting up →'}
           link="/skillset"
         />
       </div>

@@ -58,6 +58,9 @@ public sealed class SearchService : ISearchService
         IReadOnlyList<PortalConfig> allPortals,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        if (!File.Exists(_ctx.SkillsetPath))
+            throw new InvalidRequestException("Set up your profile before running a search.");
+
         var skillset = SkillsetParser.Load(_ctx.SkillsetPath);
         var ranking = RankingConfigLoader.Load(_ctx.RankingPath);
 
