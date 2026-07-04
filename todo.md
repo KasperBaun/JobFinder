@@ -53,6 +53,25 @@ _(none)_
 
 ## Completed (recent)
 
+- **Native Electron desktop shell + app icons.** Installing then launching Jobfinder used to pop a
+  console window and open a browser tab. New `src/desktop/` Electron app wraps the existing bundled
+  backend in a native window: the main process picks a free loopback port, spawns the self-contained
+  `Jobmatch.Host.exe` as a hidden child (`JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`,
+  `windowsHide:true`), polls `/api/system/ping`, then opens a `BrowserWindow` at the loopback URL —
+  no terminal, no browser tab. Layered shutdown (POST `/api/system/shutdown` → grace → `child.kill()`
+  → `taskkill /T /F`, plus a `process.on('exit')` reap) so the backend is never orphaned; a visible
+  error window on spawn/startup failure; single-instance lock. Packaged with electron-builder (NSIS),
+  which **replaces** the Inno Setup installer for the desktop distribution (the `jobfinder` dotnet
+  tool + `dotnet pack` path are untouched). The self-contained `publish/win-x64/` rides along as
+  `extraResources` (outside asar). App icon is the navy `#0A2456` funnel on a light rounded tile
+  (`build/icon-source.svg` → committed `icon.png`/`icon.ico` via `sharp`+`png-to-ico`), wired to the
+  exe/installer/window/taskbar (`setAppUserModelId`). New root scripts `publish:backend` (shared
+  publish step, extracted to `scripts/publish-backend.mjs`) and `package:desktop`; CI `release.yml`
+  swaps the Inno steps for electron-builder. Verified: dev + packaged app both spawn the backend,
+  serve the SPA (HTTP 200), and reap the child on window close with no orphan; 144 MB NSIS installer
+  produced. Still unsigned (SmartScreen warns — tracked). Win-x64 only for now; mac/linux are a
+  documented follow-up. (R-092)
+
 - **Merged `client-server-rewrite` into `dev`.** The two branches had diverged a month from
   `a243a4c` — CSR carried the async **job-based, observable search** (Hangfire + SQLite job queue,
   `Jobs/*`, `JobSearchBus`/`Store`/`Handler`, `SearchService` split into partials) so a running
