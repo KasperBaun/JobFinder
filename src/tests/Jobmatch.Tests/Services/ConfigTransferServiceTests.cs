@@ -125,6 +125,39 @@ public sealed class ConfigTransferServiceTests : IDisposable
     }
 
     [Fact]
+    public void Export_ExcludesRuntimeLogs()
+    {
+        var ctx = NewCtx(_tempRoot);
+        Write(ctx.SkillsetPath, "# skills");
+        Write(Path.Combine(ctx.RootDir, "logs", "host.log"), "WARN something");
+
+        var names = EntryNames(new ConfigTransferService(ctx).Export());
+
+        Assert.DoesNotContain(names, n => n.StartsWith("logs/", StringComparison.Ordinal));
+        Assert.Contains("skillset.md", names);
+    }
+
+    [Fact]
+    public void Import_LeavesLiveLogsDirectoryInPlace()
+    {
+        var sourceCtx = NewCtx(_tempRoot);
+        Write(sourceCtx.SkillsetPath, "# my skills");
+        var bytes = new ConfigTransferService(sourceCtx).Export();
+
+        var destRoot = Path.Combine(_tempRoot, "dest");
+        var destCtx = NewCtx(destRoot, email: "other@z");
+        var log = Path.Combine(destCtx.RootDir, "logs", "host.log");
+        Write(log, "live-log");
+
+        new ConfigTransferService(destCtx).Import(new MemoryStream(bytes));
+
+        Assert.True(File.Exists(log), "the live (locked) log dir must not be moved to backup during import");
+        Assert.Equal("live-log", File.ReadAllText(log));
+        var backups = Directory.EnumerateDirectories(destCtx.RootDir, ".backup-*").ToList();
+        Assert.False(Directory.Exists(Path.Combine(backups[0], "logs")));
+    }
+
+    [Fact]
     public void Import_LeavesLiveHangfireQueueInPlace_AndRestoresJobHistory()
     {
         var sourceCtx = NewCtx(_tempRoot);
