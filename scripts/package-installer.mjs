@@ -7,13 +7,12 @@
 import { spawnSync } from 'node:child_process'
 import { rmSync, mkdirSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { publishBackend } from './publish-backend.mjs'
 
 const root = resolve(import.meta.dirname, '..')
-const publishDir = resolve(root, 'publish', 'win-x64')
 const outDir = resolve(root, 'installer', 'Output')
 
 const version = process.env.VERSION ?? '0.1.0-local'
-const asmVersion = version.replace(/-.*$/, '') // dotnet AssemblyVersion wants pure numeric
 
 function run(cmd, args, opts = {}) {
   console.log(`> ${cmd} ${args.join(' ')}`)
@@ -26,14 +25,7 @@ function exists(cmd) {
 }
 
 // 1. Publish -------------------------------------------------------------
-rmSync(publishDir, { recursive: true, force: true })
-const publish = run('dotnet', [
-  'publish', 'src/infrastructure/Jobmatch.Host/Jobmatch.Host.csproj',
-  '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true',
-  '-p:BuildGui=true', `-p:Version=${asmVersion}`, `-p:InformationalVersion=${version}`,
-  '-o', publishDir, '--nologo',
-])
-if (publish.status !== 0) process.exit(publish.status ?? 1)
+const publishDir = publishBackend({ version, root })
 
 mkdirSync(outDir, { recursive: true })
 

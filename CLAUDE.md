@@ -13,6 +13,7 @@ src/                                 ALL source, tests, configs, build infra
     config/                          committed example/default configs (skillset.example.md, ranking.yml)
     rules/                           backend conventions docs (api/, conventions/, data-access/, infrastructure/, security/, testing/)
   frontend/                          React 19 + Vite app (runnable independently against Jobmatch.Api)
+  desktop/                           Electron desktop shell (TS): native window over the bundled Host; electron-builder NSIS installer
   infrastructure/
     Jobmatch.Host/                   bundle (runnable + .NET tool). Ephemeral Kestrel + browser-open + serves bundled SPA + jobfinder tool packaging
   tests/
@@ -89,6 +90,7 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 ## Entry point
 
 - Single binary. The published `jobfinder` .NET tool is `Jobmatch.Host`; launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. There is no separate CLI; headless operation is not part of v1.
+- The Windows **desktop distribution** is the Electron shell in `src/desktop/` (`npm run package:desktop` → electron-builder NSIS installer). It bundles the same self-contained `Jobmatch.Host.exe` as a child process (spawned with `JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`, `windowsHide`) and shows it in a native window instead of a browser tab. The `jobfinder` dotnet tool (browser-based) is unchanged and coexists.
 - The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
 - API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
 
