@@ -56,10 +56,25 @@ public sealed class SetupEndpointsTests : IDisposable
         var after = await client.GetFromJsonAsync<SetupStatusResponse>(Routes.Setup.Status);
         Assert.True(after!.Configured);
         Assert.True(File.Exists(_bootstrapPath));
+        // No generic profile is seeded — the wizard guides the user to create their own.
+        Assert.False(after.ProfileExists);
+        Assert.False(File.Exists(Path.Combine(dataDir, "skillset.md")));
 
         // Now the data endpoint resolves.
         var whoamiAfter = await client.GetAsync("/api/whoami");
         Assert.Equal(HttpStatusCode.OK, whoamiAfter.StatusCode);
+
+        // Creating a profile via PUT (create-or-update) flips profileExists true.
+        var put = await client.PutAsJsonAsync("/api/skillset", new SkillsetUpdateRequest(
+            Name: "Jane Doe", Location: "Copenhagen", ExperienceYears: 5,
+            TargetRoles: ["Backend Engineer"], RemotePreference: "remote", Seniority: "senior",
+            PrimaryStack: ["C#"], SecondaryStack: null, Domains: null, Disqualifiers: null,
+            Languages: null, EmploymentTypes: null, Country: null, Region: null, Metro: null));
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+
+        var afterProfile = await client.GetFromJsonAsync<SetupStatusResponse>(Routes.Setup.Status);
+        Assert.True(afterProfile!.ProfileExists);
+        Assert.True(File.Exists(Path.Combine(dataDir, "skillset.md")));
     }
 
     [Fact]

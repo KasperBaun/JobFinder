@@ -2397,3 +2397,39 @@ a.btn--danger:hover {
   word-break: break-all;
 }
 
+.setup__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.setup__row .setup__field {
+  flex: 1 1 8rem;
+  min-width: 8rem;
+}
+
+.setup select.setup__input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2rem;
+}
+
+.setup__skip {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-4);
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.setup__skip:hover:not(:disabled) { color: var(--c-text); }
+.setup__skip:disabled { opacity: 0.5; cursor: not-allowed; }
+
