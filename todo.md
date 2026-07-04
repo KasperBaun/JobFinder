@@ -27,18 +27,6 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
-- **`LlmModelDownloader` SSL renegotiation failure against HuggingFace.**
-  Phase 2's "no manual GGUF placement" promise is currently broken: the
-  download endpoint fails with `"The SSL connection could not be established,
-  see inner exception."` on the first hop (`huggingface.co`). curl handles
-  it via SChannel renegotiation (`schannel: remote party requests
-  renegotiation`); .NET's `SocketsHttpHandler` does not, by default. Two
-  fix candidates: (a) configure `SocketsHttpHandler.SslOptions.AllowRenegotiation = true`
-  and/or fall back to `WinHttpHandler` on Windows; (b) follow the HF redirect
-  manually with a fresh client. Workaround until then: download via curl
-  to `data/<email>/models/`. Repro: `POST /api/llm/download-model`; smoke-test
-  on 2026-05-12 hit this on first attempt.
-
 ## In progress
 
 _(none)_
@@ -67,6 +55,17 @@ _(none)_
   (suggested but editable) and explicitly acknowledges the location before anything is written.
   The choice persists in `{ApplicationData}/jobfinder/bootstrap.json`. Unconfigured data calls
   return `428`. Fixes the clean-install crash where no git identity was available. (R-075)
+- **`LlmModelDownloader` HF SSL renegotiation — fixed & verified.** The in-app
+  model download (`POST /api/llm/download-model`) previously failed with
+  "The SSL connection could not be established" because `huggingface.co`
+  requests TLS renegotiation on the first hop and .NET's `SocketsHttpHandler`
+  refuses it by default. Fixed in `d7907eb` by setting
+  `AllowRenegotiation = true` on the downloader's primary handler (and
+  surfacing `InnerException.Message` in the SSE error event). Verified
+  end-to-end 2026-07-04: a fresh download of Gemma 3 4B Q4_K_M (2.49 GB)
+  streamed clean progress to completion, the model loaded in llama.cpp, and a
+  full LLM-judged search ran. No manual curl placement needed — the earlier
+  backlog item is now resolved.
 - **LLM end-to-end smoke test.** First real run of the LLM judging layer
   (which had shipped untested in the prior session). Three issues
   surfaced and were fixed inline: (1) bumped `LLamaSharp` 0.21 → 0.27
