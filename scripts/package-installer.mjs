@@ -54,9 +54,12 @@ if (!portableOk) {
 // 3. Installer via Inno Setup -------------------------------------------
 function findIscc() {
   if (process.env.ISCC) return { cmd: process.env.ISCC, pre: [] }
+  const localAppData = process.env.LOCALAPPDATA ?? ''
   const winPaths = [
     'C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe',
     'C:\\Program Files\\Inno Setup 6\\ISCC.exe',
+    // winget installs Inno Setup per-user by default (current-user scope)
+    ...(localAppData ? [resolve(localAppData, 'Programs', 'Inno Setup 6', 'ISCC.exe')] : []),
   ]
   for (const p of winPaths) if (existsSync(p)) return { cmd: p, pre: [] }
   if (exists('ISCC.exe')) return { cmd: 'ISCC.exe', pre: [] }
