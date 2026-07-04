@@ -87,6 +87,13 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
             if (entry.FullName.EndsWith('/'))
                 continue;
 
+            // Never overwrite the live job queue with a transported one (raw/older archives may carry it).
+            if (IsHangfireDbFile(Path.GetFileName(entry.FullName)))
+            {
+                skipped++;
+                continue;
+            }
+
             var destination = Path.GetFullPath(Path.Combine(ctx.RootDir, entry.FullName));
             if (!destination.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.Ordinal))
             {
@@ -142,13 +149,22 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
         var name = segments[^1];
         return name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)
             || name.EndsWith(".download", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("portals.yml.bak", StringComparison.OrdinalIgnoreCase);
+            || name.Equals("portals.yml.bak", StringComparison.OrdinalIgnoreCase)
+            || IsHangfireDbFile(name);
     }
+
+    // Hangfire's local job queue (hangfire.db + its -wal/-shm sidecars). Transient infrastructure:
+    // regenerated on startup and held open (locked) by the running app, so it is neither exported nor
+    // moved/overwritten during an import. The user's search history lives in jobsearch/ + history/,
+    // which are exported and imported normally.
+    private static bool IsHangfireDbFile(string name) =>
+        name.StartsWith("hangfire.db", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Moves the current data-directory contents into a timestamped <c>.backup-*</c> folder before an
     /// import overwrites them. The LLM model directory is deliberately left in place so an import never
-    /// forces a multi-GB re-download, and earlier backups are left untouched.
+    /// forces a multi-GB re-download, earlier backups are left untouched, and the Hangfire job queue
+    /// (<c>hangfire.db*</c>) is left in place because it is transient and held open by the running app.
     /// </summary>
     private void BackupCurrentState()
     {
@@ -169,6 +185,8 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
         foreach (var file in Directory.EnumerateFiles(ctx.RootDir))
         {
             var name = Path.GetFileName(file);
+            if (IsHangfireDbFile(name))
+                continue; // leave the live (possibly locked) job queue in place — moving it would throw
             File.Move(file, Path.Combine(backupDir, name));
         }
     }
