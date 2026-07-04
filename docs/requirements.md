@@ -70,6 +70,8 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-071** The system should auto-launch a browser pointed at an ephemeral local server when started.
 - **R-072** The system should expose all of its capabilities through the same browser interface — there is no parallel headless or text-mode surface in v1.
 - **R-073** The system should detect server disconnect from the browser and tell the user the app is no longer attached.
+- **R-074** The system should be distributable as a self-contained Windows installer, built automatically on push to `main` and reproducible locally, that requires no .NET or Node runtime on the target machine.
+- **R-075** The system should, on first run when no data location has been established, require the user to confirm where their data is stored (offering an editable suggestion) before creating or writing anything, and persist that choice for subsequent runs.
 
 ## Non-functional
 
@@ -83,3 +85,5 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 
 - **R-085** The system should expose a filterable, sortable view of every deduped listing in a run, with at least: portal, score range, posting age, primary/secondary stack hit, mark state, shortlist membership, and free-text search across title and company.
 - **R-086** The system should ship the provider catalog as part of the application bundle (read-only at runtime) and store only per-user enable-state overrides (opt-ins for catalog-disabled providers, opt-outs for catalog-enabled ones) and provider secrets under `data/<email>/`.
+- **R-087** The system should let a user export their complete per-user state (skillset, provider overrides and secrets, marks, ranking override, and full search history) under `data/<email>/` as a single downloadable archive, excluding the re-downloadable LLM model and transient files.
+- **R-088** The system should let a user import a previously exported archive into the active user's directory, validating its format, backing up the current state before overwriting, preserving the local LLM model, and refusing archives written by a newer format version or with an unsafe path.

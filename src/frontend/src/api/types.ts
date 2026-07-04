@@ -219,3 +219,16 @@ export type SaveResponse = { success: boolean; error?: string }
 
 export type DeleteHistoryRequest = { runIds: string[] }
 export type DeleteHistoryResponse = { deleted: number; missing: string[]; error?: string }
+
+export type ImportResponse = { restored: number; skipped: number; warnings: string[] }
+
+export type SetupStatusResponse = {
+  configured: boolean
+  email: string | null
+  dataDir: string | null
+  suggestedEmail: string
+  suggestedDataDir: string
+  bootstrapPath: string
+}
+
+export type SetupRequest = { email: string; dataDir: string }

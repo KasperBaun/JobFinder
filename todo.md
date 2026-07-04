@@ -4,6 +4,10 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
+- **Code-sign the Windows installer.** Unsigned `Setup.exe`/portable exe trips SmartScreen
+  ("unknown publisher"). Needs a code-signing cert; wire it into the CI publish step.
+- **Switch data location / user after setup.** First-run setup is one-time; add a Settings action
+  to re-run it or point at a different data folder (updates `bootstrap.json`).
 - **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
   `recruit-it` portal stub uses `:scope` as `link_selector` to target the
   wrapping `<a>`. Verify Playwright resolves `:scope` inside
@@ -29,6 +33,28 @@ _(none)_
 
 ## Completed (recent)
 
+- **Windows installer + local build.** GitHub Actions (`.github/workflows/release.yml`)
+  builds a self-contained `win-x64` installer on every push to `main` and publishes it to a
+  rolling `latest` prerelease (Inno Setup script at `installer/jobfinder.iss`). `npm run
+  package:win` (`scripts/package-installer.mjs`) does the same locally — self-contained publish
+  + portable zip, plus the `.exe` when Inno Setup (ISCC) is present natively or via wine. No
+  GitHub needed to test. (R-074)
+- **Config import/export.** Settings screen exports all of `data/<email>/` (minus the
+  re-downloadable LLM model and transient files) as a zip with a versioned `manifest.json`, and
+  imports it back — validating the archive, guarding against zip-slip, and backing up current
+  state to `.backup-<stamp>/` first. New `ConfigTransferService` + `/api/config/export|import`.
+  (R-087, R-088)
+- **Ship `skillset.example.md` in the build.** Only `ranking.yml` was shipped to `config/`, so
+  first-run seeding silently no-oped and `skillset.md` was never created — and since
+  `SkillsetParser.Load` throws on a missing file, the Profile page and Search returned 500 on a
+  clean install. Added the example to `Jobmatch.csproj` content; first run now seeds a starter
+  profile ("Alex Example") the user edits.
+- **First-run setup (data-location consent).** The app no longer silently guesses where to store
+  data. `UserContext` resolution is deferred through `IUserContextProvider`; with no bootstrap
+  config the GUI shows a setup screen where the user confirms their email + data folder
+  (suggested but editable) and explicitly acknowledges the location before anything is written.
+  The choice persists in `{ApplicationData}/jobfinder/bootstrap.json`. Unconfigured data calls
+  return `428`. Fixes the clean-install crash where no git identity was available. (R-075)
 - **`LlmModelDownloader` HF SSL renegotiation — fixed & verified.** The in-app
   model download (`POST /api/llm/download-model`) previously failed with
   "The SSL connection could not be established" because `huggingface.co`
