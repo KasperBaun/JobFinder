@@ -18,7 +18,7 @@ namespace Jobmatch.Search;
 [JsonDerivedType(typeof(ErrorEvent), "error")]
 public abstract record SearchProgressEvent;
 
-public sealed record StartedEvent(int Total) : SearchProgressEvent;
+public sealed record StartedEvent(string RunId, int Total) : SearchProgressEvent;
 
 public sealed record ProviderRunningEvent(string Provider, int Index, int Total) : SearchProgressEvent;
 

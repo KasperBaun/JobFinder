@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 
-namespace Jobmatch.Api;
+namespace Jobmatch.Api.Infrastructure;
 
 public static class SseHelper
 {

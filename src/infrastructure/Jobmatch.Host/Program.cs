@@ -3,13 +3,25 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Hangfire;
+using Hangfire.Dashboard;
+using Jobmatch;
 using Jobmatch.Api;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using NReco.Logging.File;
 
 var port = ResolvePort();
 var url = $"http://127.0.0.1:{port}";
 var cts = new CancellationTokenSource();
+
+// Resolve UserContext once at boot so we know where the log file lives. The DI
+// factory in AddJobmatchApi resolves it again (cheap and idempotent — the file
+// system ops are all "create if missing").
+var userContextForLog = UserContext.Resolve();
+var logDir = Path.Combine(userContextForLog.RootDir, "logs");
+Directory.CreateDirectory(logDir);
+var logPath = Path.Combine(logDir, "host.log");
 
 var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
 {
@@ -18,9 +30,17 @@ var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
 
 builder.WebHost.UseUrls(url);
 
-// Suppress all Kestrel/hosting output — the terminal belongs to the user.
+// Terminal stays quiet (Kestrel info chatter would be noise), but WARN+ goes
+// to data/<email>/logs/host.log so silent failures stop requiring console-logger
+// surgery to diagnose.
 builder.Logging.ClearProviders();
-builder.Logging.AddFilter((_, _, level) => level >= LogLevel.None);
+builder.Logging.AddFile(logPath, options =>
+{
+    options.Append = true;
+    options.MinLevel = LogLevel.Warning;
+    options.FileSizeLimitBytes = 5_000_000;
+    options.MaxRollingFiles = 1;
+});
 
 builder.Services.AddJobmatchApi();
 builder.Services.AddSingleton(cts);
@@ -75,6 +95,13 @@ if (Directory.Exists(guiPath))
 
 app.MapJobmatchApi();
 
+// Hangfire job dashboard — local-only (the host binds 127.0.0.1, and this filter rejects any
+// non-loopback request as defence in depth). Gives at-a-glance visibility of runs, retries, failures.
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new LocalRequestsOnlyAuthorizationFilter()],
+});
+
 // Host-owned endpoints — shutdown is not part of the standalone Api surface.
 new Jobmatch.Host.Endpoints.HostShutdownEndpoint().Register(app);
 
@@ -106,6 +133,7 @@ AppDomain.CurrentDomain.ProcessExit += (_, _) => cts.Cancel();
 Console.ForegroundColor = ConsoleColor.Yellow;
 Console.WriteLine($"\n  jobfinder GUI → {url}");
 Console.ResetColor();
+Console.WriteLine($"  log file → {logPath}");
 
 if (ShouldOpenBrowser())
 {

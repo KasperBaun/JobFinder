@@ -11,6 +11,16 @@
 
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+    <!-- File sink for host-side WARN+ logs at data/<email>/logs/host.log.
+         Tiny package (~30 KB) that plugs into the standard ILoggerProvider pipeline. -->
+    <PackageVersion Include="NReco.Logging.File" Version="1.2.2" />
+
+    <!-- Background job execution. The job search runs as a Hangfire job decoupled from
+         the HTTP request, so it survives client navigation / reload / host restart.
+         SQLite storage keeps the queue under data/<email>/hangfire.db — durable, server-less. -->
+    <PackageVersion Include="Hangfire.Core" Version="1.8.23" />
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageVersion Include="Hangfire.Storage.SQLite" Version="0.4.3" />
 
     <!-- Phase 3+ (pinned now, referenced when needed) -->
     <PackageVersion Include="CodeHollow.FeedReader" Version="1.2.6" />

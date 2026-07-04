@@ -70,6 +70,7 @@ export function SetupPage() {
         country: '',
         region: '',
         metro: [],
+        preferredCompanies: [],
       }
       return updateSkillset(payload)
     },

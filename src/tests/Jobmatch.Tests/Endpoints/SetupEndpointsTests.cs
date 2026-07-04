@@ -69,7 +69,8 @@ public sealed class SetupEndpointsTests : IDisposable
             Name: "Jane Doe", Location: "Copenhagen", ExperienceYears: 5,
             TargetRoles: ["Backend Engineer"], RemotePreference: "remote", Seniority: "senior",
             PrimaryStack: ["C#"], SecondaryStack: null, Domains: null, Disqualifiers: null,
-            Languages: null, EmploymentTypes: null, Country: null, Region: null, Metro: null));
+            Languages: null, EmploymentTypes: null, Country: null, Region: null, Metro: null,
+            PreferredCompanies: null));
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
 
         var afterProfile = await client.GetFromJsonAsync<SetupStatusResponse>(Routes.Setup.Status);

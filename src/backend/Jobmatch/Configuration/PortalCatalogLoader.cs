@@ -241,6 +241,9 @@ public static class PortalCatalogLoader
         JsonValueKind.False => false,
         JsonValueKind.Null => null,
         JsonValueKind.Number => el.TryGetInt32(out var i) ? (object?)i : el.GetDouble(),
-        _ => el,
+        // Clone detaches nested objects/arrays from the backing JsonDocument, which is
+        // disposed when Parse returns — without it, serializing a nested bodyTemplate
+        // (e.g. Workday appliedFacets) throws ObjectDisposedException at request time.
+        _ => el.Clone(),
     };
 }

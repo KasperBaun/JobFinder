@@ -1,13 +1,12 @@
 using Jobmatch.Api;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Jobmatch.Tests.Endpoints;
 
-public sealed class SystemEndpointsTests : IClassFixture<WebApplicationFactory<ApiProgram>>
+public sealed class SystemEndpointsTests : IClassFixture<ApiTestFactory>
 {
-    private readonly WebApplicationFactory<ApiProgram> _factory;
+    private readonly ApiTestFactory _factory;
 
-    public SystemEndpointsTests(WebApplicationFactory<ApiProgram> factory)
+    public SystemEndpointsTests(ApiTestFactory factory)
     {
         _factory = factory;
     }

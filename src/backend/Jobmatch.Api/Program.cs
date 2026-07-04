@@ -14,7 +14,10 @@ public sealed class ApiProgram
             builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
         }
 
-        builder.Services.AddJobmatchApi();
+        // Tests boot this via WebApplicationFactory with the "Testing" environment; skip the Hangfire
+        // server there so no SQLite db is created and no worker thread starts during tests.
+        var enableBackgroundJobs = !builder.Environment.IsEnvironment("Testing");
+        builder.Services.AddJobmatchApi(enableBackgroundJobs);
         var app = builder.Build();
         app.MapJobmatchApi();
         await app.RunAsync();
