@@ -37,6 +37,10 @@ node_modules/
 # Local NuGet output from `npm run package`
 pkg/
 
+# Self-contained publish + Windows installer build output
+publish/
+installer/Output/
+
 # Scratch
 .tmp/
 

@@ -70,4 +70,20 @@ public static class Routes
         public const string Status = $"{Base}/status";
         public const string DownloadModel = $"{Base}/download-model";
     }
+
+    public static class Config
+    {
+        public const string Tag = "Config";
+        public const string Base = $"{ApiConstants.RouteBase}/config";
+        public const string Export = $"{Base}/export";
+        public const string Import = $"{Base}/import";
+    }
+
+    public static class Setup
+    {
+        public const string Tag = "Setup";
+        public const string Base = $"{ApiConstants.RouteBase}/setup";
+        public const string Status = $"{Base}/status";
+        public const string Complete = Base;
+    }
 }

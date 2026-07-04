@@ -7,6 +7,7 @@ using Jobmatch.Llm;
 using Jobmatch.Search;
 using Jobmatch.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobmatch.Api;
@@ -15,14 +16,12 @@ public static class JobmatchApiExtensions
 {
     public static IServiceCollection AddJobmatchApi(this IServiceCollection services)
     {
-        // Active user — singleton resolved once per process. Side-effect: runs the one-time portals
-        // migration so the host doesn't need to know about it.
-        services.AddSingleton<UserContext>(_ =>
-        {
-            var ctx = UserContext.Resolve();
-            PortalsMigrationShim.RunIfNeeded(ctx.RootDir);
-            return ctx;
-        });
+        // Active user — resolution is deferred through the provider so the app can boot and show a
+        // first-run setup screen (on a machine with no git identity) instead of crashing. The provider
+        // loads the persisted bootstrap config on construction and runs the one-time portals migration.
+        services.AddSingleton<BootstrapStore>(_ => new BootstrapStore());
+        services.AddSingleton<IUserContextProvider, UserContextProvider>();
+        services.AddSingleton<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
 
         // Filesystem abstraction — physical by default; tests stage in-memory.
         services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();
@@ -34,6 +33,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<ISkillsetService, SkillsetService>();
         services.AddScoped<IProvidersService, ProvidersService>();
         services.AddScoped<ISearchService, SearchService>();
+        services.AddScoped<IConfigTransferService, ConfigTransferService>();
 
         // LLM model downloader — singleton because it owns a process-wide lock
         // around the download. HttpClient injected from IHttpClientFactory so we
@@ -51,6 +51,7 @@ public static class JobmatchApiExtensions
             });
 
         // Handlers
+        services.AddScoped<ISetupHandler, SetupHandler>();
         services.AddScoped<ISystemHandler, SystemHandler>();
         services.AddScoped<IWhoamiHandler, WhoamiHandler>();
         services.AddScoped<IMarksHandler, MarksHandler>();
@@ -59,14 +60,31 @@ public static class JobmatchApiExtensions
         services.AddScoped<IProvidersHandler, ProvidersHandler>();
         services.AddScoped<ISearchHandler, SearchHandler>();
         services.AddScoped<ILlmHandler, LlmHandler>();
+        services.AddScoped<IConfigTransferHandler, ConfigTransferHandler>();
 
         return services;
     }
 
     public static WebApplication MapJobmatchApi(this WebApplication app)
     {
+        // Translate "setup not done yet" into 428 so a stray data call while unconfigured returns a
+        // clean signal (the GUI gates on /api/setup/status, so this is defence-in-depth).
+        app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next(context);
+            }
+            catch (SetupRequiredException) when (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = StatusCodes.Status428PreconditionRequired;
+                await context.Response.WriteAsJsonAsync(new { setupRequired = true });
+            }
+        });
+
         IEndpointRegistration[] registrations =
         [
+            new SetupEndpoints(),
             new SystemEndpoints(),
             new WhoamiEndpoints(),
             new MarksEndpoints(),
@@ -75,6 +93,7 @@ public static class JobmatchApiExtensions
             new ProvidersEndpoints(),
             new SearchEndpoints(),
             new LlmEndpoints(),
+            new ConfigTransferEndpoints(),
         ];
 
         foreach (var registration in registrations)
