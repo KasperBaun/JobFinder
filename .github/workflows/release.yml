@@ -1,0 +1,67 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-installer
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test
+        run: dotnet test src/Jobmatch.slnx -c Release
+        env:
+          # The runner has no git user.email; give UserContext.Resolve() a value so any
+          # test that touches per-user paths resolves instead of throwing.
+          JOBFINDER_USER: ci@jobfinder.local
+
+      - name: Publish (self-contained win-x64, GUI bundled)
+        run: >
+          dotnet publish src/infrastructure/Jobmatch.Host/Jobmatch.Host.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:BuildGui=true -p:Version=0.1.${{ github.run_number }}
+          -o publish/win-x64
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        run: >
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          /DAppVersion=0.1.${{ github.run_number }}
+          installer\jobfinder.iss
+
+      - name: Publish rolling "latest" prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Jobfinder (latest)
+          prerelease: true
+          files: installer/Output/jobfinder-setup-0.1.${{ github.run_number }}.exe
+          body: |
+            Automated Windows build from the latest commit on `main`
+            (version `0.1.${{ github.run_number }}`, commit ${{ github.sha }}).
+
+            Download `jobfinder-setup-0.1.${{ github.run_number }}.exe` below and run it.
+            Windows SmartScreen may warn that the publisher is unknown (the installer is
+            unsigned) — choose **More info → Run anyway**.
