@@ -138,6 +138,8 @@ jobfinder ranks with keywords out of the box. To enable the on-device LLM judge,
 
 ---
 
+**Manual imports.** Some sources (LinkedIn, TechJob.dk, Stepstone) can't be fetched automatically. For those, save the roles you care about as `data/<your-email>/imports/<provider>-<anything>.csv` (e.g. `linkedin-2026-06.csv`) — the file name must start with the provider's name. Required columns: `url`, `title`; optional: `company`, `location`, `description`, `posted_at`. Turn the matching provider on and the next search run ingests every file.
+
 ## Where your data lives
 
 Everything personal lives under `data/<your-email>/` on your own machine — skillset, provider list, run history, and good-match marks. That folder is gitignored, never sent anywhere, never shared. Delete it and jobfinder forgets everything about you and starts fresh.

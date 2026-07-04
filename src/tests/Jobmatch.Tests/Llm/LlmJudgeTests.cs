@@ -1,9 +1,35 @@
 using Jobmatch.Llm;
+using Jobmatch.Models;
 
 namespace Jobmatch.Tests.Llm;
 
 public sealed class LlmJudgeTests
 {
+    [Fact]
+    public void BuildSystemPrompt_Includes_Preferred_Companies_When_Present()
+    {
+        var skillset = new Skillset(
+            Name: "A",
+            Location: "Copenhagen",
+            ExperienceYears: 5,
+            TargetRoles: ["Software Engineer"],
+            RemotePreference: RemotePreference.Hybrid,
+            Seniority: Seniority.Mid,
+            PrimaryStack: ["C#"],
+            SecondaryStack: [],
+            Domains: [],
+            Disqualifiers: [],
+            Languages: ["English"],
+            EmploymentTypes: ["full-time"])
+        {
+            PreferredCompanies = ["LEGO", "Maersk"],
+        };
+
+        var prompt = LlmJudge.BuildSystemPrompt(skillset, []);
+
+        Assert.Contains("LEGO, Maersk", prompt);
+    }
+
     [Fact]
     public void ParseVerdict_StrictJson_Parses()
     {

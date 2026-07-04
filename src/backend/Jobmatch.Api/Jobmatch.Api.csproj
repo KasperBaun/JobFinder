@@ -12,6 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.Storage.SQLite" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Jobmatch.Tests" />
   </ItemGroup>
 

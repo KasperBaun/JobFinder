@@ -73,6 +73,8 @@ public sealed class LlmJudge(ILlmClient client, ILogger<LlmJudge> logger)
             sb.AppendLine($"  Domains of interest: {string.Join(", ", skillset.Domains)}");
         if (skillset.Disqualifiers.Count > 0)
             sb.AppendLine($"  Hard disqualifiers (any of these → 0.0): {string.Join(", ", skillset.Disqualifiers)}");
+        if (skillset.PreferredCompanies.Count > 0)
+            sb.AppendLine($"  Preferred employers (a listing AT one of these companies is a stronger fit): {string.Join(", ", skillset.PreferredCompanies)}");
         sb.AppendLine();
         sb.AppendLine(ExamplesLoader.ToFewShotPrompt(examples));
         sb.AppendLine();

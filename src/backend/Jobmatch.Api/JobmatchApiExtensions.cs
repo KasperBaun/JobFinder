@@ -1,8 +1,12 @@
 using System.Net.Security;
+using Hangfire;
+using Hangfire.Storage.SQLite;
 using Jobmatch.Api.Endpoints;
 using Jobmatch.Api.Handlers;
 using Jobmatch.Api.Infrastructure;
+using Jobmatch.Api.Jobs;
 using Jobmatch.Configuration;
+using Jobmatch.Jobs;
 using Jobmatch.Llm;
 using Jobmatch.Search;
 using Jobmatch.Services;
@@ -14,8 +18,22 @@ namespace Jobmatch.Api;
 
 public static class JobmatchApiExtensions
 {
-    public static IServiceCollection AddJobmatchApi(this IServiceCollection services)
+    /// <param name="enableBackgroundJobs">
+    /// When true (dev + host), registers Hangfire (SQLite storage) and starts the in-process job server so
+    /// searches actually run. Tests pass false so no SQLite db is created and no server thread starts.
+    /// </param>
+    public static IServiceCollection AddJobmatchApi(this IServiceCollection services, bool enableBackgroundJobs = true)
     {
+        // Minimal-API JSON must match the SSE / on-disk shape: camelCase, enums as camelCase strings
+        // (so JobSearchState/Phase serialise as "running"/"llmJudging", not 4), and nulls omitted.
+        services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+            options.SerializerOptions.Converters.Add(
+                new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+        });
+
         // Active user — resolution is deferred through the provider so the app can boot and show a
         // first-run setup screen (on a machine with no git identity) instead of crashing. The provider
         // loads the persisted bootstrap config on construction and runs the one-time portals migration.
@@ -34,6 +52,28 @@ public static class JobmatchApiExtensions
         services.AddScoped<IProvidersService, ProvidersService>();
         services.AddScoped<ISearchService, SearchService>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();
+
+        // Background job search: the JobSearch lifecycle store, the live SSE fan-out bus, and the
+        // orchestrating service/job. The bus is a singleton (one in-proc broker); the store and service
+        // are scoped (resolved per request and per Hangfire job scope).
+        services.AddScoped<IJobSearchStore, JobSearchStore>();
+        services.AddSingleton<JobSearchBus>();
+        services.AddScoped<IJobSearchService, JobSearchService>();
+        services.AddScoped<SearchJob>();
+
+        if (enableBackgroundJobs)
+        {
+            services.AddHangfire((sp, config) => config
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSQLiteStorage(
+                    HangfireDbPath(sp),
+                    // Default SQLite poll is ~15s — far too slow for an interactive "Run a search".
+                    new SQLiteStorageOptions { QueuePollInterval = TimeSpan.FromSeconds(1) }));
+
+            // Single-user tool: one worker serialises runs so two searches don't contend for the LLM.
+            services.AddHangfireServer(options => options.WorkerCount = 1);
+        }
 
         // LLM model downloader — singleton because it owns a process-wide lock
         // around the download. HttpClient injected from IHttpClientFactory so we
@@ -58,11 +98,27 @@ public static class JobmatchApiExtensions
         services.AddScoped<IHistoryHandler, HistoryHandler>();
         services.AddScoped<ISkillsetHandler, SkillsetHandler>();
         services.AddScoped<IProvidersHandler, ProvidersHandler>();
-        services.AddScoped<ISearchHandler, SearchHandler>();
+        services.AddScoped<IJobSearchHandler, JobSearchHandler>();
         services.AddScoped<ILlmHandler, LlmHandler>();
         services.AddScoped<IConfigTransferHandler, ConfigTransferHandler>();
 
         return services;
+    }
+
+    // hangfire.db is transient job-queue infrastructure that Hangfire opens at server start — before
+    // first-run setup may have chosen a data directory. Use the configured data dir when available,
+    // else a stable per-user fallback, so the job server starts without forcing the deferred
+    // UserContext (which throws SetupRequiredException until setup completes).
+    private static string HangfireDbPath(IServiceProvider sp)
+    {
+        var provider = sp.GetRequiredService<IUserContextProvider>();
+        if (provider.IsConfigured)
+            return Path.Combine(provider.Current.RootDir, "hangfire.db");
+
+        var fallback = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "jobfinder");
+        Directory.CreateDirectory(fallback);
+        return Path.Combine(fallback, "hangfire.db");
     }
 
     public static WebApplication MapJobmatchApi(this WebApplication app)

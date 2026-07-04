@@ -213,4 +213,32 @@ public sealed class DeduperTests
             location: "Brøndby, Denmark");
         Assert.Single(Deduper.Deduplicate([jobindex, teamtailor]).Deduped);
     }
+
+    [Theory]
+    [InlineData("DR", "Danmarks Radio")]
+    [InlineData("dr", "danmarks radio")]
+    [InlineData("DR A/S", "Danmarks Radio")]
+    public void NormaliseCompany_CollapsesKnownAliasesToCanonicalForm(string alias, string canonical)
+    {
+        Assert.Equal(Deduper.NormaliseCompany(canonical), Deduper.NormaliseCompany(alias));
+    }
+
+    [Fact]
+    public void Deduplicate_CrossPortal_JobindexAndHrManager_Collapse_When_CompanyDiffersByAlias()
+    {
+        // Jobindex extracts company="DR" from the trailing title suffix; hr-manager-dr
+        // sets company="Danmarks Radio" from the upstream catalog. Same employer, same
+        // role — collapse via the CompanyCanonicalForm alias.
+        var jobindex = Make("jobindex-rss-net-udvikler",
+            title: "Erfaren softwareudvikler til DR Teknologi",
+            company: "DR",
+            url: "https://www.jobindex.dk/vis-job/h1663903",
+            location: "København S");
+        var hrManager = Make("hr-manager-dr",
+            title: "Erfaren softwareudvikler til DR Teknologi",
+            company: "Danmarks Radio",
+            url: "https://candidate.hr-manager.net/ApplicationInit.aspx?cid=1165&ProjectId=148555",
+            location: "København C, Denmark");
+        Assert.Single(Deduper.Deduplicate([jobindex, hrManager]).Deduped);
+    }
 }

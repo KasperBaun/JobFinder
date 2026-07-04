@@ -15,7 +15,8 @@ public sealed record SkillsetResponse(
     IReadOnlyList<string> EmploymentTypes,
     string? Country,
     string? Region,
-    IReadOnlyList<string> Metro);
+    IReadOnlyList<string> Metro,
+    IReadOnlyList<string> PreferredCompanies);
 
 public sealed record SkillsetUpdateRequest(
     string? Name,
@@ -32,6 +33,7 @@ public sealed record SkillsetUpdateRequest(
     IReadOnlyList<string>? EmploymentTypes,
     string? Country,
     string? Region,
-    IReadOnlyList<string>? Metro);
+    IReadOnlyList<string>? Metro,
+    IReadOnlyList<string>? PreferredCompanies);
 
 public sealed record SaveResponse(bool Success, string? Error = null);

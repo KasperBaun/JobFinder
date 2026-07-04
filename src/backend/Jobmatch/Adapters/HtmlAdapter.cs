@@ -87,7 +87,11 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
             }
         }
 
-        return results;
+        // Card markup rarely carries the full posting; EnrichBody fetches each listing's
+        // detail page and merges the visible text into Description, same as RssAdapter.
+        return Config.EnrichBody && results.Count > 0
+            ? await EnrichBodiesAsync(results, ct)
+            : results;
     }
 
     private static string? TextOf(IElement card, string selector)

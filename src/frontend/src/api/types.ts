@@ -66,6 +66,7 @@ export type SkillsetResponse = {
   country?: string | null
   region?: string | null
   metro: string[]
+  preferredCompanies: string[]
 }
 
 export type SkillsetUpdateRequest = {
@@ -84,6 +85,7 @@ export type SkillsetUpdateRequest = {
   country?: string | null
   region?: string | null
   metro: string[]
+  preferredCompanies: string[]
 }
 
 export type SearchRequest = {
@@ -106,23 +108,76 @@ export type ListingMatch = {
   reasoning: string
   primaryStackHits: string[]
   secondaryStackHits: string[]
+  favoriteCompany?: boolean
 }
-
-export type SearchProgressEvent =
-  | { type: 'started'; total: number }
-  | { type: 'provider_running'; provider: string; index: number; total: number }
-  | { type: 'provider_done'; provider: string; fetchedCount: number; index: number; total: number }
-  | { type: 'provider_failed'; provider: string; error: string; index: number; total: number }
-  | { type: 'dedupe'; mergedCount: number }
-  | { type: 'rank'; rankedCount: number; topScore: number }
-  | { type: 'complete'; runId: string; shortlist: ListingMatch[] }
-  | { type: 'error'; message: string }
 
 export type ProviderRunStatus = {
   name: string
-  status: 'ok' | 'failed'
+  status: 'pending' | 'running' | 'ok' | 'failed'
   fetchedCount?: number
   error?: string
+}
+
+// Background search lifecycle — mirrors the backend JobSearch aggregate. Enum values are camelCase
+// to match the API's JsonStringEnumConverter (e.g. JobSearchPhase.LlmJudging → "llmJudging").
+export type JobSearchState =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled'
+  | 'interrupted'
+
+export type JobSearchPhase =
+  | 'pending'
+  | 'fetching'
+  | 'deduping'
+  | 'ranking'
+  | 'llmJudging'
+  | 'writing'
+  | 'done'
+
+export type JobSearchEvent = {
+  timestamp: string
+  level: 'info' | 'warn' | 'error'
+  phase: JobSearchPhase
+  message: string
+  provider?: string
+  count?: number
+}
+
+export type JobSearch = {
+  id: string
+  state: JobSearchState
+  phase: JobSearchPhase
+  request: SearchRequest
+  createdAt: string
+  startedAt?: string
+  finishedAt?: string
+  providers: ProviderRunStatus[]
+  fetchedCount: number
+  dedupedCount: number
+  rankedCount: number
+  shortlistCount: number
+  topScore: number
+  error?: string
+  hangfireJobId?: string
+  attempt: number
+  lastHeartbeat: string
+  timeline: JobSearchEvent[]
+}
+
+export type StartSearchResponse = { id: string }
+
+export const JOB_SEARCH_TERMINAL_STATES: JobSearchState[] = [
+  'succeeded',
+  'failed',
+  'cancelled',
+  'interrupted',
+]
+
+export function isTerminalState(state: JobSearchState): boolean {
+  return JOB_SEARCH_TERMINAL_STATES.includes(state)
 }
 
 export type RunSummary = {
@@ -135,6 +190,8 @@ export type RunSummary = {
   shortlistCount: number
   topScore: number
   goodMarks: number
+  state?: JobSearchState
+  phase?: JobSearchPhase
 }
 
 export type HistoryResponse = { runs: RunSummary[] }
@@ -206,6 +263,7 @@ export type RunDetail = RunSummary & {
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
   dropped?: DroppedEntry[]
+  timeline?: JobSearchEvent[]
 }
 
 export type MarkRequest = {

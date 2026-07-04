@@ -15,7 +15,7 @@ const EMPTY_FORM: Form = {
   name: '', location: '', experienceYears: 0, targetRoles: [],
   remotePreference: 'any', seniority: 'mid', primaryStack: [], secondaryStack: [],
   domains: [], disqualifiers: [], languages: [], employmentTypes: [],
-  country: '', region: '', metro: [],
+  country: '', region: '', metro: [], preferredCompanies: [],
 }
 
 function toForm(s: SkillsetResponse): Form {
@@ -35,6 +35,7 @@ function toForm(s: SkillsetResponse): Form {
     country: s.country ?? '',
     region: s.region ?? '',
     metro: [...s.metro],
+    preferredCompanies: [...s.preferredCompanies],
   }
 }
 
@@ -227,6 +228,15 @@ export function SkillsetPage() {
               <TagInput values={form.domains}
                 onChange={(v) => patch({ domains: v })}
                 placeholder="e.g. fintech, b2b saas" ariaLabel="Industries" />
+            </section>
+
+            <section className="card">
+              <h2 className="card__title">Favorite companies</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Employers you'd love to work for. Their listings get a rating boost.</p>
+              <TagInput variant="primary"
+                values={form.preferredCompanies}
+                onChange={(v) => patch({ preferredCompanies: v })}
+                placeholder="e.g. LEGO, Maersk" ariaLabel="Favorite companies" />
             </section>
 
             <section className="card">

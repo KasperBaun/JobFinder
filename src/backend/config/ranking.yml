@@ -33,6 +33,12 @@ require_primary_stack_hit: true
 # for users who are mid-with-experience.
 seniority_adjacency_credit: 1.0
 
+# Score multiplier applied to listings whose company name matches one of the
+# user's preferred companies (the "Preferred companies" skillset section).
+# Multiplicative, capped at 1.0. 1.0 = no boost. Deal-breakers still win:
+# a disqualified listing stays at 0 regardless of employer.
+preferred_company_boost: 1.25
+
 # Score multiplier applied when a listing's title looks clearly non-engineering
 # (Product/Project/Account Manager, Marketing/Sales/Finance roles, Customer
 # Success, Recruiter, Data/Business/Fraud Analyst, etc.) — even if the

@@ -8,6 +8,8 @@ Current status of work on `jobfinder`.
   ("unknown publisher"). Needs a code-signing cert; wire it into the CI publish step.
 - **Switch data location / user after setup.** First-run setup is one-time; add a Settings action
   to re-run it or point at a different data folder (updates `bootstrap.json`).
+- **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
+  currently user-disabled) — still the single widest DK net we have.
 - **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
   `recruit-it` portal stub uses `:scope` as `link_selector` to target the
   wrapping `<a>`. Verify Playwright resolves `:scope` inside
@@ -27,11 +29,47 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
+- **Source-specific remote-mode extraction (`ApiAdapter` /
+  `HrManagerAdapter`).** 5 of the current top-10 still tag `Unknown` —
+  the frontend hides the badge but the data is recoverable from source.
+  SmartRecruiters' JSON `customField` array commonly carries "Workplace
+  policy / Hybrid"; HR-Manager's JSON-LD often has `workLocation` /
+  `employmentType`. Per-adapter: pull the structured value first, fall
+  through to `BaseAdapter.InferRemoteMode` only when those fields are
+  silent.
+- **LLM judging speed-up — system-prompt KV caching.** Current run is
+  ~19 sec/listing on CPU → 50 listings ≈ 16 min. The system prompt is
+  identical across every call; only the user prompt varies. Pre-tokenise
+  the system prompt into a "warm" KV state once and rewind to it between
+  calls instead of `MemoryClear` (see `LLamaContext.SaveState` /
+  `LoadState` in LLamaSharp 0.27). Target ~5-10× speedup. Lower-hanging
+  follow-ups: GPU offload (already a documented `llm.gpu_layer_count`
+  knob — needs a `LLamaSharp.Backend.Cuda12` / `.Vulkan` swap in
+  `Directory.Packages.props`); lower `llm.top_n` 50 → 25.
+
 ## In progress
 
 _(none)_
 
 ## Completed (recent)
+
+- **Merged `client-server-rewrite` into `dev`.** The two branches had diverged a month from
+  `a243a4c` — CSR carried the async **job-based, observable search** (Hangfire + SQLite job queue,
+  `Jobs/*`, `JobSearchBus`/`Store`/`Handler`, `SearchService` split into partials) so a running
+  search stays visible in the UI (live progress, reconnect on reload) while the LLM works, plus R-091
+  preferred-companies ranking, 17 new DK sources (Danske Bank + 5 DK .NET employers + favorite-company
+  boards), a favorite-company badge, a DR-Teknologi dedupe alias, and WARN+ file logging. `dev`
+  carried the LLM download resilience, config import/export, guided first-run, and the Windows
+  installer. LLM judging predated the split and is identical on both sides (CSR extracted it to
+  `SearchService.Llm.cs`), so it merged cleanly. Reconciliations: unified the DI seam
+  (`JobmatchApiExtensions` — dev's deferred `UserContextProvider` + config/LLM services **and** CSR's
+  Hangfire/JobSearch registrations), made `hangfire.db` fall back to a stable per-user path when
+  unconfigured so a clean install boots to the setup screen instead of crashing on the eager Hangfire
+  storage, added the profile guard to CSR's `SearchService.Prepare`, unioned the `SkillsetUpdateRequest`
+  `preferredCompanies` field into dev's Setup/Skillset UIs, and merged `SearchPage` (CSR's live UI +
+  dev's LLM banner + profile nudge). Narrow NuGet-audit suppression for the transitive
+  SQLitePCLRaw advisory (Hangfire's local queue, no untrusted input). 327 backend tests green,
+  frontend build + Vitest green.
 
 - **LLM model download — retry + Range resume (survives transient TLS resets).** The
   `AllowRenegotiation` fix (`d7907eb`) handled the HuggingFace handshake, but the download was
@@ -90,6 +128,120 @@ _(none)_
   streamed clean progress to completion, the model loaded in llama.cpp, and a
   full LLM-judged search ran. No manual curl placement needed — the earlier
   backlog item is now resolved.
+- **Source expansion round 2 — Danske Bank unblocked + 5 DK .NET
+  employers (ids 44-49).** `JsonValueReader.Walk` learned numeric path
+  segments (array indexing, TDD) which unblocked Danske Bank's Oracle
+  Recruiting REST (id 44 — 100 listings live). ATS sweep over 13 more DK
+  .NET employers wired twoday (TeamTailor, 45), Templafy (TeamTailor,
+  46), Milestone Systems (Oracle, 47), EG A/S (HR-Manager, 48), Stibo
+  Systems (Workday, 49) — ~172 extra listings/run; KMD/Trifork/
+  Systematic/Siteimprove/3Shape/Visma/Nexi/Cbrain have no machine-
+  readable surface (see T-007 INDEX sweep note). Favorite-company boost
+  now renders as a green "★ Favorite" badge on listing cards
+  (ListingMatch.FavoriteCompany flag; legacy note sentence stripped
+  client-side).
+- **Source expansion — 5 RSS query feeds, 7 favorite-company providers,
+  manual-import docs.** New Jobindex/IT-Jobbank query feeds (ids 30-34:
+  backend udvikler / c# / azure / software engineer / it-jobbank .net,
+  each ~10-20 newest, enriched — adds ~3.5 min sequential fetch time per
+  run). Favorite-company career sites wired per T-007-style worksheets
+  (`docs/tasks/T-007/company-*.md`): LEGO/SimCorp/Maersk via Workday CXS
+  POST (ids 37-39, descriptions via JSON-LD enrichment), H1 via Lever
+  (id 40), Nordea/Pandora/PFA via server-rendered HTML (ids 41-43 —
+  HtmlAdapter learned `enrichBody` for this). Danske Bank blocked on a
+  `JsonValueReader.Walk` numeric-segment extension (backlogged); DFDS/
+  Nykredit/Epico are JS-only, covered via Jobindex feeds + boost.
+  Hardened `PortalCatalogLoader` nested-JSON cloning (disposed-document
+  bug); R-021 updated to six provider types. LinkedIn (id 11) + new
+  TechJob.dk (id 36) manual entries now carry concrete CSV-import
+  instructions; README gained a "Manual imports" paragraph. All new
+  providers live-tested via `POST /api/providers/{id}/test` on
+  2026-06-12: feeds 9-20 items, LEGO 39, SimCorp 60, Maersk 29, H1 20,
+  Nordea 100, Pandora 10, PFA 5.
+- **Preferred companies — skillset section + ranking boost (R-091).** New
+  `## Preferred companies` skillset section (GUI: "Favorite companies" card
+  on the profile page) listing employers the user wants to work for. The
+  ranker multiplies a listing's post-gate score by `preferred_company_boost`
+  (ranking.yml, default 1.25, capped at 1.0) when the listing's company name
+  matches an entry — company name only, so a listing merely mentioning a
+  dream company in its description gets nothing, and deal-breakers still
+  zero the score. Breakdown gains a `preferred_company_bonus` component;
+  notes say "One of your favorite companies (X) — rating boosted."; the LLM
+  judge prompt lists the preferred employers. Coverage caveat logged below.
+- **Searches run as durable background jobs (Hangfire) with a `JobSearch`
+  state model.** Fixes the bug where navigating away from the search page
+  killed the in-flight run and left "Past searches" empty (history was only
+  written at the very end of a synchronous in-request SSE run). Now `POST
+  /api/search` enqueues a Hangfire job (SQLite storage at
+  `data/<email>/hangfire.db`) that runs decoupled from the request, so it
+  survives in-app navigation, full reload, and host restart. A new
+  `JobSearch` aggregate (`Jobmatch/Jobs/`) with an explicit state machine
+  (queued → running → succeeded/failed/cancelled/interrupted) + timestamped
+  timeline is persisted per run under `data/<email>/jobsearch/<id>.json`;
+  every run — including abandoned/failed — now shows in history with a state
+  badge. Live progress streams over SSE (`/api/search/{id}/stream`, snapshot
+  replay + live) via an in-proc `JobSearchBus`; the GUI reconnects to an
+  active run on load via `/api/search/active`. Frontend: app-level
+  `SearchRunContext` (survives navigation, replaces the old
+  `useSearchStream`), a global running indicator + cancel on every page, and
+  history state badges + per-run timeline. Local-only Hangfire dashboard at
+  `/hangfire`. Background jobs are gated off in the "Testing" environment so
+  tests stay hermetic. 33 new tests (state machine, store + orphan
+  reconciliation, bus fan-out, job event-mapping + terminal states, service
+  enqueue/cancel, history merge). See R-036/037/038/055 and the
+  "Background search jobs" note in CLAUDE.md.
+
+- **DR Teknologi cross-portal duplicate collapsed (company alias).**
+  The pair the 2026-05-12 dedupe pass left behind. Jobindex extracts
+  `company: "DR"` from the trailing title suffix; the hr-manager-dr
+  adapter sets `company: "Danmarks Radio"`. Added a small
+  `CompanyCanonicalForm` map in `Deduper` (analogous to the existing
+  `CityAliases` in `Ranker`) — keys are the non-canonical form after
+  legal-form strip + lowercase, values are the canonical form they
+  collapse to. Currently one entry (`dr → danmarks radio`). The map is
+  consulted inside `NormaliseCompany` so the dedupe key matches across
+  portals; display data on each listing stays untouched. Four new tests
+  cover the alias resolution + the cross-portal collapse against the
+  real top-10 data.
+
+- **Cross-portal Jobindex duplicate collapse.** Top-10 had two copies
+  each of Sopra Steria (#1+#2), Danske Spil (#4+#5), DR Teknologi
+  (#9+#10) — the Jobindex RSS feed appends `, <Company> [A/S|ApS|...]`
+  to every title while SmartRecruiters / Teamtailor / hr-manager
+  populate the bare Company field, so the dedupe key
+  `(title|company|location)` diverged on every component. Two changes:
+  (a) `RssAdapter` for jobindex.dk / it-jobbank.dk hosts splits the
+  trailing `, <suffix>` off the title and puts it in `Company` — fixes
+  display too; (b) `Deduper` normalises the Company key by stripping
+  legal-form suffixes (A/S, ApS, GmbH, Ltd, Inc, ...) and the Location
+  key by stripping the Danish remote tail `og mulighed for
+  hjemmearbejde / fjernarbejde`, taking the first comma segment, and
+  dropping a trailing 1-2-letter Copenhagen district code ("København K"
+  → "København"). Live smoke: Sopra Steria pair collapsed to one entry
+  at #1, Danske Spil pair collapsed to one at #3, mergedCount 994 →
+  984. Top-10 now shows 9 distinct jobs (was 7). DR Teknologi pair
+  ("DR" vs "Danmarks Radio") still survives — moved to Backlog as a
+  company-alias item. 27 new tests; 236 backend tests green.
+- **Host file logging for WARN+ at `data/<email>/logs/host.log`.**
+  Closes the silent-failure debugging gap flagged in the prior handoff
+  (terminal was suppressed for both info chatter and real errors).
+  Terminal stays quiet, but WARN / ERROR now flow to a rolling 5 MB
+  file under the user data dir via `NReco.Logging.File` (~30 KB).
+  Startup banner prints the log path so it's discoverable without
+  shelling around. Verified: 404'd `/api/history/<bad-id>` via curl,
+  host.log captured the `HistoryHandler` exception + full stack trace
+  while the terminal stayed clean.
+- **`LlmModelDownloader` SSL renegotiation against HuggingFace.**
+  Closed the Phase 2 "no manual GGUF placement" regression. .NET's
+  default `SocketsHttpHandler` refuses TLS renegotiation, which
+  `huggingface.co` requests on the first hop; configured the named
+  HttpClient with `SslOptions = new SslClientAuthenticationOptions {
+  AllowRenegotiation = true }`. Also surfaced `InnerException.Message`
+  in the SSE error event so future TLS/transport failures don't hide
+  behind the opaque outer message. Verified live: deleted the local
+  model, hit `/api/llm/download-model`, watched five progress events
+  stream from 4 MB to 20 MB before cancelling.
+
 - **LLM end-to-end smoke test.** First real run of the LLM judging layer
   (which had shipped untested in the prior session). Three issues
   surfaced and were fixed inline: (1) bumped `LLamaSharp` 0.21 → 0.27

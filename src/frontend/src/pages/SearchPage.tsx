@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getHistory, getProviders, getSetupStatus } from '../api/client'
-import { useSearchStream } from '../hooks/useSearchStream'
+import { getHistory, getProviders, getRun, getSetupStatus } from '../api/client'
+import { useSearchRun } from '../context/SearchRunContext'
 import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
 import { formatRelative } from '../utils/time'
-import type { SearchProgressEvent, SearchRequest } from '../api/types'
+import { PHASE_LABEL, STATE_LABEL } from '../utils/searchLabels'
+import { isTerminalState } from '../api/types'
+import type { JobSearch, SearchRequest } from '../api/types'
 
 type ProviderRowState = {
   name: string
@@ -15,64 +17,47 @@ type ProviderRowState = {
   error?: string
 }
 
-function reduceProgress(events: SearchProgressEvent[], initialNames: string[]): {
-  rows: ProviderRowState[]
-  dedupe?: number
-  rank?: { rankedCount: number; topScore: number }
-} {
+function buildRows(job: JobSearch | null, initialNames: string[]): ProviderRowState[] {
   const rows = new Map<string, ProviderRowState>()
   for (const name of initialNames) rows.set(name, { name, status: 'pending' })
-
-  let dedupe: number | undefined
-  let rank: { rankedCount: number; topScore: number } | undefined
-
-  for (const ev of events) {
-    if (ev.type === 'provider_running') {
-      rows.set(ev.provider, { name: ev.provider, status: 'running' })
-    } else if (ev.type === 'provider_done') {
-      rows.set(ev.provider, { name: ev.provider, status: 'ok', fetchedCount: ev.fetchedCount })
-    } else if (ev.type === 'provider_failed') {
-      rows.set(ev.provider, { name: ev.provider, status: 'failed', error: ev.error })
-    } else if (ev.type === 'dedupe') {
-      dedupe = ev.mergedCount
-    } else if (ev.type === 'rank') {
-      rank = { rankedCount: ev.rankedCount, topScore: ev.topScore }
-    }
+  for (const p of job?.providers ?? []) {
+    rows.set(p.name, { name: p.name, status: p.status, fetchedCount: p.fetchedCount, error: p.error })
   }
-  return { rows: Array.from(rows.values()), dedupe, rank }
+  return Array.from(rows.values())
+}
+
+function reached(phase: JobSearch['phase'], target: JobSearch['phase']): boolean {
+  const order: JobSearch['phase'][] = ['pending', 'fetching', 'deduping', 'ranking', 'llmJudging', 'writing', 'done']
+  return order.indexOf(phase) >= order.indexOf(target)
 }
 
 export function SearchPage() {
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const historyQuery = useQuery({ queryKey: ['history'], queryFn: getHistory })
   const setupQuery = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
-  const stream = useSearchStream()
-  const lastRun = historyQuery.data?.runs[0]
+  const { job, isActive, start, cancel, reset } = useSearchRun()
+
+  const lastRun = historyQuery.data?.runs.find(r => r.state === 'succeeded' || r.state === undefined)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [topN, setTopN] = useState<string>('')
   const [minScore, setMinScore] = useState<string>('')
   const [selectedProviders, setSelectedProviders] = useState<string[] | null>(null)
+  const [stepsOpen, setStepsOpen] = useState(true)
 
   const enabledProviderNames = useMemo(
     () => providersQuery.data?.providers.filter(p => p.enabled).map(p => p.name) ?? [],
     [providersQuery.data],
   )
-
   const effectiveProviders = selectedProviders ?? enabledProviderNames
 
-  const progress = useMemo(
-    () => reduceProgress(stream.events, effectiveProviders),
-    [stream.events, effectiveProviders],
-  )
+  const rows = useMemo(() => buildRows(job, effectiveProviders), [job, effectiveProviders])
 
-  const [progressExpanded, setProgressExpanded] = useState(true)
-  useEffect(() => {
-    if (stream.status === 'running') setProgressExpanded(true)
-    if (stream.status === 'complete') {
-      const t = setTimeout(() => setProgressExpanded(false), 350)
-      return () => clearTimeout(t)
-    }
-  }, [stream.status])
+  const succeeded = job?.state === 'succeeded'
+  const runDetailQuery = useQuery({
+    queryKey: ['run', job?.id],
+    queryFn: () => getRun(job!.id),
+    enabled: succeeded && !!job?.id,
+  })
 
   function toggleProvider(name: string) {
     const base = selectedProviders ?? enabledProviderNames
@@ -87,7 +72,8 @@ export function SearchPage() {
     if (Number.isFinite(tn)) req.topN = tn
     const ms = minScore.trim() ? Number(minScore) : NaN
     if (Number.isFinite(ms)) req.minScore = ms
-    stream.start(req)
+    setStepsOpen(true)
+    void start(req)
   }
 
   if (setupQuery.data && !setupQuery.data.profileExists) {
@@ -105,6 +91,10 @@ export function SearchPage() {
     )
   }
 
+  const showDedupe = job != null && (job.dedupedCount > 0 || reached(job.phase, 'deduping'))
+  const showRank = job != null && (job.rankedCount > 0 || reached(job.phase, 'ranking'))
+  const statusBadge = job && isTerminalState(job.state) ? STATE_LABEL[job.state] : null
+
   return (
     <div className="page page--wide">
       <header className="page__header">
@@ -112,7 +102,7 @@ export function SearchPage() {
         <h1 className="page__heading">Run a <em>search</em></h1>
         <p className="page__lede">
           Pulls the latest listings from your active sources, removes duplicates, rates them against your profile,
-          and shows you the top picks.
+          and shows you the top picks. The search keeps running even if you move to another page or reload.
         </p>
       </header>
 
@@ -123,20 +113,21 @@ export function SearchPage() {
           type="button"
           className="btn btn--primary btn--lg"
           onClick={handleRun}
-          disabled={stream.status === 'running'}
+          disabled={isActive}
         >
-          {stream.status === 'running' ? 'Running…' : 'Run a search'}
+          {isActive ? 'Running…' : 'Run a search'}
         </button>
-        {stream.status !== 'idle' && stream.status !== 'running' && (
-          <button type="button" className="btn btn--secondary" onClick={stream.reset}>
+        {isActive && (
+          <button type="button" className="btn btn--secondary" onClick={() => void cancel()}>
+            Cancel
+          </button>
+        )}
+        {job != null && !isActive && (
+          <button type="button" className="btn btn--secondary" onClick={reset}>
             Reset
           </button>
         )}
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => setAdvancedOpen(o => !o)}
-        >
+        <button type="button" className="link-button" onClick={() => setAdvancedOpen(o => !o)}>
           {advancedOpen ? 'Hide options' : 'More options…'}
         </button>
       </div>
@@ -194,7 +185,7 @@ export function SearchPage() {
         </section>
       )}
 
-      {stream.status === 'idle' && (
+      {job == null && (
         <div className="hint-card">
           {lastRun ? (
             <>
@@ -211,114 +202,95 @@ export function SearchPage() {
         </div>
       )}
 
-      {stream.status !== 'idle' && (
-        <section className={`progress-panel${stream.status === 'complete' && !progressExpanded ? ' progress-panel--collapsed' : ''}`}>
-          {stream.status === 'complete' ? (
-            <button
-              type="button"
-              className="progress-summary"
-              onClick={() => setProgressExpanded(e => !e)}
-              aria-expanded={progressExpanded}
-            >
-              <span className="progress-summary__check" aria-hidden="true">✓</span>
-              <span className="progress-summary__text">
-                <span className="tabular">{progress.rows.filter(r => r.status === 'ok').length}</span>
-                {' / '}
-                <span className="tabular">{progress.rows.length}</span> sources
-                {progress.dedupe !== undefined && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.dedupe}</span> unique jobs</>}
-                {progress.rank && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.rank.rankedCount}</span> rated <span className="progress-summary__sep">·</span> best <span className="tabular mono">{progress.rank.topScore.toFixed(2)}</span></>}
-              </span>
-              <span className="progress-summary__toggle">
-                {progressExpanded ? 'hide steps' : 'show steps'} {progressExpanded ? '▴' : '▾'}
-              </span>
+      {job != null && (
+        <section className="progress-panel">
+          <div className="progress-panel__head">
+            <h2 className="progress-panel__heading">
+              {statusBadge ?? PHASE_LABEL[job.phase]}
+              {job.attempt > 1 && !statusBadge && <span className="muted"> · attempt {job.attempt}</span>}
+            </h2>
+            <button type="button" className="link-button" onClick={() => setStepsOpen(o => !o)}>
+              {stepsOpen ? 'hide steps ▴' : 'show steps ▾'}
             </button>
-          ) : (
-            <h2 className="progress-panel__heading">Progress</h2>
+          </div>
+
+          {stepsOpen && (
+            <>
+              <ul className="progress-list">
+                {rows.map(row => {
+                  const linkable = succeeded && row.status === 'ok'
+                  const body = (
+                    <>
+                      <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
+                      <span className="progress-row__name">{row.name}</span>
+                      <span className="progress-row__status">
+                        {row.status === 'pending' && 'pending'}
+                        {row.status === 'running' && 'running…'}
+                        {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} jobs`}
+                        {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
+                      </span>
+                    </>
+                  )
+                  return (
+                    <li key={row.name} className={`progress-row progress-row--${row.status}${linkable ? ' progress-row--link' : ''}`}>
+                      {linkable ? (
+                        <Link to={`/history/${job.id}#tab=raw&provider=${encodeURIComponent(row.name)}`}>{body}</Link>
+                      ) : body}
+                    </li>
+                  )
+                })}
+                {showDedupe && (
+                  <li className="progress-row progress-row--info">
+                    <span className="progress-row__icon">·</span>
+                    <span className="progress-row__name">remove duplicates</span>
+                    <span className="progress-row__status">{job.dedupedCount} unique jobs</span>
+                  </li>
+                )}
+                {showRank && (
+                  <li className="progress-row progress-row--info">
+                    <span className="progress-row__icon">·</span>
+                    <span className="progress-row__name">rate jobs</span>
+                    <span className="progress-row__status">
+                      {job.rankedCount} rated · best {job.topScore.toFixed(2)}
+                    </span>
+                  </li>
+                )}
+              </ul>
+
+              {job.timeline.length > 0 && (
+                <ol className="timeline">
+                  {job.timeline.map((ev, i) => (
+                    <li key={i} className={`timeline__item timeline__item--${ev.level}`}>
+                      <span className="timeline__time tabular mono">{formatRelative(ev.timestamp)}</span>
+                      <span className="timeline__msg">{ev.message}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </>
           )}
-          <div className="progress-collapse"><div>
-          <ul className="progress-list">
-            {progress.rows.map(row => {
-              const linkable = stream.status === 'complete' && !!stream.runId && row.status === 'ok'
-              const body = (
-                <>
-                  <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
-                  <span className="progress-row__name">{row.name}</span>
-                  <span className="progress-row__status">
-                    {row.status === 'pending' && 'pending'}
-                    {row.status === 'running' && 'running…'}
-                    {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} jobs`}
-                    {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
-                  </span>
-                </>
-              )
-              const className = `progress-row progress-row--${row.status}${linkable ? ' progress-row--link' : ''}`
-              return (
-                <li key={row.name} className={className}>
-                  {linkable ? (
-                    <Link to={`/history/${stream.runId}#tab=raw&provider=${encodeURIComponent(row.name)}`}>
-                      {body}
-                    </Link>
-                  ) : body}
-                </li>
-              )
-            })}
-            {progress.dedupe !== undefined && (
-              <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
-                {stream.status === 'complete' && stream.runId ? (
-                  <Link to={`/history/${stream.runId}#tab=dedupe`}>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">remove duplicates</span>
-                    <span className="progress-row__status">{progress.dedupe} unique jobs</span>
-                  </Link>
-                ) : (
-                  <>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">remove duplicates</span>
-                    <span className="progress-row__status">{progress.dedupe} unique jobs</span>
-                  </>
-                )}
-              </li>
-            )}
-            {progress.rank !== undefined && (
-              <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
-                {stream.status === 'complete' && stream.runId ? (
-                  <Link to={`/history/${stream.runId}#tab=longlist`}>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rate jobs</span>
-                    <span className="progress-row__status">
-                      {progress.rank.rankedCount} rated · best {progress.rank.topScore.toFixed(2)}
-                    </span>
-                  </Link>
-                ) : (
-                  <>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rate jobs</span>
-                    <span className="progress-row__status">
-                      {progress.rank.rankedCount} rated · best {progress.rank.topScore.toFixed(2)}
-                    </span>
-                  </>
-                )}
-              </li>
-            )}
-          </ul>
-          </div></div>
-          {stream.status === 'error' && stream.error && (
-            <div className="error-banner">Search failed: {stream.error}</div>
+
+          {job.state === 'failed' && job.error && (
+            <div className="error-banner">Search failed: {job.error}</div>
           )}
         </section>
       )}
 
-      {stream.status === 'complete' && stream.runId && (
+      {succeeded && job && (
         <section className="results">
           <h2 className="results__heading">
-            Top jobs <span className="muted serif" style={{ fontStyle: 'italic' }}>({stream.shortlist.length})</span>
+            Top jobs{' '}
+            <span className="muted serif" style={{ fontStyle: 'italic' }}>
+              ({runDetailQuery.data?.shortlist.length ?? job.shortlistCount})
+            </span>
           </h2>
-          {stream.shortlist.length === 0 && (
+          {runDetailQuery.isLoading && <div className="muted">Loading results…</div>}
+          {runDetailQuery.data?.shortlist.length === 0 && (
             <div className="muted">No jobs met the minimum rating.</div>
           )}
           <div className="listing-list">
-            {stream.shortlist.map(m => (
-              <ListingCard key={m.id} match={m} runId={stream.runId!} />
+            {runDetailQuery.data?.shortlist.map(m => (
+              <ListingCard key={m.id} match={m} runId={job.id} />
             ))}
           </div>
         </section>

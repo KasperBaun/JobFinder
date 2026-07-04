@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Jobmatch.Configuration;
 using Jobmatch.Models;
 
@@ -5,6 +6,29 @@ namespace Jobmatch.Tests.Configuration;
 
 public sealed class PortalCatalogLoaderTests
 {
+    [Fact]
+    public void Parse_Nested_BodyTemplate_Object_Survives_Document_Disposal()
+    {
+        // Nested objects in bodyTemplate (e.g. Workday's "appliedFacets": {}) must be
+        // cloned out of the backing JsonDocument, which is disposed when Parse returns.
+        var json = """
+            { "version": 1, "providers": [
+              {
+                "id": 1, "name": "workday-x", "type": "api", "enabled": true,
+                "endpoint": "https://x.wd3.myworkdayjobs.com/wday/cxs/x/X/jobs",
+                "method": "post",
+                "bodyTemplate": { "searchText": "software", "appliedFacets": { "locationCountry": ["dk"] } },
+                "responseMapping": { "items_path": "jobPostings", "id": "externalPath", "title": "title", "url_template": "https://x/{externalPath}" }
+              }
+            ] }
+            """;
+
+        var portals = PortalCatalogLoader.Parse(json);
+
+        var serialized = JsonSerializer.Serialize(portals[0].BodyTemplate);
+        Assert.Contains("locationCountry", serialized);
+    }
+
     [Fact]
     public void Parse_MinimalProvider()
     {
