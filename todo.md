@@ -53,14 +53,15 @@ _(none)_
 
 ## Completed (recent)
 
-- **Config export/import handles the Hangfire queue (`hangfire.db`).** After the CSR merge the data
-  dir gained `hangfire.db` (+ `-wal`/`-shm`), but `ConfigTransferService` predated Hangfire: it swept
-  the transient queue into exports and — worse — `BackupCurrentState` tried to `File.Move` it during
-  import, which throws when the running app holds it locked (and could leave a half-moved data dir).
-  `hangfire.db*` is now treated like the model dir: excluded from exports, left in place during the
-  import backup, and skipped when restoring an archive that happens to carry it. Search history is
-  unaffected — it lives in `jobsearch/*.json` + `history/*.json`, which export/import normally. 3 new
-  tests; 330 backend tests green.
+- **Config export/import handles the live locked files from the CSR merge (`hangfire.db`, `logs/`).**
+  `ConfigTransferService` predated Hangfire + WARN file logging, so it swept the transient
+  `hangfire.db` (+ `-wal`/`-shm`) and `logs/host.log` into exports and — worse — `BackupCurrentState`
+  tried to `File.Move`/`Directory.Move` them during import, which throws when the running app holds
+  them locked and can leave a **half-moved data dir**. Both are now treated like the model dir:
+  excluded from exports, left in place during the import backup, and skipped when restoring an archive
+  that carries them (generalised into `IsTransientDir` for `models`/`logs`/`.backup-*` plus the
+  `hangfire.db*` file check). Search history is unaffected — it lives in `jobsearch/*.json` +
+  `history/*.json`, which export/import normally. 5 new tests; 332 backend tests green.
 
 - **Merged `client-server-rewrite` into `dev`.** The two branches had diverged a month from
   `a243a4c` — CSR carried the async **job-based, observable search** (Hangfire + SQLite job queue,

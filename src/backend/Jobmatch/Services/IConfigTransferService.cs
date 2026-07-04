@@ -87,8 +87,10 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
             if (entry.FullName.EndsWith('/'))
                 continue;
 
-            // Never overwrite the live job queue with a transported one (raw/older archives may carry it).
-            if (IsHangfireDbFile(Path.GetFileName(entry.FullName)))
+            // Never overwrite transient/locked state (live job queue, runtime logs, the model) with a
+            // transported copy — raw/older archives may carry these.
+            var entrySegments = entry.FullName.Split('/', '\\');
+            if (entrySegments.Any(IsTransientDir) || IsHangfireDbFile(entrySegments[^1]))
             {
                 skipped++;
                 continue;
@@ -139,11 +141,7 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
     {
         var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        // The LLM model is multi-GB and re-downloadable; prior-import backups and migration
-        // leftovers are not part of a clean export.
-        if (segments.Any(s =>
-                s.Equals("models", StringComparison.OrdinalIgnoreCase)
-                || s.StartsWith(".backup-", StringComparison.Ordinal)))
+        if (segments.Any(IsTransientDir))
             return true;
 
         var name = segments[^1];
@@ -153,18 +151,26 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
             || IsHangfireDbFile(name);
     }
 
-    // Hangfire's local job queue (hangfire.db + its -wal/-shm sidecars). Transient infrastructure:
-    // regenerated on startup and held open (locked) by the running app, so it is neither exported nor
-    // moved/overwritten during an import. The user's search history lives in jobsearch/ + history/,
-    // which are exported and imported normally.
+    // Directories that are transient/regenerable or held open by the running app: the multi-GB
+    // re-downloadable LLM model, the WARN+ runtime logs (host.log is locked while running), and
+    // prior-import .backup-* folders. Excluded from exports and left in place across an import (never
+    // moved to backup or overwritten). The user's search history lives in jobsearch/ + history/.
+    private static bool IsTransientDir(string segment) =>
+        segment.Equals("models", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("logs", StringComparison.OrdinalIgnoreCase)
+        || segment.StartsWith(".backup-", StringComparison.Ordinal);
+
+    // Hangfire's local job queue (hangfire.db + its -wal/-shm sidecars) — a transient root-level file
+    // held open by the running app, so it is neither exported nor moved/overwritten during an import.
     private static bool IsHangfireDbFile(string name) =>
         name.StartsWith("hangfire.db", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Moves the current data-directory contents into a timestamped <c>.backup-*</c> folder before an
-    /// import overwrites them. The LLM model directory is deliberately left in place so an import never
-    /// forces a multi-GB re-download, earlier backups are left untouched, and the Hangfire job queue
-    /// (<c>hangfire.db*</c>) is left in place because it is transient and held open by the running app.
+    /// import overwrites them. Transient/locked state is deliberately left in place: the LLM model (so
+    /// an import never forces a multi-GB re-download), the WARN+ runtime <c>logs/</c> and the Hangfire
+    /// queue (<c>hangfire.db*</c>) — both held open by the running app, so moving them would throw —
+    /// and earlier <c>.backup-*</c> folders.
     /// </summary>
     private void BackupCurrentState()
     {
@@ -176,9 +182,8 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
         foreach (var dir in Directory.EnumerateDirectories(ctx.RootDir))
         {
             var name = Path.GetFileName(dir);
-            if (name.StartsWith(".backup-", StringComparison.Ordinal)
-                || name.Equals("models", StringComparison.OrdinalIgnoreCase))
-                continue;
+            if (IsTransientDir(name))
+                continue; // leave the model, live logs, and prior backups in place — moving logs would throw
             Directory.Move(dir, Path.Combine(backupDir, name));
         }
 
