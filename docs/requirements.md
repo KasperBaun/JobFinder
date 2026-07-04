@@ -72,6 +72,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-073** The system should detect server disconnect from the browser and tell the user the app is no longer attached.
 - **R-074** The system should be distributable as a self-contained Windows installer, built automatically on push to `main` and reproducible locally, that requires no .NET or Node runtime on the target machine.
 - **R-075** The system should, on first run when no data location has been established, require the user to confirm where their data is stored (offering an editable suggestion) before creating or writing anything, and persist that choice for subsequent runs.
+- **R-076** The system should, on first run, guide the user to create their own profile; the profile step is skippable, and while no profile exists the Profile and Search surfaces should prompt the user to finish it instead of failing.
 
 ## Non-functional
 

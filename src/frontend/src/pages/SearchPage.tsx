@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getHistory, getProviders } from '../api/client'
+import { getHistory, getProviders, getSetupStatus } from '../api/client'
 import { useSearchStream } from '../hooks/useSearchStream'
 import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
@@ -45,6 +45,7 @@ function reduceProgress(events: SearchProgressEvent[], initialNames: string[]): 
 export function SearchPage() {
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const historyQuery = useQuery({ queryKey: ['history'], queryFn: getHistory })
+  const setupQuery = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
   const stream = useSearchStream()
   const lastRun = historyQuery.data?.runs[0]
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -87,6 +88,21 @@ export function SearchPage() {
     const ms = minScore.trim() ? Number(minScore) : NaN
     if (Number.isFinite(ms)) req.minScore = ms
     stream.start(req)
+  }
+
+  if (setupQuery.data && !setupQuery.data.profileExists) {
+    return (
+      <div className="page page--wide">
+        <header className="page__header">
+          <div className="page__eyebrow">03 / search</div>
+          <h1 className="page__heading">Run a <em>search</em></h1>
+        </header>
+        <div className="hint-card">
+          <p>Set up your profile first — jobfinder rates every listing against it.</p>
+          <Link to="/skillset" className="btn btn--primary">Set up your profile</Link>
+        </div>
+      </div>
+    )
   }
 
   return (

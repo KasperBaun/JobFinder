@@ -224,6 +224,7 @@ export type ImportResponse = { restored: number; skipped: number; warnings: stri
 
 export type SetupStatusResponse = {
   configured: boolean
+  profileExists: boolean
   email: string | null
   dataDir: string | null
   suggestedEmail: string

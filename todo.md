@@ -33,6 +33,14 @@ _(none)_
 
 ## Completed (recent)
 
+- **Guided first-run profile (no generic seed).** First-run setup no longer copies the "Alex
+  Example" template into `skillset.md`. Instead the setup screen is a 2-step wizard — data location,
+  then an essentials profile step (name, location, years, level, work-location, target roles,
+  must-have skills) that writes the user's own `skillset.md`. The profile step is **skippable**;
+  while no profile exists the Profile page opens in create-mode and Search shows a "set up your
+  profile" nudge (both guarded server-side too — missing profile → friendly 400 / SSE error instead
+  of 500). `PUT /api/skillset` is now create-or-update; `GET /api/setup/status` exposes
+  `profileExists`. (R-076)
 - **Windows installer + local build.** GitHub Actions (`.github/workflows/release.yml`)
   builds a self-contained `win-x64` installer on every push to `main` and publishes it to a
   rolling `latest` prerelease (Inno Setup script at `installer/jobfinder.iss`). `npm run

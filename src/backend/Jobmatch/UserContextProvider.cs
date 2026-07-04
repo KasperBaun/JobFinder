@@ -5,6 +5,7 @@ namespace Jobmatch;
 /// <summary>What the setup screen needs: whether we're configured, and sensible pre-filled hints.</summary>
 public sealed record SetupState(
     bool IsConfigured,
+    bool ProfileExists,
     string? Email,
     string? DataDir,
     string SuggestedEmail,
@@ -56,6 +57,7 @@ public sealed class UserContextProvider : IUserContextProvider
         var suggestedEmail = UserContext.TryResolveEmail() ?? string.Empty;
         return new SetupState(
             IsConfigured: _ctx is not null,
+            ProfileExists: _ctx is not null && File.Exists(_ctx.SkillsetPath),
             Email: _ctx?.Email,
             DataDir: _ctx?.RootDir,
             SuggestedEmail: suggestedEmail,
@@ -84,7 +86,9 @@ public sealed class UserContextProvider : IUserContextProvider
 
     private static UserContext Build(string email, string dataDir)
     {
-        var ctx = UserContext.Resolve(emailOverride: email, dataDirOverride: dataDir, seedExamples: true);
+        // seedExamples: false — first run guides the user to create their own profile instead of
+        // dropping in a generic example. The profile is written by the setup wizard (PUT /api/skillset).
+        var ctx = UserContext.Resolve(emailOverride: email, dataDirOverride: dataDir, seedExamples: false);
         PortalsMigrationShim.RunIfNeeded(ctx.RootDir);
         return ctx;
     }
