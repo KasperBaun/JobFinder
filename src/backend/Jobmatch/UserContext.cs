@@ -25,6 +25,7 @@ public sealed class UserContext
     public required string MarksPath { get; init; }
     public required string ExamplesDir { get; init; }
     public required string ProviderStatePath { get; init; }
+    public required string UserProvidersPath { get; init; }
 
     /// <summary>
     /// Resolves the active <see cref="UserContext"/> by determining the email, building the on-disk
@@ -99,6 +100,7 @@ public sealed class UserContext
             MarksPath = Path.Combine(rootDir, "marks.json"),
             ExamplesDir = examplesDir,
             ProviderStatePath = Path.Combine(rootDir, "provider-state.json"),
+            UserProvidersPath = Path.Combine(rootDir, "user-providers.json"),
         };
     }
 

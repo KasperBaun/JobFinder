@@ -19,9 +19,6 @@ Current status of work on `jobfinder`.
 - **Recruit IT location parsing.** Location renders as a plain text node
   next to an icon with no wrapper class; `location_selector` is intentionally
   omitted and listings will have null location until the markup changes.
-- **`jobindex-rss` / `it-jobbank-rss` dedupe warning.** Both feeds hit the
-  same Jobindex backend; enabling both wastes calls. Add a config-time hint
-  or a UX warning when both are enabled at once.
 - **`jobsearch-dk` company/location parser.** Items expose only `title` /
   `description` / `link` — no `pubDate`, no structured company/location.
   Add a parser that extracts company/location from the title or URL slug

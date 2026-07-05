@@ -4,7 +4,7 @@ export type WhoamiResponse = {
   toolVersion: string
 }
 
-export type ProviderType = 'api' | 'rss' | 'html' | 'manual'
+export type ProviderType = 'api' | 'rss' | 'html' | 'manual' | 'teamtailor' | 'hrmanager'
 
 export type ProviderSummary = {
   id: number
@@ -19,6 +19,7 @@ export type ProviderSummary = {
   lastFetchCount?: number
   requiresSecret?: string
   hasSecret: boolean
+  removable: boolean
 }
 
 export type ProvidersResponse = { providers: ProviderSummary[] }
@@ -49,6 +50,19 @@ export type ProviderTestResult = {
 }
 
 export type CreateResponse = { success: boolean; id: number; error?: string }
+
+// Add-a-source flow. A detected candidate is referenced back to the server by `kind` (+ the pasted
+// url) so the client never authors a raw endpoint or field mapping.
+export type DetectedSource = {
+  kind: string
+  displayName: string
+  summary: string
+  duplicateWarning?: string
+}
+
+export type DetectSourceResponse = { candidates: DetectedSource[] }
+
+export type ProviderCreatedResponse = { id: number }
 
 export type SkillsetResponse = {
   name: string

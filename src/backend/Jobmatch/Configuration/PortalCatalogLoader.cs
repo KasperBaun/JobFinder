@@ -46,7 +46,7 @@ public static class PortalCatalogLoader
         var typeRaw = RequireString(el, "type", prefix);
         if (!Enum.TryParse<PortalType>(typeRaw, ignoreCase: true, out var type))
         {
-            throw new ConfigException($"{prefix} ('{name}'): type must be one of [api, rss, html, manual], got '{typeRaw}'");
+            throw new ConfigException($"{prefix} ('{name}'): type must be one of [api, rss, html, manual, teamtailor, hrmanager], got '{typeRaw}'");
         }
 
         var enabled = ReadBool(el, "enabled", true);

@@ -28,13 +28,19 @@
     <!-- HTML scraping for type=html portals — pure parser, no browser runtime -->
     <PackageVersion Include="AngleSharp" Version="1.3.0" />
 
-    <!-- In-process LLM judging via llama.cpp. The Cpu backend bundles native
-         binaries for win-x64 / linux-x64 / osx-arm64 inside the NuGet — one ref
-         per backend; the user can swap Cpu → Cuda12 / Vulkan / etc. without
-         touching code. The model file (Gemma 3 4B GGUF, ~2.5 GB) is downloaded
-         on first run, not bundled. -->
+    <!-- In-process LLM judging via llama.cpp. Each backend NuGet bundles the
+         native binaries for its target. Both Cpu and Vulkan are referenced:
+         LLamaSharp auto-selects at runtime (WithAutoFallback, on by default) —
+         it uses the GPU via Vulkan when a Vulkan-capable device + driver are
+         present and falls back to CPU otherwise, no code change needed. GPU
+         offload also requires llm.gpu_layer_count > 0 in ranking.yml. Vulkan is
+         cross-vendor (NVIDIA/AMD/Intel) and far smaller than the CUDA backend;
+         swap Vulkan → Cuda12 only if you want max NVIDIA throughput and can
+         accept the ~0.5 GB payload. The model file (Gemma 3 4B GGUF, ~2.5 GB) is
+         downloaded on first run, not bundled. -->
     <PackageVersion Include="LLamaSharp" Version="0.27.0" />
     <PackageVersion Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
+    <PackageVersion Include="LLamaSharp.Backend.Vulkan" Version="0.27.0" />
 
     <!-- Test -->
     <PackageVersion Include="xunit" Version="2.9.3" />
