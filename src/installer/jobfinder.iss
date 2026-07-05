@@ -1,7 +1,7 @@
 ; Inno Setup script for the jobfinder Windows installer.
 ; Built in CI by .github/workflows/release.yml, which passes the version via:
-;   ISCC /DAppVersion=0.1.<run> installer\jobfinder.iss
-; It packages the self-contained publish output at ..\publish\win-x64 into a single Setup.exe.
+;   ISCC /DAppVersion=0.1.<run> src\installer\jobfinder.iss
+; It packages the self-contained publish output at ..\..\publish\win-x64 into a single Setup.exe.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -29,7 +29,7 @@ UninstallDisplayIcon={app}\{#AppExe}
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"
 
 [Files]
-Source: "..\publish\win-x64\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "..\..\publish\win-x64\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"

@@ -11,7 +11,7 @@ import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
 import { findFreePort, waitForPort, waitForPortFree, openBrowser, killTree, killDescendantsOnWindows, postShutdown } from './dev-utils.mjs'
 
-const root = resolve(import.meta.dirname, '..')
+const root = resolve(import.meta.dirname, '..', '..')
 
 const apiPort  = await findFreePort()
 const vitePort = await findFreePort()

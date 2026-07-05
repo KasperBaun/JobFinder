@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { rmSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const root = resolve(import.meta.dirname, '..')
+const root = resolve(import.meta.dirname, '..', '..')
 const pkgDir = resolve(root, 'pkg')
 
 mkdirSync(pkgDir, { recursive: true })

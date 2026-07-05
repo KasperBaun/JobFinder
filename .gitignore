@@ -44,7 +44,7 @@ pkg/
 
 # Self-contained publish + Windows installer build output
 publish/
-installer/Output/
+src/installer/Output/
 
 # Scratch
 .tmp/

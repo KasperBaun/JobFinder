@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { existsSync, readdirSync } from 'node:fs'
 
-const root = resolve(import.meta.dirname, '..')
+const root = resolve(import.meta.dirname, '..', '..')
 const pkgDir = resolve(root, 'pkg')
 
 if (!existsSync(pkgDir) || readdirSync(pkgDir).filter(f => f.endsWith('.nupkg')).length === 0) {
