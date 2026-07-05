@@ -7,6 +7,7 @@ using Hangfire;
 using Hangfire.Dashboard;
 using Jobmatch;
 using Jobmatch.Api;
+using Jobmatch.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using NReco.Logging.File;
@@ -15,11 +16,12 @@ var port = ResolvePort();
 var url = $"http://127.0.0.1:{port}";
 var cts = new CancellationTokenSource();
 
-// Resolve UserContext once at boot so we know where the log file lives. The DI
-// factory in AddJobmatchApi resolves it again (cheap and idempotent — the file
-// system ops are all "create if missing").
-var userContextForLog = UserContext.Resolve();
-var logDir = Path.Combine(userContextForLog.RootDir, "logs");
+// The log file must live in the SAME data directory the API uses — the one recorded in the
+// bootstrap config — so logs never diverge into a git-identity-resolved location. Before first-run
+// setup there is no configured directory yet: fall back to default resolution, and never let this
+// crash the host (it must still boot to the setup screen on a machine with no git identity).
+var logRootDir = LogLocation.ResolveRootDir(new BootstrapStore(), ResolveFallbackLogRoot);
+var logDir = Path.Combine(logRootDir, "logs");
 Directory.CreateDirectory(logDir);
 var logPath = Path.Combine(logDir, "host.log");
 
@@ -157,6 +159,21 @@ static int ResolvePort()
         return fixedPort;
     }
     return FindAvailablePort();
+}
+
+// Pre-setup fallback for the log directory: the default git/env resolution, but degrade to a fixed
+// per-user location rather than throwing — logging must never be the reason the host fails to boot.
+static string ResolveFallbackLogRoot()
+{
+    try
+    {
+        return UserContext.Resolve().RootDir;
+    }
+    catch
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "jobfinder");
+    }
 }
 
 static bool ShouldOpenBrowser()
