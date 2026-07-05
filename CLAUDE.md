@@ -37,7 +37,8 @@ publish/                             GITIGNORED — self-contained win-x64 publi
 pkg/                                 GITIGNORED — local NuGet tool package (npm run package)
 .github/workflows/                   CI — release.yml builds the Windows installer on push to main
 README.md                            business-level intro
-todo.md                              ongoing/completed/backlog
+todo.md                              backlog + in-progress (forward-looking only)
+CHANGELOG.md                         shipped work — one lean line per change
 ```
 
 The SDK is pinned only by `<TargetFramework>net10.0</TargetFramework>` in `src/Directory.Build.props` (no `global.json`).
@@ -46,11 +47,12 @@ The SDK is pinned only by `<TargetFramework>net10.0</TargetFramework>` in `src/D
 
 - **What the product is** → [`docs/prd.md`](docs/prd.md)
 - **What the system must do** → [`docs/requirements.md`](docs/requirements.md) (one-line requirements with `R-NNN` IDs)
-- **What's in flight** → [`todo.md`](todo.md)
+- **What's in flight** → [`todo.md`](todo.md) (backlog + in-progress only)
+- **What's shipped** → [`CHANGELOG.md`](CHANGELOG.md)
 - **Why each DK portal got the verdict it did** → [`docs/tasks/T-007/`](docs/tasks/T-007/) — per-portal evaluation worksheets (api / rss / html / manual / dead) + the playbook for evaluating a new one. Reference data, not a task spec — keep when adding or reconsidering portals.
 - **How the backend should look** → read `src/backend/rules/` for the conventions (Endpoint → Handler → Service layering, HandlerBase + ExecuteAsync, IEndpointRegistration, typed Routes, custom exceptions, module pattern, file-size limits, coding conventions). Then read `src/backend/Jobmatch.Api/` to see the pattern applied. The structural/quality rules are the standard here; a few infra rules are deliberately excepted — see **Backend rules: adopted vs. exceptions** below.
 
-When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, update `todo.md`.
+When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, drop it from `todo.md` and record the result as **one lean line** in `CHANGELOG.md` (full detail belongs in the commit) — keep `todo.md` forward-looking (backlog + in-progress only), never a prose changelog.
 
 ## Backend rules: adopted vs. exceptions
 
