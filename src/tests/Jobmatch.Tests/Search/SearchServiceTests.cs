@@ -522,4 +522,73 @@ public sealed class SearchServiceTests : IDisposable
         Assert.Single(events.OfType<ProviderRunningEvent>());
         Assert.Equal("mine", events.OfType<ProviderRunningEvent>().Single().Provider);
     }
+
+    [Fact]
+    public async Task RunAsync_Concurrent_Fetch_Preserves_Event_Invariants()
+    {
+        // Providers fetch concurrently, so completion events may interleave. The contract that
+        // still holds: every provider emits a running event, all fetch events precede dedupe,
+        // and each provider's done event is preceded by its own running event.
+        const string portals = """
+            portals:
+              - name: alpha
+                type: manual
+                enabled: true
+              - name: beta
+                type: manual
+                enabled: true
+              - name: gamma
+                type: manual
+                enabled: true
+            """;
+        var (ctx, portalList) = CreateContext("concurrent@example.com", portals);
+        foreach (var name in new[] { "alpha", "beta", "gamma" })
+            File.WriteAllText(Path.Combine(ctx.ImportsDir, $"{name}-1.json"),
+                $$"""[ { "title": "Python Role at {{name}}", "url": "https://{{name}}.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
+
+        var service = new SearchService(ctx, Fs);
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
+
+        var running = events.OfType<ProviderRunningEvent>().Select(e => e.Provider).ToHashSet();
+        Assert.Equal(new[] { "alpha", "beta", "gamma" }.ToHashSet(), running);
+
+        var dedupeIdx = events.FindIndex(e => e is DedupeEvent);
+        var lastFetchIdx = events.FindLastIndex(e => e is ProviderRunningEvent or ProviderDoneEvent or ProviderFailedEvent);
+        Assert.True(lastFetchIdx < dedupeIdx, "all provider fetch events must precede dedupe");
+
+        foreach (var done in events.OfType<ProviderDoneEvent>())
+        {
+            var runningIdx = events.FindIndex(e => e is ProviderRunningEvent r && r.Provider == done.Provider);
+            var doneIdx = events.FindIndex(e => e is ProviderDoneEvent d && d.Provider == done.Provider);
+            Assert.True(runningIdx >= 0 && runningIdx < doneIdx, $"{done.Provider}: running must precede done");
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_Concurrent_Fetch_Dedupe_Is_Deterministic_First_Enabled_Wins()
+    {
+        // Two providers surface the same URL with different titles. Dedupe is first-wins, and
+        // despite concurrent fetching the surviving listing must always be the first enabled
+        // provider's — because results are reassembled in enabled-order before dedupe.
+        const string portals = """
+            portals:
+              - name: first
+                type: manual
+                enabled: true
+              - name: second
+                type: manual
+                enabled: true
+            """;
+        var (ctx, portalList) = CreateContext("dedupe-order@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "first-1.json"),
+            """[ { "title": "First Provider Python Role", "url": "https://dup.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "second-1.json"),
+            """[ { "title": "Second Provider Python Role", "url": "https://dup.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
+
+        var service = new SearchService(ctx, Fs);
+        var complete = Assert.IsType<CompleteEvent>((await Drain(service.RunAsync(new SearchRequest(), portalList)))[^1]);
+
+        Assert.Single(complete.Shortlist);
+        Assert.Equal("First Provider Python Role", complete.Shortlist[0].Title);
+    }
 }

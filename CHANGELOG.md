@@ -5,6 +5,7 @@ Shipped work, newest first. One line per change — full detail is in the git co
 
 ## Recent
 
+- Provider fetches run concurrently instead of one-after-another — the fetch phase now takes as long as the slowest single source, not the sum of all of them; completions still stream live per-provider (Channel), and results are reassembled in enabled-order so first-wins dedupe stays deterministic. LLM judging remains sequential by design.
 - Source "Test" is list-only + speaks plain language — the Test / Test-now button no longer triggers body enrichment (was an uncapped ~5 rps per-listing crawl of the source), so a test is one request for API/RSS/HTML/HR-Manager boards; fetch failures now read as plain language (404 / timed out / refused / unreachable) instead of raw HTTP exception text.
 - Add-a-source wizard — paste a careers-page/feed URL; auto-detects Greenhouse/Ashby/Lever/SmartRecruiters/TeamTailor/HR-Manager boards + RSS (falls back to manual import), live-tests before saving, persists per-user to `user-providers.json`; user sources are removable and duplicate feeds warn. (R-090)
 - Sources page filter/search — search box + On/Off/Failing chips with live counts; fixed active-chip hover repainting its label invisible.

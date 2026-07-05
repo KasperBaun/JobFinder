@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
@@ -139,30 +140,70 @@ public sealed partial class SearchService : ISearchService
         List<Listing> fetched,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        for (var i = 0; i < enabled.Count; i++)
+        var total = enabled.Count;
+        if (total == 0) yield break;
+
+        // Fetch every provider concurrently — they're independent I/O. Each result lands in a
+        // fixed-position slot so `fetched` is reassembled in enabled-order once all complete,
+        // keeping first-wins dedupe deterministic regardless of which provider returns first.
+        var slots = new ProviderFetchResult[total];
+        var channel = Channel.CreateUnbounded<SearchProgressEvent>();
+
+        async Task FetchOne(int i)
         {
-            ct.ThrowIfCancellationRequested();
             var portal = enabled[i];
             var index = i + 1;
-
-            yield return new ProviderRunningEvent(portal.Name, index, enabled.Count);
-
+            await channel.Writer.WriteAsync(new ProviderRunningEvent(portal.Name, index, total), ct).ConfigureAwait(false);
             var (results, error) = await FetchSafe(portal, http, ct).ConfigureAwait(false);
-            if (error is null)
+            slots[i] = new ProviderFetchResult(portal.Name, results, error);
+            await channel.Writer.WriteAsync(
+                error is null
+                    ? new ProviderDoneEvent(portal.Name, results.Count, index, total)
+                    : new ProviderFailedEvent(portal.Name, error, index, total),
+                ct).ConfigureAwait(false);
+        }
+
+        var pending = new Task[total];
+        for (var i = 0; i < total; i++) pending[i] = FetchOne(i);
+
+        async Task DrainToCompletion()
+        {
+            try { await Task.WhenAll(pending).ConfigureAwait(false); }
+            finally { channel.Writer.Complete(); }
+        }
+        var completion = DrainToCompletion();
+
+        await foreach (var evt in channel.Reader.ReadAllAsync().ConfigureAwait(false))
+            yield return evt;
+
+        await completion.ConfigureAwait(false);
+        Collect(slots, fetched, statuses, rawByProvider);
+    }
+
+    private static void Collect(
+        ProviderFetchResult[] slots,
+        List<Listing> fetched,
+        List<ProviderRunStatus> statuses,
+        Dictionary<string, IReadOnlyList<Listing>> rawByProvider)
+    {
+        foreach (var slot in slots)
+        {
+            if (slot.Error is null)
             {
-                fetched.AddRange(results);
-                rawByProvider[portal.Name] = results;
-                statuses.Add(new ProviderRunStatus(portal.Name, ProviderRunState.Ok, results.Count, null));
-                yield return new ProviderDoneEvent(portal.Name, results.Count, index, enabled.Count);
+                fetched.AddRange(slot.Results);
+                rawByProvider[slot.Name] = slot.Results;
+                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Ok, slot.Results.Count, null));
             }
             else
             {
-                rawByProvider[portal.Name] = [];
-                statuses.Add(new ProviderRunStatus(portal.Name, ProviderRunState.Failed, null, error));
-                yield return new ProviderFailedEvent(portal.Name, error, index, enabled.Count);
+                rawByProvider[slot.Name] = [];
+                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Failed, null, slot.Error));
             }
         }
     }
+
+    /// <summary>One provider's fetch outcome, held in enabled-order so result assembly stays deterministic.</summary>
+    private readonly record struct ProviderFetchResult(string Name, IReadOnlyList<Listing> Results, string? Error);
 
     /// <summary>Resolved inputs for a single run — config + the filtered portal set + run-level knobs.</summary>
     private readonly record struct RunPrep(
