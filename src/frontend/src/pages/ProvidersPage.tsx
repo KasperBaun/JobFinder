@@ -30,11 +30,21 @@ const HEALTH_LABEL: Record<Health, string> = {
   untested: 'not tested yet',
 }
 
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'on', label: 'On' },
+  { key: 'off', label: 'Off' },
+  { key: 'failing', label: 'Failing' },
+] as const
+type FilterKey = (typeof FILTERS)[number]['key']
+
 export function ProvidersPage() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
   const [tests, setTests] = useState<Record<number, SessionTest>>({})
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<FilterKey>('all')
 
   const toggle = useMutation({
     mutationFn: async ({ p, enabled }: { p: ProviderSummary; enabled: boolean }) => {
@@ -88,12 +98,35 @@ export function ProvidersPage() {
     },
   })
 
-  const stats = useMemo(() => {
-    if (!data) return null
-    const total = data.providers.length
-    const enabled = data.providers.filter((p) => p.enabled).length
-    return { total, enabled, disabled: total - enabled }
-  }, [data])
+  // Health depends on session test results as well as last-fetch metadata, so both the "failing"
+  // count and the "failing" filter recompute when a Test finishes.
+  const health = useMemo(() => {
+    const m = new Map<number, Health>()
+    for (const p of data?.providers ?? []) m.set(p.id, classifyHealth(p, tests[p.id]))
+    return m
+  }, [data, tests])
+
+  const counts = useMemo(() => {
+    const ps = data?.providers ?? []
+    return {
+      all: ps.length,
+      on: ps.filter((p) => p.enabled).length,
+      off: ps.filter((p) => !p.enabled).length,
+      failing: ps.filter((p) => health.get(p.id) === 'failing').length,
+    }
+  }, [data, health])
+
+  const filtered = useMemo(() => {
+    const ps = data?.providers ?? []
+    const q = query.trim().toLowerCase()
+    return ps.filter((p) => {
+      if (filter === 'on' && !p.enabled) return false
+      if (filter === 'off' && p.enabled) return false
+      if (filter === 'failing' && health.get(p.id) !== 'failing') return false
+      if (q && !`${p.displayName} ${p.name} ${p.type}`.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [data, query, filter, health])
 
   return (
     <div className="page page--wide">
@@ -112,11 +145,38 @@ export function ProvidersPage() {
       {isLoading && <div className="muted">Loading sources…</div>}
       {error && <div className="error-text">Failed to load sources.</div>}
 
-      {stats && (
+      {data && (
         <div className="provider-stats">
-          <Stat label="total" value={stats.total} />
-          <Stat label="on" value={stats.enabled} tone={stats.enabled > 0 ? 'good' : undefined} />
-          <Stat label="off" value={stats.disabled} tone="muted" />
+          <Stat label="total" value={counts.all} />
+          <Stat label="on" value={counts.on} tone={counts.on > 0 ? 'good' : undefined} />
+          <Stat label="off" value={counts.off} tone="muted" />
+          {counts.failing > 0 && <Stat label="failing" value={counts.failing} tone="bad" />}
+        </div>
+      )}
+
+      {data && data.providers.length > 0 && (
+        <div className="provider-toolbar">
+          <input
+            type="search"
+            className="input provider-toolbar__search"
+            placeholder="Search sources…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search sources by name"
+          />
+          <div className="provider-toolbar__filters" role="group" aria-label="Filter sources">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={filter === f.key ? 'chip chip--active' : 'chip'}
+                onClick={() => setFilter(f.key)}
+                aria-pressed={filter === f.key}
+              >
+                {f.label} <span className="provider-toolbar__count">{counts[f.key]}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -126,9 +186,16 @@ export function ProvidersPage() {
         </div>
       )}
 
-      {data && data.providers.length > 0 && (
+      {data && data.providers.length > 0 && filtered.length === 0 && (
+        <div className="hint-card">
+          No sources match{query.trim() ? ` “${query.trim()}”` : ''}
+          {filter !== 'all' ? ` in “${filter}”` : ''}.
+        </div>
+      )}
+
+      {filtered.length > 0 && (
         <div className="provider-grid">
-          {data.providers.map((p) => {
+          {filtered.map((p) => {
             const session = tests[p.id]
             const health = classifyHealth(p, session)
             const testing = session?.kind === 'pending'

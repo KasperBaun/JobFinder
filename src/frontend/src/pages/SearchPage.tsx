@@ -6,6 +6,7 @@ import { useSearchRun } from '../context/SearchRunContext'
 import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
 import { formatRelative } from '../utils/time'
+import { lastCompletedRun } from '../utils/runs'
 import { PHASE_LABEL, STATE_LABEL } from '../utils/searchLabels'
 import { isTerminalState } from '../api/types'
 import type { JobSearch, SearchRequest } from '../api/types'
@@ -37,7 +38,7 @@ export function SearchPage() {
   const setupQuery = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
   const { job, isActive, start, cancel, reset } = useSearchRun()
 
-  const lastRun = historyQuery.data?.runs.find(r => r.state === 'succeeded' || r.state === undefined)
+  const lastRun = lastCompletedRun(historyQuery.data?.runs)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [topN, setTopN] = useState<string>('')
   const [minScore, setMinScore] = useState<string>('')

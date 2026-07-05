@@ -808,6 +808,19 @@ a.btn--danger:hover {
   flex-wrap: wrap;
 }
 
+/* Short windows — e.g. the desktop shell at its minimum height (~568px of content).
+   The hero's generous vertical rhythm is intentional on tall screens but pushes the
+   "At a glance" cards fully below the fold on a short one, so trim it there only. */
+@media (max-height: 780px) {
+  .page,
+  .page--wide { padding-top: var(--space-5); }
+  .hero { padding: var(--space-4) 0; }
+  .hero__lede { margin-top: var(--space-3); }
+  .hero__meta { margin-top: var(--space-3); }
+  .cta-row { margin-top: var(--space-4); }
+  .section-head { margin-top: var(--space-5); }
+}
+
 /* ============================================================
    search page
    ============================================================ */
@@ -852,6 +865,14 @@ a.btn--danger:hover {
   background: var(--c-navy-800);
   color: #fff;
   border-color: var(--c-navy-800);
+}
+
+/* Keep the label legible when hovering an already-active chip — otherwise the generic
+   .chip:hover rule repaints the text dark navy on the dark navy fill and it disappears. */
+.chip--active:hover:not(:disabled) {
+  color: #fff;
+  background: var(--c-navy-900);
+  border-color: var(--c-navy-900);
 }
 
 .hint-card {
@@ -1433,6 +1454,31 @@ a.btn--danger:hover {
 .provider-stats__item--bad    .provider-stats__value { color: var(--c-bad); }
 .provider-stats__item--warn   .provider-stats__value { color: var(--c-warn); }
 .provider-stats__item--muted  .provider-stats__value { color: var(--c-text-subtle); }
+
+.provider-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.provider-toolbar__search {
+  flex: 1 1 16rem;
+  max-width: 22rem;
+}
+
+.provider-toolbar__filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.provider-toolbar__count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
 
 .provider-grid {
   display: grid;
@@ -2373,6 +2419,45 @@ a.btn--danger:hover {
   padding: 0.6rem 0.9rem;
   font-size: 0.86rem;
   margin: 0 0 var(--space-4);
+}
+
+/* Trim the default page's oversized vertical padding so the (now three) settings
+   cards sit closer to the fold instead of forcing an early scrollbar. */
+.page--settings { padding-top: var(--space-5); padding-bottom: var(--space-6); }
+.page--settings .page__header { margin-bottom: var(--space-6); }
+
+.settings-facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.settings-facts__row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+
+.settings-facts__row dt {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-text-subtle);
+  min-width: 6.5rem;
+}
+
+.settings-facts__row dd {
+  color: var(--c-text);
+  word-break: break-all;
+}
+
+.settings-facts__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
 }
 
 /* ============================================================
