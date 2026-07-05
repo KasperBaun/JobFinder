@@ -5,6 +5,9 @@ Shipped work, newest first. One line per change — full detail is in the git co
 
 ## Recent
 
+- Sources page filter/search — search box + On/Off/Failing chips with live counts; fixed active-chip hover repainting its label invisible.
+- Settings "Active profile" section — switch active email / data folder post-setup via the existing setup endpoint (live context swap + query invalidation).
+- Overview & Search now agree on "last search" (shared `lastCompletedRun`), interrupted runs are labelled, and the hero compresses on short windows so the stat cards clear the fold.
 - Config export/import skips live locked files (`hangfire.db`, `logs/`) — excluded from exports, left in place on import (`IsTransientDir`).
 - Merged `client-server-rewrite` into `dev` — async Hangfire job-based observable search, 17 new DK sources, preferred-companies ranking, WARN+ file logging.
 - LLM model download: retry + HTTP Range resume, survives transient TLS resets.

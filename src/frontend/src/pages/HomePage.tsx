@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getHistory, getProviders, getSetupStatus, getWhoami } from '../api/client'
 import { StatCard } from '../components/StatCard'
 import { formatRelative } from '../utils/time'
+import { lastCompletedRun } from '../utils/runs'
+import { STATE_LABEL } from '../utils/searchLabels'
 
 export function HomePage() {
   const whoami = useQuery({ queryKey: ['whoami'], queryFn: getWhoami })
@@ -12,7 +14,7 @@ export function HomePage() {
 
   const enabledCount = providers.data?.providers.filter(p => p.enabled).length
   const totalCount = providers.data?.providers.length
-  const lastRun = history.data?.runs[0]
+  const lastRun = lastCompletedRun(history.data?.runs)
   const totalGoodMarks = history.data?.runs.reduce((sum, r) => sum + r.goodMarks, 0) ?? 0
   const recent = history.data?.runs.slice(0, 4) ?? []
 
@@ -116,6 +118,9 @@ export function HomePage() {
                       <Link to={`/history/${r.runId}`} onClick={(e) => e.stopPropagation()}>
                         {formatRelative(r.startedAt)}
                       </Link>
+                      {r.state && r.state !== 'succeeded' && (
+                        <span className="muted small"> · {STATE_LABEL[r.state]}</span>
+                      )}
                     </td>
                     <td className="tabular">{r.shortlistCount}</td>
                     <td className="tabular mono">{r.topScore.toFixed(2)}</td>

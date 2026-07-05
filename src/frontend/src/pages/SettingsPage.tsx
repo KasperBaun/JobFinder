@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { exportConfig, importConfig } from '../api/client'
 import { Toast } from '../components/Toast'
+import { ActiveProfileSection } from '../components/ActiveProfileSection'
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
@@ -47,16 +48,18 @@ export function SettingsPage() {
   const busy = exporting.isPending || importing.isPending
 
   return (
-    <div className="page">
+    <div className="page page--settings">
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
       <header className="page__header">
         <div className="page__eyebrow">settings</div>
-        <h1 className="page__heading">Backup &amp; <em>restore</em></h1>
+        <h1 className="page__heading">Settings</h1>
         <p className="page__lede">
-          Save everything to a file, or move your setup to another computer.
+          Your profile&apos;s data location, and backup or restore everything to a file.
         </p>
       </header>
+
+      <ActiveProfileSection notify={(kind, message) => setToast({ kind, message })} />
 
       <section className="settings-section">
         <h2 className="settings-section__title">Export a backup</h2>
