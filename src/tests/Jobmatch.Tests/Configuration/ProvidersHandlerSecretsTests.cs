@@ -32,7 +32,7 @@ public sealed class ProvidersHandlerSecretsTests : IDisposable
         UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
 
     private static ProvidersService NewService(UserContext ctx) =>
-        new(ctx, new PhysicalFileSystem(), NullLogger<ProvidersService>.Instance);
+        new(ctx, new PhysicalFileSystem(), new SourceDetectionService(), NullLogger<ProvidersService>.Instance);
 
     [Fact]
     public void SetSecrets_WritesValuesToProviderStateJson()

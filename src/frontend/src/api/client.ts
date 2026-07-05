@@ -1,10 +1,12 @@
 import type {
   DeleteHistoryResponse,
+  DetectSourceResponse,
   HistoryResponse,
   ImportResponse,
   JobSearch,
   MarkRequest,
   MarkResponse,
+  ProviderCreatedResponse,
   ProviderDetail,
   ProvidersResponse,
   ProviderTestResult,
@@ -114,6 +116,36 @@ export async function setProviderSecrets(id: number, values: Record<string, stri
 
 export async function testProvider(id: number): Promise<ProviderTestResult> {
   return apiFetch<ProviderTestResult>(`/api/providers/${id}/test`, { method: 'POST' })
+}
+
+export async function deleteProvider(id: number): Promise<SaveResponse> {
+  return apiFetch<SaveResponse>(`/api/providers/${id}`, { method: 'DELETE' })
+}
+
+export async function detectSource(url: string): Promise<DetectSourceResponse> {
+  return apiFetch<DetectSourceResponse>('/api/providers/detect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+}
+
+type SourceRef = { url?: string; kind: string; displayName?: string }
+
+export async function previewSource(ref: SourceRef): Promise<ProviderTestResult> {
+  return apiFetch<ProviderTestResult>('/api/providers/detect/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ref),
+  })
+}
+
+export async function createSource(ref: SourceRef): Promise<ProviderCreatedResponse> {
+  return apiFetch<ProviderCreatedResponse>('/api/providers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ref),
+  })
 }
 
 export async function getSkillset(): Promise<SkillsetResponse> {

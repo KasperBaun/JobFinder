@@ -49,6 +49,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<IMarksService, MarksService>();
         services.AddScoped<IHistoryService, HistoryService>();
         services.AddScoped<ISkillsetService, SkillsetService>();
+        services.AddSingleton<ISourceDetectionService, SourceDetectionService>();
         services.AddScoped<IProvidersService, ProvidersService>();
         services.AddScoped<ISearchService, SearchService>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();

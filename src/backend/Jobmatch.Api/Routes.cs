@@ -29,6 +29,11 @@ public static class Routes
         public const string Update = ById;
         public const string Test = $"{ById}/test";
         public const string SetSecrets = $"{ById}/secrets";
+        // Add-a-source flow: detect a pasted URL, preview-test the candidate, create, delete.
+        public const string Create = Base;
+        public const string Delete = ById;
+        public const string Detect = $"{Base}/detect";
+        public const string PreviewTest = $"{Base}/detect/test";
     }
 
     public static class Skillset

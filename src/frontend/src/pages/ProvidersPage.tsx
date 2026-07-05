@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getProviders, setProviderEnabled, testProvider } from '../api/client'
 import type { ProviderSummary, ProviderTestResult } from '../api/types'
 import { Toast } from '../components/Toast'
+import { AddSourceModal } from '../components/AddSourceModal'
 import { formatRelative } from '../utils/time'
 
 type Health = 'working' | 'failing' | 'stale' | 'untested'
@@ -45,6 +46,7 @@ export function ProvidersPage() {
   const [tests, setTests] = useState<Record<number, SessionTest>>({})
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
+  const [adding, setAdding] = useState(false)
 
   const toggle = useMutation({
     mutationFn: async ({ p, enabled }: { p: ProviderSummary; enabled: boolean }) => {
@@ -137,10 +139,24 @@ export function ProvidersPage() {
           <div className="page__eyebrow">01 / sources</div>
           <h1 className="page__heading">Job <em>sites</em></h1>
           <p className="page__lede">
-            Where listings come from. Turn each one on or off, test it, or edit it.
+            Where listings come from. Turn each one on or off, test it, or add your own.
           </p>
         </div>
+        <button type="button" className="btn btn--primary" onClick={() => setAdding(true)}>
+          + Add a source
+        </button>
       </header>
+
+      {adding && (
+        <AddSourceModal
+          onClose={() => setAdding(false)}
+          onCreated={(_id, name) => {
+            setAdding(false)
+            void queryClient.invalidateQueries({ queryKey: ['providers'] })
+            setToast({ kind: 'ok', message: `Added ${name}.` })
+          }}
+        />
+      )}
 
       {isLoading && <div className="muted">Loading sources…</div>}
       {error && <div className="error-text">Failed to load sources.</div>}
@@ -182,7 +198,10 @@ export function ProvidersPage() {
 
       {data && data.providers.length === 0 && (
         <div className="hint-card">
-          No job sites set up yet.
+          <p>No job sites set up yet.</p>
+          <button type="button" className="btn btn--primary btn--sm" onClick={() => setAdding(true)}>
+            + Add your first source
+          </button>
         </div>
       )}
 
@@ -286,11 +305,13 @@ function truncate(s: string, max: number): string {
 
 function friendlyType(type: string): string {
   switch (type) {
-    case 'api':    return 'Auto-fetched'
-    case 'rss':    return 'News feed'
-    case 'html':   return 'Read from website'
-    case 'manual': return 'Manual import'
-    default:       return type
+    case 'api':        return 'Auto-fetched'
+    case 'rss':        return 'News feed'
+    case 'html':       return 'Read from website'
+    case 'teamtailor': return 'Auto-fetched'
+    case 'hrmanager':  return 'Auto-fetched'
+    case 'manual':     return 'Manual import'
+    default:           return type
   }
 }
 
