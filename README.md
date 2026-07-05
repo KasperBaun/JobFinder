@@ -122,7 +122,7 @@ Start menu. (It's unsigned, so SmartScreen may say "unknown publisher" — choos
 Want to build that Windows package yourself without GitHub?
 
 ```bash
-npm run package:win    # self-contained publish + a portable .zip in installer/Output/
+npm run package:win    # self-contained publish + a portable .zip in src/installer/Output/
                        # …and the Setup.exe too, if Inno Setup (ISCC) is installed
 ```
 

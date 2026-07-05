@@ -1,6 +1,6 @@
 // Builds a Windows distribution locally, without GitHub:
 //   1. self-contained win-x64 publish (GUI bundled)      -> publish/win-x64/
-//   2. a portable zip you can copy to any Windows box     -> installer/Output/jobfinder-portable-<v>-win-x64.zip
+//   2. a portable zip you can copy to any Windows box     -> src/installer/Output/jobfinder-portable-<v>-win-x64.zip
 //   3. the Inno Setup installer .exe, IF Inno Setup (ISCC) is available (native or via wine)
 //
 // Set VERSION to override the version (default 0.1.0-local). Point ISCC at ISCC.exe to force a path.
@@ -8,9 +8,9 @@ import { spawnSync } from 'node:child_process'
 import { rmSync, mkdirSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const root = resolve(import.meta.dirname, '..')
+const root = resolve(import.meta.dirname, '..', '..')
 const publishDir = resolve(root, 'publish', 'win-x64')
-const outDir = resolve(root, 'installer', 'Output')
+const outDir = resolve(root, 'src', 'installer', 'Output')
 
 const version = process.env.VERSION ?? '0.1.0-local'
 const asmVersion = version.replace(/-.*$/, '') // dotnet AssemblyVersion wants pure numeric
@@ -72,7 +72,7 @@ function findIscc() {
 const iscc = findIscc()
 let installerBuilt = false
 if (iscc) {
-  const res = run(iscc.cmd, [...iscc.pre, `/DAppVersion=${version}`, 'installer/jobfinder.iss'])
+  const res = run(iscc.cmd, [...iscc.pre, `/DAppVersion=${version}`, 'src/installer/jobfinder.iss'])
   installerBuilt = res.status === 0
 } else {
   console.log('\n  Inno Setup (ISCC) not found — skipping the installer .exe.')

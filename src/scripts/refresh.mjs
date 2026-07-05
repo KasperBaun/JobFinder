@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 
-const root = resolve(import.meta.dirname, '..')
+const root = resolve(import.meta.dirname, '..', '..')
 
 // `npm` is a .cmd shim on Windows; Node refuses to spawn .cmd without shell:true
 // (CVE-2024-27980). Combining shell:true with an args array triggers DEP0190.

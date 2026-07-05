@@ -107,8 +107,8 @@ _(none)_
   `profileExists`. (R-076)
 - **Windows installer + local build.** GitHub Actions (`.github/workflows/release.yml`)
   builds a self-contained `win-x64` installer on every push to `main` and publishes it to a
-  rolling `latest` prerelease (Inno Setup script at `installer/jobfinder.iss`). `npm run
-  package:win` (`scripts/package-installer.mjs`) does the same locally — self-contained publish
+  rolling `latest` prerelease (Inno Setup script at `src/installer/jobfinder.iss`). `npm run
+  package:win` (`src/scripts/package-installer.mjs`) does the same locally — self-contained publish
   + portable zip, plus the `.exe` when Inno Setup (ISCC) is present natively or via wine. No
   GitHub needed to test. (R-074)
 - **Config import/export.** Settings screen exports all of `data/<email>/` (minus the

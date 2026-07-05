@@ -5,7 +5,7 @@ Working notes for agents (Claude Code, sub-agents) operating in this repo.
 ## Repo shape (read this first)
 
 ```
-docs/                                prd.md, requirements.md
+docs/                                prd.md, requirements.md, tasks/T-007/ (portal reference), screenshots/
 src/                                 ALL source, tests, configs, build infra
   backend/
     Jobmatch/                        class library — models, parsing, adapters, ranking, dedupe, output, verification, services
@@ -15,25 +15,32 @@ src/                                 ALL source, tests, configs, build infra
   frontend/                          React 19 + Vite app (runnable independently against Jobmatch.Api)
   infrastructure/
     Jobmatch.Host/                   bundle (runnable + .NET tool). Ephemeral Kestrel + browser-open + serves bundled SPA + jobfinder tool packaging
+  desktop/                           Electron shell — spawns Jobmatch.Host.exe on a loopback port, renders the SPA in a BrowserWindow (see "Entry point"). Only build outputs (dist/, node_modules/, release/) present so far; all gitignored.
+  installer/                         Inno Setup recipe (jobfinder.iss) → Windows Setup.exe. Output/ is gitignored build output.
+  scripts/                           Node build/dev wrappers (dev.mjs, package*.mjs, *-tool.mjs, clean/refresh) — driven by root package.json.
   tests/
     Jobmatch.Tests/                  xUnit
     playwright/                      Playwright e2e (bootstrap; specs added incrementally)
   Directory.Build.props
   Directory.Packages.props
   Jobmatch.slnx
-data/                                GITIGNORED — per-user state under data/<email>/
-                                     (typically a junction/symlink to a personal sync folder; never tracked)
+data/                                GITIGNORED — per-user state under data/<email>/ (may be a junction/symlink to a personal sync folder; never tracked). Live dir can be redirected on first run — see Per-user data.
   <email>/
     skillset.md, portals.yml, [ranking.yml override]
     raw/, imports/
-    all_listings.json, ranked_listings.json, top_jobs.md
+    all-listings.json, ranked-listings.json, top-jobs.md
     examples/                        user-curated seed listings (liked / disliked archetypes)
-    history/<run-id>.json
+    history/<run-id>.json, jobsearch/<id>.json, hangfire.db
     marks.json
+package.json                         root npm wrapper — convenience scripts around dotnet + npm (build/dev/test/package/tool)
+publish/                             GITIGNORED — self-contained win-x64 publish output
+pkg/                                 GITIGNORED — local NuGet tool package (npm run package)
+.github/workflows/                   CI — release.yml builds the Windows installer on push to main
 README.md                            business-level intro
 todo.md                              ongoing/completed/backlog
-global.json                          SDK pin (.NET 10)
 ```
+
+The SDK is pinned only by `<TargetFramework>net10.0</TargetFramework>` in `src/Directory.Build.props` (no `global.json`).
 
 ## Source of truth for product decisions
 
@@ -80,6 +87,7 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 ## Per-user data
 
 - Every operation that reads or writes user state must resolve the path through `data/<email>/`. The active email comes from `git config user.email`, falling back to env var `JOBFINDER_USER`, falling back to a clear error. The GUI exposes the email switch as a setting.
+- On first launch the GUI asks the user to confirm where data lives; the choice (email + absolute data dir) is persisted to `%APPDATA%/jobfinder/bootstrap.json` (`BootstrapStore`) and used verbatim on later runs — for both state (`UserContextProvider`) and the host log (`LogLocation.ResolveRootDir`, `Jobmatch.Host/Program.cs`). So once bootstrap is set the live data dir sits wherever the user chose (e.g. `%LOCALAPPDATA%/jobfinder/`), even inside a git checkout, and the repo-root `data/` is not written to — any `data/` left in the repo is a stale skeleton from earlier runs and safe to delete.
 - The committed `src/backend/config/*.example.*` files are templates copied into `data/<email>/` on first use.
 - `src/backend/config/ranking.yml` is the default; if `data/<email>/ranking.yml` exists, it overrides.
 - Never write user state outside `data/<email>/`. Never commit anything from `data/`.
@@ -88,7 +96,9 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 
 ## Entry point
 
-- Single binary. The published `jobfinder` .NET tool is `Jobmatch.Host`; launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. There is no separate CLI; headless operation is not part of v1.
+- One backend, two front-end shells. The backbone is the self-contained `Jobmatch.Host` (published as the `jobfinder` .NET tool): launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. Shipped as a Windows installer via `src/installer/jobfinder.iss` (Inno Setup).
+- The Electron desktop shell (`src/desktop/`) is the second front-end: it spawns that same `Jobmatch.Host.exe` on an ephemeral loopback port and renders the SPA in a native `BrowserWindow` (single-instance lock, graceful backend shutdown, startup-error window), packaged with electron-builder (NSIS). **Caveat:** only build artifacts (`dist/`, `node_modules/`, `release/`) are checked in today and gitignored — the TypeScript source, `package.json`, `tsconfig`, electron-builder config, and `build/icon.ico` that produce them are not yet in the repo. Add those before treating `src/desktop/` as tracked source.
+- There is no separate CLI; headless operation is not part of v1.
 - The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
 - API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
 
@@ -116,6 +126,14 @@ Do **not** "fix" this back to a synchronous in-request run.
   `/api/search/active` for reconnect; `POST /api/search/{id}/cancel`.
 - DI gate: `AddJobmatchApi(enableBackgroundJobs)` — false in the "Testing" environment so tests don't
   start a server or create a db. The `rules/infrastructure/background-jobs.md` conventions now apply.
+
+## Product & ranking constraints (don't regress these)
+
+Durable decisions that outlive any single task — migrated here from earlier handoff/plan docs so they survive:
+
+- **Strict primary stack.** Don't loosen `require_primary_stack_hit`: .NET/C#/Azure, TypeScript/React, SQL. No Rust/Python/Go roles, however strong the employer or seniority signal.
+- **Ranking success metric.** The only measure that counts is "would the user take one of the top-10 jobs?", judged against the curated `examples/` seed listings — NOT test counts, top-score deltas, or rule coverage.
+- **No external-service dependency.** The AI judge runs in-process via LlamaSharp (Gemma GGUF), fully offline. No Docker, no Ollama, no network at rank time — this is why LlamaSharp is the default, not just a convenience.
 
 ## When in doubt
 
