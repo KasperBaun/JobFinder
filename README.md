@@ -114,6 +114,22 @@ npm run install:tool   # installs `jobfinder` as a global .NET tool
 jobfinder              # launch it from anywhere
 ```
 
+**On Windows, just want the installer?** Every push to `main` builds a self-contained
+`jobfinder-setup-*.exe` (no .NET or Node needed) and attaches it to the rolling
+[**latest** release](../../releases/tag/latest). Download it, run it, and launch jobfinder from the
+Start menu. (It's unsigned, so SmartScreen may say "unknown publisher" — choose **More info → Run anyway**.)
+
+Want to build that Windows installer yourself without GitHub?
+
+```bash
+npm run package:win    # self-contained backend publish + electron-builder NSIS installer
+                       # → src/desktop/release/jobfinder-setup-*.exe
+```
+
+Run the resulting `jobfinder-setup-*.exe` to install the desktop app. On first launch jobfinder asks
+you to confirm where to store your data (it suggests a folder; you choose) — nothing is written until
+you agree.
+
 Other scripts: `npm run build` (release build), `npm test` (backend suite), `npm run test:client` (frontend), `npm run test:e2e` (Playwright).
 
 ### Optional: the local AI judge
@@ -122,17 +138,7 @@ jobfinder ranks with keywords out of the box. To enable the on-device LLM judge,
 
 ---
 
-## Where your data lives
-
-Everything personal lives under `data/<your-email>/` on your own machine — skillset, provider list, run history, and good-match marks. That folder is gitignored, never sent anywhere, never shared. Delete it and jobfinder forgets everything about you and starts fresh.
-
----
-
-## Where to look next
-
-- [`docs/prd.md`](./docs/prd.md) — what this product is and who it's for.
-- [`docs/requirements.md`](./docs/requirements.md) — the one-line requirement list.
-- [`todo.md`](./todo.md) — what's done, what's in flight, and what's next.
+- [`CHANGELOG.md`](./CHANGELOG.md) — what's shipped.
 
 ---
 

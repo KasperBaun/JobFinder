@@ -1,7 +1,6 @@
 using Jobmatch.Api.Handlers;
 using Jobmatch.Api.Infrastructure;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
@@ -30,10 +29,9 @@ public sealed class LlmEndpoints : IEndpointRegistration
     {
         group.MapPost(
                 Routes.Llm.DownloadModel,
-                ([FromServices] ILlmHandler handler, HttpContext http, CancellationToken ct)
-                    => handler.DownloadModel(http, ct))
+                ([FromServices] ILlmHandler handler) => handler.StartDownload())
             .WithName($"{nameof(Routes.Llm)}.DownloadModel")
-            .WithSummary("Download LLM model")
-            .WithDescription("Streams the GGUF model file from the configured download URL into the user's data directory. SSE progress events; finishes with a complete or error event.");
+            .WithSummary("Start LLM model download")
+            .WithDescription("Starts a background download of the GGUF model into the user's data directory, or no-ops if one is already running. Returns the current download state immediately; live progress is reported by GET /api/llm/status, which the client polls.");
     }
 }

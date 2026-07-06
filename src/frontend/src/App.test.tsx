@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SearchRunProvider } from './context/SearchRunContext';
 import { App } from './App';
 
 function renderApp() {
@@ -10,9 +11,11 @@ function renderApp() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/']}>
-        <App />
-      </MemoryRouter>
+      <SearchRunProvider>
+        <MemoryRouter initialEntries={['/']}>
+          <App />
+        </MemoryRouter>
+      </SearchRunProvider>
     </QueryClientProvider>,
   );
 }

@@ -1,0 +1,55 @@
+appId: dev.kasperbaun.jobfinder
+productName: Jobfinder
+copyright: © Kasper Baun
+
+directories:
+  output: release
+  buildResources: build
+
+# What goes inside the app (asar). The 204 MB self-contained backend is NOT here — it rides along
+# as per-platform extraResources so it stays outside asar and isn't double-packed. Each OS block
+# below bundles only its own publish/<rid> output.
+files:
+  - dist/**/*
+  - package.json
+
+win:
+  target:
+    - nsis
+  icon: build/icon.ico
+  artifactName: jobfinder-setup-${version}.exe
+  extraResources:
+    - from: ../../publish/win-x64
+      to: backend
+      filter:
+        - "**/*"
+  # Unsigned for now — SmartScreen will warn "unknown publisher". Code-signing is a tracked backlog
+  # item; add signtool config here once a cert is available.
+
+linux:
+  target:
+    - deb
+  # A directory of NxN.png files — electron-builder installs each into hicolor/NxN/apps so
+  # GNOME finds a standard size. A lone 1024x1024 png is ignored by the icon theme.
+  icon: build/icons
+  category: Utility
+  maintainer: Kasper Baun <tappah2510@gmail.com>
+  extraResources:
+    - from: ../../publish/linux-x64
+      to: backend
+      filter:
+        - "**/*"
+
+deb:
+  # Force the SUID chrome-sandbox so the app launches on Ubuntu 24.04 (apparmor blocks the
+  # userns sandbox for /opt apps). See build/deb-after-install.sh for the full rationale.
+  afterInstall: build/deb-after-install.sh
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Jobfinder
+  uninstallDisplayName: Jobfinder

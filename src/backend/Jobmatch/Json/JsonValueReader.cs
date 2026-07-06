@@ -10,6 +10,16 @@ public static class JsonValueReader
         var current = root;
         foreach (var segment in dottedPath.Split('.'))
         {
+            // Numeric segments index into arrays (e.g. Oracle Recruiting's
+            // "items.0.requisitionList"); object properties — even ones literally
+            // named "0" — keep resolving by name.
+            if (current.ValueKind == JsonValueKind.Array)
+            {
+                if (!int.TryParse(segment, out var idx) || idx < 0 || idx >= current.GetArrayLength())
+                    return default;
+                current = current[idx];
+                continue;
+            }
             if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(segment, out var next))
                 return default;
             current = next;

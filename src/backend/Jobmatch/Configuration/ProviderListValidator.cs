@@ -9,6 +9,32 @@ namespace Jobmatch.Configuration;
 /// </summary>
 public static class ProviderListValidator
 {
+    /// <summary>
+    /// Asserts a single new provider doesn't collide (by name, or by type+endpoint) with any provider
+    /// already present. Unlike <see cref="AssertNoDuplicates"/> this does not re-check the existing set
+    /// against itself, so a pre-existing duplicate in the shipped catalog can't block a valid add.
+    /// </summary>
+    public static void AssertNotDuplicate(PortalConfig candidate, IReadOnlyList<PortalConfig> existing)
+    {
+        var nameKey = NormalizeName(candidate.Name);
+        var endpointKey = candidate.Endpoint is null ? null : $"{candidate.Type}|{NormalizeEndpoint(candidate.Endpoint)}";
+
+        foreach (var p in existing)
+        {
+            if (NormalizeName(p.Name) == nameKey)
+            {
+                throw new ConfigException(
+                    $"a source named '{candidate.Name}' already exists (names are case-insensitive after trimming)");
+            }
+            if (endpointKey is not null && p.Endpoint is not null
+                && $"{p.Type}|{NormalizeEndpoint(p.Endpoint)}" == endpointKey)
+            {
+                throw new ConfigException(
+                    $"a source already targets {NormalizeEndpoint(candidate.Endpoint!)} as {candidate.Type} ('{p.Name}')");
+            }
+        }
+    }
+
     public static void AssertNoDuplicates(IReadOnlyList<PortalConfig> portals)
     {
         var seenNames = new Dictionary<string, string>(StringComparer.Ordinal);

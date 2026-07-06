@@ -3,13 +3,27 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Hangfire;
+using Hangfire.Dashboard;
+using Jobmatch;
 using Jobmatch.Api;
+using Jobmatch.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using NReco.Logging.File;
 
 var port = ResolvePort();
 var url = $"http://127.0.0.1:{port}";
 var cts = new CancellationTokenSource();
+
+// The log file must live in the SAME data directory the API uses — the one recorded in the
+// bootstrap config — so logs never diverge into a git-identity-resolved location. Before first-run
+// setup there is no configured directory yet: fall back to default resolution, and never let this
+// crash the host (it must still boot to the setup screen on a machine with no git identity).
+var logRootDir = LogLocation.ResolveRootDir(new BootstrapStore(), ResolveFallbackLogRoot);
+var logDir = Path.Combine(logRootDir, "logs");
+Directory.CreateDirectory(logDir);
+var logPath = Path.Combine(logDir, "host.log");
 
 var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
 {
@@ -18,9 +32,17 @@ var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
 
 builder.WebHost.UseUrls(url);
 
-// Suppress all Kestrel/hosting output — the terminal belongs to the user.
+// Terminal stays quiet (Kestrel info chatter would be noise), but WARN+ goes
+// to data/<email>/logs/host.log so silent failures stop requiring console-logger
+// surgery to diagnose.
 builder.Logging.ClearProviders();
-builder.Logging.AddFilter((_, _, level) => level >= LogLevel.None);
+builder.Logging.AddFile(logPath, options =>
+{
+    options.Append = true;
+    options.MinLevel = LogLevel.Warning;
+    options.FileSizeLimitBytes = 5_000_000;
+    options.MaxRollingFiles = 1;
+});
 
 builder.Services.AddJobmatchApi();
 builder.Services.AddSingleton(cts);
@@ -75,6 +97,13 @@ if (Directory.Exists(guiPath))
 
 app.MapJobmatchApi();
 
+// Hangfire job dashboard — local-only (the host binds 127.0.0.1, and this filter rejects any
+// non-loopback request as defence in depth). Gives at-a-glance visibility of runs, retries, failures.
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new LocalRequestsOnlyAuthorizationFilter()],
+});
+
 // Host-owned endpoints — shutdown is not part of the standalone Api surface.
 new Jobmatch.Host.Endpoints.HostShutdownEndpoint().Register(app);
 
@@ -106,6 +135,7 @@ AppDomain.CurrentDomain.ProcessExit += (_, _) => cts.Cancel();
 Console.ForegroundColor = ConsoleColor.Yellow;
 Console.WriteLine($"\n  jobfinder GUI → {url}");
 Console.ResetColor();
+Console.WriteLine($"  log file → {logPath}");
 
 if (ShouldOpenBrowser())
 {
@@ -129,6 +159,21 @@ static int ResolvePort()
         return fixedPort;
     }
     return FindAvailablePort();
+}
+
+// Pre-setup fallback for the log directory: the default git/env resolution, but degrade to a fixed
+// per-user location rather than throwing — logging must never be the reason the host fails to boot.
+static string ResolveFallbackLogRoot()
+{
+    try
+    {
+        return UserContext.Resolve().RootDir;
+    }
+    catch
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "jobfinder");
+    }
 }
 
 static bool ShouldOpenBrowser()

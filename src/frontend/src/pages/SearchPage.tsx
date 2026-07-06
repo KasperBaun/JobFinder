@@ -1,77 +1,45 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getHistory, getProviders } from '../api/client'
-import { useSearchStream } from '../hooks/useSearchStream'
+import { getHistory, getProviders, getRun, getSetupStatus } from '../api/client'
+import { useSearchRun } from '../context/SearchRunContext'
 import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
+import { SearchProgress } from '../components/SearchProgress'
 import { formatRelative } from '../utils/time'
-import type { SearchProgressEvent, SearchRequest } from '../api/types'
+import { lastCompletedRun } from '../utils/runs'
+import type { ProviderSummary, SearchRequest } from '../api/types'
 
-type ProviderRowState = {
-  name: string
-  status: 'pending' | 'running' | 'ok' | 'failed'
-  fetchedCount?: number
-  error?: string
-}
-
-function reduceProgress(events: SearchProgressEvent[], initialNames: string[]): {
-  rows: ProviderRowState[]
-  dedupe?: number
-  rank?: { rankedCount: number; topScore: number }
-} {
-  const rows = new Map<string, ProviderRowState>()
-  for (const name of initialNames) rows.set(name, { name, status: 'pending' })
-
-  let dedupe: number | undefined
-  let rank: { rankedCount: number; topScore: number } | undefined
-
-  for (const ev of events) {
-    if (ev.type === 'provider_running') {
-      rows.set(ev.provider, { name: ev.provider, status: 'running' })
-    } else if (ev.type === 'provider_done') {
-      rows.set(ev.provider, { name: ev.provider, status: 'ok', fetchedCount: ev.fetchedCount })
-    } else if (ev.type === 'provider_failed') {
-      rows.set(ev.provider, { name: ev.provider, status: 'failed', error: ev.error })
-    } else if (ev.type === 'dedupe') {
-      dedupe = ev.mergedCount
-    } else if (ev.type === 'rank') {
-      rank = { rankedCount: ev.rankedCount, topScore: ev.topScore }
-    }
-  }
-  return { rows: Array.from(rows.values()), dedupe, rank }
-}
+// A source is actually fetched only if the user has it on AND any required secret is set — this
+// mirrors the backend's Prepare() filter (ProviderStateMerger.Merge). A secret-less source stays
+// "enabled" in the list but never runs, so it must not seed the progress grid or the source total.
+const isRunnableSource = (p: ProviderSummary) => p.enabled && (!p.requiresSecret || p.hasSecret)
 
 export function SearchPage() {
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const historyQuery = useQuery({ queryKey: ['history'], queryFn: getHistory })
-  const stream = useSearchStream()
-  const lastRun = historyQuery.data?.runs[0]
+  const setupQuery = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
+  const { job, isActive, start, cancel, reset } = useSearchRun()
+
+  const lastRun = lastCompletedRun(historyQuery.data?.runs)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [topN, setTopN] = useState<string>('')
   const [minScore, setMinScore] = useState<string>('')
   const [selectedProviders, setSelectedProviders] = useState<string[] | null>(null)
+  const [stepsOpen, setStepsOpen] = useState(true)
 
   const enabledProviderNames = useMemo(
-    () => providersQuery.data?.providers.filter(p => p.enabled).map(p => p.name) ?? [],
+    () => providersQuery.data?.providers.filter(isRunnableSource).map(p => p.name) ?? [],
     [providersQuery.data],
   )
-
   const effectiveProviders = selectedProviders ?? enabledProviderNames
 
-  const progress = useMemo(
-    () => reduceProgress(stream.events, effectiveProviders),
-    [stream.events, effectiveProviders],
-  )
-
-  const [progressExpanded, setProgressExpanded] = useState(true)
-  useEffect(() => {
-    if (stream.status === 'running') setProgressExpanded(true)
-    if (stream.status === 'complete') {
-      const t = setTimeout(() => setProgressExpanded(false), 350)
-      return () => clearTimeout(t)
-    }
-  }, [stream.status])
+  const succeeded = job?.state === 'succeeded'
+  const runDetailQuery = useQuery({
+    queryKey: ['run', job?.id],
+    queryFn: () => getRun(job!.id),
+    enabled: succeeded && !!job?.id,
+  })
 
   function toggleProvider(name: string) {
     const base = selectedProviders ?? enabledProviderNames
@@ -86,7 +54,23 @@ export function SearchPage() {
     if (Number.isFinite(tn)) req.topN = tn
     const ms = minScore.trim() ? Number(minScore) : NaN
     if (Number.isFinite(ms)) req.minScore = ms
-    stream.start(req)
+    setStepsOpen(true)
+    void start(req)
+  }
+
+  if (setupQuery.data && !setupQuery.data.profileExists) {
+    return (
+      <div className="page page--wide">
+        <header className="page__header">
+          <div className="page__eyebrow">03 / search</div>
+          <h1 className="page__heading">Run a <em>search</em></h1>
+        </header>
+        <div className="hint-card">
+          <p>Set up your profile first — jobfinder rates every listing against it.</p>
+          <Link to="/skillset" className="btn btn--primary">Set up your profile</Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -96,7 +80,7 @@ export function SearchPage() {
         <h1 className="page__heading">Run a <em>search</em></h1>
         <p className="page__lede">
           Pulls the latest listings from your active sources, removes duplicates, rates them against your profile,
-          and shows you the top picks.
+          and shows you the top picks. The search keeps running even if you move to another page or reload.
         </p>
       </header>
 
@@ -107,20 +91,21 @@ export function SearchPage() {
           type="button"
           className="btn btn--primary btn--lg"
           onClick={handleRun}
-          disabled={stream.status === 'running'}
+          disabled={isActive}
         >
-          {stream.status === 'running' ? 'Running…' : 'Run a search'}
+          {isActive ? 'Running…' : 'Run a search'}
         </button>
-        {stream.status !== 'idle' && stream.status !== 'running' && (
-          <button type="button" className="btn btn--secondary" onClick={stream.reset}>
+        {isActive && (
+          <button type="button" className="btn btn--secondary" onClick={() => void cancel()}>
+            Cancel
+          </button>
+        )}
+        {job != null && !isActive && (
+          <button type="button" className="btn btn--secondary" onClick={reset}>
             Reset
           </button>
         )}
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => setAdvancedOpen(o => !o)}
-        >
+        <button type="button" className="link-button" onClick={() => setAdvancedOpen(o => !o)}>
           {advancedOpen ? 'Hide options' : 'More options…'}
         </button>
       </div>
@@ -159,14 +144,21 @@ export function SearchPage() {
               <div className="chip-group">
                 {providersQuery.data?.providers.map(p => {
                   const active = effectiveProviders.includes(p.name)
+                  const needsSecret = !!p.requiresSecret && !p.hasSecret
                   return (
                     <button
                       key={p.name}
                       type="button"
                       className={active ? 'chip chip--active' : 'chip'}
                       onClick={() => toggleProvider(p.name)}
-                      disabled={!p.enabled && !active}
-                      title={p.enabled ? '' : 'Turned off on the Sources page'}
+                      disabled={(!p.enabled || needsSecret) && !active}
+                      title={
+                        !p.enabled
+                          ? 'Turned off on the Sources page'
+                          : needsSecret
+                            ? 'Needs an API key — set it on the Sources page'
+                            : ''
+                      }
                     >
                       {p.displayName}
                     </button>
@@ -178,7 +170,7 @@ export function SearchPage() {
         </section>
       )}
 
-      {stream.status === 'idle' && (
+      {job == null && (
         <div className="hint-card">
           {lastRun ? (
             <>
@@ -195,114 +187,31 @@ export function SearchPage() {
         </div>
       )}
 
-      {stream.status !== 'idle' && (
-        <section className={`progress-panel${stream.status === 'complete' && !progressExpanded ? ' progress-panel--collapsed' : ''}`}>
-          {stream.status === 'complete' ? (
-            <button
-              type="button"
-              className="progress-summary"
-              onClick={() => setProgressExpanded(e => !e)}
-              aria-expanded={progressExpanded}
-            >
-              <span className="progress-summary__check" aria-hidden="true">✓</span>
-              <span className="progress-summary__text">
-                <span className="tabular">{progress.rows.filter(r => r.status === 'ok').length}</span>
-                {' / '}
-                <span className="tabular">{progress.rows.length}</span> sources
-                {progress.dedupe !== undefined && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.dedupe}</span> unique jobs</>}
-                {progress.rank && <> <span className="progress-summary__sep">·</span> <span className="tabular">{progress.rank.rankedCount}</span> rated <span className="progress-summary__sep">·</span> best <span className="tabular mono">{progress.rank.topScore.toFixed(2)}</span></>}
-              </span>
-              <span className="progress-summary__toggle">
-                {progressExpanded ? 'hide steps' : 'show steps'} {progressExpanded ? '▴' : '▾'}
-              </span>
-            </button>
-          ) : (
-            <h2 className="progress-panel__heading">Progress</h2>
-          )}
-          <div className="progress-collapse"><div>
-          <ul className="progress-list">
-            {progress.rows.map(row => {
-              const linkable = stream.status === 'complete' && !!stream.runId && row.status === 'ok'
-              const body = (
-                <>
-                  <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
-                  <span className="progress-row__name">{row.name}</span>
-                  <span className="progress-row__status">
-                    {row.status === 'pending' && 'pending'}
-                    {row.status === 'running' && 'running…'}
-                    {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} jobs`}
-                    {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
-                  </span>
-                </>
-              )
-              const className = `progress-row progress-row--${row.status}${linkable ? ' progress-row--link' : ''}`
-              return (
-                <li key={row.name} className={className}>
-                  {linkable ? (
-                    <Link to={`/history/${stream.runId}#tab=raw&provider=${encodeURIComponent(row.name)}`}>
-                      {body}
-                    </Link>
-                  ) : body}
-                </li>
-              )
-            })}
-            {progress.dedupe !== undefined && (
-              <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
-                {stream.status === 'complete' && stream.runId ? (
-                  <Link to={`/history/${stream.runId}#tab=dedupe`}>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">remove duplicates</span>
-                    <span className="progress-row__status">{progress.dedupe} unique jobs</span>
-                  </Link>
-                ) : (
-                  <>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">remove duplicates</span>
-                    <span className="progress-row__status">{progress.dedupe} unique jobs</span>
-                  </>
-                )}
-              </li>
-            )}
-            {progress.rank !== undefined && (
-              <li className={`progress-row progress-row--info${stream.status === 'complete' && stream.runId ? ' progress-row--link' : ''}`}>
-                {stream.status === 'complete' && stream.runId ? (
-                  <Link to={`/history/${stream.runId}#tab=longlist`}>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rate jobs</span>
-                    <span className="progress-row__status">
-                      {progress.rank.rankedCount} rated · best {progress.rank.topScore.toFixed(2)}
-                    </span>
-                  </Link>
-                ) : (
-                  <>
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rate jobs</span>
-                    <span className="progress-row__status">
-                      {progress.rank.rankedCount} rated · best {progress.rank.topScore.toFixed(2)}
-                    </span>
-                  </>
-                )}
-              </li>
-            )}
-          </ul>
-          </div></div>
-          {stream.status === 'error' && stream.error && (
-            <div className="error-banner">Search failed: {stream.error}</div>
-          )}
-        </section>
+      {job != null && (
+        <SearchProgress
+          job={job}
+          providerNames={effectiveProviders}
+          succeeded={succeeded}
+          stepsOpen={stepsOpen}
+          onToggleSteps={() => setStepsOpen(o => !o)}
+        />
       )}
 
-      {stream.status === 'complete' && stream.runId && (
+      {succeeded && job && (
         <section className="results">
           <h2 className="results__heading">
-            Top jobs <span className="muted serif" style={{ fontStyle: 'italic' }}>({stream.shortlist.length})</span>
+            Top jobs{' '}
+            <span className="muted serif" style={{ fontStyle: 'italic' }}>
+              ({runDetailQuery.data?.shortlist.length ?? job.shortlistCount})
+            </span>
           </h2>
-          {stream.shortlist.length === 0 && (
+          {runDetailQuery.isLoading && <div className="muted">Loading results…</div>}
+          {runDetailQuery.data?.shortlist.length === 0 && (
             <div className="muted">No jobs met the minimum rating.</div>
           )}
           <div className="listing-list">
-            {stream.shortlist.map(m => (
-              <ListingCard key={m.id} match={m} runId={stream.runId!} />
+            {runDetailQuery.data?.shortlist.map(m => (
+              <ListingCard key={m.id} match={m} runId={job.id} />
             ))}
           </div>
         </section>

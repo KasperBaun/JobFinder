@@ -13,10 +13,13 @@
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="LLamaSharp" />
     <PackageReference Include="LLamaSharp.Backend.Cpu" />
+    <PackageReference Include="LLamaSharp.Backend.Vulkan" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\config\ranking.yml" CopyToOutputDirectory="PreserveNewest" Link="config\%(Filename)%(Extension)" />
+    <!-- Seeded into data/<email>/skillset.md on first run by UserContext.SeedFromExamples. -->
+    <None Include="..\config\skillset.example.md" CopyToOutputDirectory="PreserveNewest" Link="config\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

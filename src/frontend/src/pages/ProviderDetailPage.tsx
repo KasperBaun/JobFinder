@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  deleteProvider,
   getProvider,
   setProviderEnabled,
   setProviderSecrets,
@@ -14,6 +15,7 @@ import { formatRelative } from '../utils/time'
 
 export function ProviderDetailPage() {
   const { id: idParam } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const id = Number(idParam)
   const validId = Number.isFinite(id)
@@ -26,6 +28,20 @@ export function ProviderDetailPage() {
 
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
   const [testResult, setTestResult] = useState<ProviderTestResult | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+
+  const remove = useMutation({
+    mutationFn: () => deleteProvider(id),
+    onSuccess: (res) => {
+      if (!res.success) {
+        setToast({ kind: 'err', message: res.error ?? 'Remove failed' })
+        return
+      }
+      void queryClient.invalidateQueries({ queryKey: ['providers'] })
+      navigate('/providers')
+    },
+    onError: (err) => setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) }),
+  })
 
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => setProviderEnabled(id, enabled),
@@ -142,6 +158,29 @@ export function ProviderDetailPage() {
               )}
             </section>
 
+            {data.removable && (
+              <section className="card">
+                <div className="row-spread">
+                  <div>
+                    <h2 className="card__title" style={{ marginBottom: 0 }}>Remove this source</h2>
+                    <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>
+                      You added this source, so you can remove it. This only affects your setup.
+                    </p>
+                  </div>
+                  {confirmRemove ? (
+                    <div className="add-source__actions">
+                      <button type="button" className="btn btn--danger btn--sm" disabled={remove.isPending} onClick={() => remove.mutate()}>
+                        {remove.isPending ? <span className="spinner" /> : 'Yes, remove'}
+                      </button>
+                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmRemove(false)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button type="button" className="btn btn--danger btn--sm" onClick={() => setConfirmRemove(true)}>Remove</button>
+                  )}
+                </div>
+              </section>
+            )}
+
             {data.recentRuns.length > 0 && (
               <section className="card">
                 <h2 className="card__title">Recent searches</h2>
@@ -168,11 +207,13 @@ export function ProviderDetailPage() {
 
 function friendlyType(type: string): string {
   switch (type) {
-    case 'api':    return 'Auto-fetched'
-    case 'rss':    return 'News feed'
-    case 'html':   return 'Read from website'
-    case 'manual': return 'Manual import'
-    default:       return type
+    case 'api':        return 'Auto-fetched'
+    case 'rss':        return 'News feed'
+    case 'html':       return 'Read from website'
+    case 'teamtailor': return 'Auto-fetched'
+    case 'hrmanager':  return 'Auto-fetched'
+    case 'manual':     return 'Manual import'
+    default:           return type
   }
 }
 

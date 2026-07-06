@@ -1,5 +1,6 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
+using Jobmatch.Configuration;
 using Jobmatch.Models;
 using Jobmatch.Services;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +15,10 @@ public interface IProvidersHandler
     Task<IResult> Update(int id, ProviderUpsert? request);
     Task<IResult> SetSecrets(int id, SetSecretsRequest? request);
     Task<IResult> Test(int id, CancellationToken ct);
+    Task<IResult> Detect(DetectSourceRequest? request);
+    Task<IResult> PreviewTest(PreviewSourceRequest? request, CancellationToken ct);
+    Task<IResult> Create(CreateSourceRequest? request);
+    Task<IResult> Delete(int id);
 }
 
 public sealed class ProvidersHandler(IProvidersService providers, ILogger<ProvidersHandler> logger)
@@ -70,6 +75,48 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         },
         logParams: [id]);
 
+    public Task<IResult> Detect(DetectSourceRequest? request) => ExecuteAsync(
+        "detect source",
+        () =>
+        {
+            var candidates = providers.Detect(request?.Url);
+            var dtos = candidates
+                .Select(c => new DetectedSourceDto(c.Kind, c.DisplayName, c.Summary, c.DuplicateWarning))
+                .ToList();
+            return Task.FromResult<IResult>(Results.Ok(new DetectSourceResponse(dtos)));
+        });
+
+    public Task<IResult> PreviewTest(PreviewSourceRequest? request, CancellationToken ct) => ExecuteAsync(
+        "preview-test source",
+        async () =>
+        {
+            if (request?.Kind is null)
+                throw new InvalidRequestException("kind is required");
+            var outcome = await providers
+                .PreviewTestAsync(request.Url, request.Kind, request.DisplayName, ct)
+                .ConfigureAwait(false);
+            return Results.Ok(ToTestResult(outcome));
+        });
+
+    public Task<IResult> Create(CreateSourceRequest? request) => ExecuteAsync(
+        "create source",
+        () =>
+        {
+            if (request?.Kind is null)
+                throw new InvalidRequestException("kind is required");
+            var created = providers.Create(request.Url, request.Kind, request.DisplayName);
+            return Task.FromResult<IResult>(Results.Ok(new ProviderCreatedResponse(created.Portal.Id)));
+        });
+
+    public Task<IResult> Delete(int id) => ExecuteAsync(
+        "delete provider: {ProviderId}",
+        () =>
+        {
+            providers.Delete(id);
+            return Task.FromResult<IResult>(Results.Ok(new SaveResponse(true)));
+        },
+        logParams: [id]);
+
     private static ProviderSummary ToSummary(ProviderListing l) => new(
         Id: l.Portal.Id,
         Name: l.Portal.Name,
@@ -82,7 +129,8 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         LastFetchedAt: l.LastFetchedAt,
         LastFetchCount: l.LastFetchCount,
         RequiresSecret: l.Portal.RequiresSecret,
-        HasSecret: l.HasSecret);
+        HasSecret: l.HasSecret,
+        Removable: l.Portal.Id >= UserProviderStore.IdBase);
 
     private static ProviderDetail ToDetail(ProviderListingDetail d)
     {
@@ -107,6 +155,7 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
             LastFetchCount: l.LastFetchCount,
             RequiresSecret: l.Portal.RequiresSecret,
             HasSecret: l.HasSecret,
+            Removable: l.Portal.Id >= UserProviderStore.IdBase,
             RecentRuns: recent);
     }
 

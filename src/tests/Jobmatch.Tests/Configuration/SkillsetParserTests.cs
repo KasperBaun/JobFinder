@@ -261,6 +261,46 @@ public sealed class SkillsetParserTests
     }
 
     [Fact]
+    public void Parse_Preferred_Companies_Section_Is_Read()
+    {
+        var content = """
+            ---
+            name: A
+            location: B
+            experience_years: 1
+            remote_preference: any
+            seniority: any
+            ---
+
+            ## Primary stack
+            - C#
+
+            ## Preferred companies
+            Employers you'd love to work for.
+
+            - LEGO
+            - Danske Bank
+            """;
+        var s = SkillsetParser.Parse(content);
+        Assert.Equal(new[] { "LEGO", "Danske Bank" }, s.PreferredCompanies);
+    }
+
+    [Fact]
+    public void Parse_Preferred_Companies_Default_Empty_When_Absent()
+    {
+        var s = SkillsetParser.Parse(ValidSkillset);
+        Assert.Empty(s.PreferredCompanies);
+    }
+
+    [Fact]
+    public void Serialize_Roundtrip_Preserves_Preferred_Companies()
+    {
+        var original = SkillsetParser.Parse(ValidSkillset) with { PreferredCompanies = ["LEGO", "Maersk"] };
+        var reparsed = SkillsetParser.Parse(SkillsetParser.Serialize(original));
+        Assert.Equal(new[] { "LEGO", "Maersk" }, reparsed.PreferredCompanies);
+    }
+
+    [Fact]
     public void Parse_Handles_CRLF_Line_Endings()
     {
         var crlf = ValidSkillset.Replace("\n", "\r\n");

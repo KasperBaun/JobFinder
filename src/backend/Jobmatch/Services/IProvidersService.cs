@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Text.Json;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
@@ -35,6 +36,12 @@ public sealed record ProviderTestOutcome(
     string? Error,
     DateTimeOffset TestedAt);
 
+public sealed record DetectedSource(
+    string Kind,
+    string DisplayName,
+    string Summary,
+    string? DuplicateWarning);
+
 public interface IProvidersService
 {
     IReadOnlyList<ProviderListing> List();
@@ -42,9 +49,17 @@ public interface IProvidersService
     void SetEnabled(int id, bool enabled);
     void SetSecrets(int id, IReadOnlyDictionary<string, string> values);
     Task<ProviderTestOutcome> TestAsync(int id, CancellationToken ct);
+    IReadOnlyList<DetectedSource> Detect(string? url);
+    Task<ProviderTestOutcome> PreviewTestAsync(string? url, string kind, string? displayName, CancellationToken ct);
+    ProviderListing Create(string? url, string kind, string? displayName);
+    void Delete(int id);
 }
 
-public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<ProvidersService> logger) : IProvidersService
+public sealed partial class ProvidersService(
+    UserContext ctx,
+    IFileSystem fs,
+    ISourceDetectionService detection,
+    ILogger<ProvidersService> logger) : IProvidersService
 {
     public IReadOnlyList<ProviderListing> List()
     {
@@ -67,7 +82,7 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
 
     public void SetEnabled(int id, bool enabled)
     {
-        var catalog = PortalCatalogLoader.Load(CatalogPath());
+        var catalog = LoadCatalog();
         var portal = catalog.FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
 
@@ -100,7 +115,7 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
 
     public void SetSecrets(int id, IReadOnlyDictionary<string, string> values)
     {
-        var catalog = PortalCatalogLoader.Load(CatalogPath());
+        var catalog = LoadCatalog();
         var portal = catalog.FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
 
@@ -132,7 +147,11 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
         var portals = LoadMerged();
         var portal = portals.FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
+        return await TestConfigAsync(portal, ct).ConfigureAwait(false);
+    }
 
+    private async Task<ProviderTestOutcome> TestConfigAsync(PortalConfig portal, CancellationToken ct)
+    {
         if (portal.Type == PortalType.Manual)
         {
             return new ProviderTestOutcome(
@@ -142,7 +161,7 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
         }
 
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        var adapter = AdapterFactory.Create(portal, http, NullLogger.Instance, ctx.ImportsDir, fs);
+        var adapter = AdapterFactory.Create(ForConnectivityTest(portal), http, NullLogger.Instance, ctx.ImportsDir, fs);
         if (adapter is null)
         {
             return new ProviderTestOutcome(
@@ -162,7 +181,7 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
                 FetchedCount: results.Count,
                 DurationMs: sw.ElapsedMilliseconds,
                 SampleTitle: sample,
-                Error: results.Count == 0 ? "fetch returned 0 listings" : null,
+                Error: results.Count == 0 ? "This source is reachable but returned no jobs right now." : null,
                 TestedAt: DateTimeOffset.UtcNow);
         }
         catch (Exception ex)
@@ -174,16 +193,55 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
                 FetchedCount: 0,
                 DurationMs: sw.ElapsedMilliseconds,
                 SampleTitle: null,
-                Error: ex.Message,
+                Error: FriendlyError(ex),
                 TestedAt: DateTimeOffset.UtcNow);
         }
     }
 
+    // A connectivity test is list-only: it never enriches bodies. Body enrichment fetches every
+    // listing's detail page sequentially (~5 rps, uncapped), turning a one-request "does this work?"
+    // check into a full N-request crawl of a third-party site. The test signal (count + one title)
+    // comes from the list response, so enrichment adds latency and load without adding information.
+    // (TeamTailor is inherently page-per-job — its listings only exist behind detail pages — so this
+    // does not lighten a TeamTailor test; every other enrich-capable adapter honours the flag.)
+    internal static PortalConfig ForConnectivityTest(PortalConfig portal) =>
+        portal with { EnrichBody = false };
+
+    // Fetch failures surface as raw framework exception text ("Response status code does not indicate
+    // success: 404 (Not Found).") which means nothing to a non-technical user. Map the common cases
+    // to plain language; the full exception is still logged above for diagnosis.
+    internal static string FriendlyError(Exception ex) => ex switch
+    {
+        HttpRequestException { StatusCode: HttpStatusCode.NotFound } =>
+            "This source no longer exists at that address (404). The board may have moved or closed.",
+        HttpRequestException { StatusCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden } =>
+            "This source refused access — it may need an access key or block automated requests.",
+        HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests } =>
+            "This source is rate-limiting requests right now — try again in a little while.",
+        HttpRequestException { StatusCode: { } code } =>
+            $"This source responded with an error ({(int)code}).",
+        HttpRequestException =>
+            "Couldn't reach this source — check the web address or your internet connection.",
+        TaskCanceledException or TimeoutException =>
+            "This source took too long to respond (timed out).",
+        _ => ex.Message,
+    };
+
     private static string CatalogPath() => Path.Combine(AppContext.BaseDirectory, "portals.json");
+
+    private static IReadOnlyList<PortalConfig> LoadBakedCatalog() => PortalCatalogLoader.Load(CatalogPath());
+
+    // The effective catalog is the shipped one plus the user's own added sources.
+    private IReadOnlyList<PortalConfig> LoadCatalog()
+    {
+        var baked = LoadBakedCatalog();
+        var user = UserProviderStore.Load(ctx.UserProvidersPath);
+        return user.Count == 0 ? baked : [.. baked, .. user];
+    }
 
     private (IReadOnlyList<PortalConfig> Catalog, ProviderState State) LoadCatalogAndState()
     {
-        var catalog = PortalCatalogLoader.Load(CatalogPath());
+        var catalog = LoadCatalog();
         var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
         return (catalog, state);
     }
@@ -211,122 +269,4 @@ public sealed class ProvidersService(UserContext ctx, IFileSystem fs, ILogger<Pr
     }
 
     private sealed record LastFetch(DateTimeOffset FetchedAt, int? FetchedCount);
-
-    private Dictionary<string, LastFetch> LoadLastFetchByProvider()
-    {
-        var result = new Dictionary<string, LastFetch>(StringComparer.OrdinalIgnoreCase);
-        if (!Directory.Exists(ctx.HistoryDir)) return result;
-
-        IEnumerable<string> files;
-        try
-        {
-            files = Directory.EnumerateFiles(ctx.HistoryDir, "*.json")
-                .OrderByDescending(p => p, StringComparer.Ordinal);
-        }
-        catch
-        {
-            return result;
-        }
-
-        foreach (var file in files)
-        {
-            try
-            {
-                using var stream = File.OpenRead(file);
-                using var doc = JsonDocument.Parse(stream);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
-
-                if (!doc.RootElement.TryGetProperty("startedAt", out var startedProp)) continue;
-                if (!doc.RootElement.TryGetProperty("providers", out var providersProp)) continue;
-                if (providersProp.ValueKind != JsonValueKind.Array) continue;
-                if (!startedProp.TryGetDateTimeOffset(out var startedAt)) continue;
-
-                foreach (var prov in providersProp.EnumerateArray())
-                {
-                    if (prov.ValueKind != JsonValueKind.Object) continue;
-                    if (!prov.TryGetProperty("name", out var nameProp)) continue;
-                    var name = nameProp.GetString();
-                    if (string.IsNullOrWhiteSpace(name)) continue;
-
-                    int? count = null;
-                    if (prov.TryGetProperty("fetchedCount", out var countProp) &&
-                        countProp.ValueKind == JsonValueKind.Number)
-                    {
-                        count = countProp.GetInt32();
-                    }
-
-                    if (!result.ContainsKey(name))
-                    {
-                        result[name] = new LastFetch(startedAt, count);
-                    }
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        return result;
-    }
-
-    private IReadOnlyList<ProviderRunHistory> LoadRecentRuns(string providerName, int take)
-    {
-        var result = new List<ProviderRunHistory>();
-        if (!Directory.Exists(ctx.HistoryDir)) return result;
-
-        IEnumerable<string> files;
-        try
-        {
-            files = Directory.EnumerateFiles(ctx.HistoryDir, "*.json")
-                .OrderByDescending(p => p, StringComparer.Ordinal);
-        }
-        catch
-        {
-            return result;
-        }
-
-        foreach (var file in files)
-        {
-            if (result.Count >= take) break;
-            try
-            {
-                using var stream = File.OpenRead(file);
-                using var doc = JsonDocument.Parse(stream);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
-                if (!doc.RootElement.TryGetProperty("runId", out var runIdProp)) continue;
-                if (!doc.RootElement.TryGetProperty("startedAt", out var startedProp)) continue;
-                if (!doc.RootElement.TryGetProperty("providers", out var providersProp)) continue;
-                if (providersProp.ValueKind != JsonValueKind.Array) continue;
-                if (!startedProp.TryGetDateTimeOffset(out var startedAt)) continue;
-
-                foreach (var prov in providersProp.EnumerateArray())
-                {
-                    if (prov.ValueKind != JsonValueKind.Object) continue;
-                    if (!prov.TryGetProperty("name", out var nameProp)) continue;
-                    if (!string.Equals(nameProp.GetString(), providerName, StringComparison.OrdinalIgnoreCase)) continue;
-
-                    var status = prov.TryGetProperty("status", out var sProp) ? sProp.GetString() ?? "unknown" : "unknown";
-                    int? count = prov.TryGetProperty("fetchedCount", out var cProp) && cProp.ValueKind == JsonValueKind.Number
-                        ? cProp.GetInt32()
-                        : null;
-                    string? error = prov.TryGetProperty("error", out var eProp) && eProp.ValueKind == JsonValueKind.String
-                        ? eProp.GetString()
-                        : null;
-
-                    result.Add(new ProviderRunHistory(
-                        RunId: runIdProp.GetString() ?? "",
-                        StartedAt: startedAt,
-                        Status: status,
-                        FetchedCount: count,
-                        Error: error));
-                    break;
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        return result;
-    }
 }

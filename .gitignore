@@ -26,6 +26,11 @@ src/backend/config/portals.yml
 src/frontend/node_modules/
 src/frontend/dist/
 
+# Desktop (Electron) build outputs — deps, compiled output, and installer artifacts
+src/desktop/node_modules/
+src/desktop/dist/
+src/desktop/release/
+
 # Playwright e2e — local installs and reports
 src/tests/playwright/node_modules/
 src/tests/playwright/test-results/
@@ -36,6 +41,9 @@ node_modules/
 
 # Local NuGet output from `npm run package`
 pkg/
+
+# Self-contained publish output (bundled into the desktop installer as extraResources)
+publish/
 
 # Scratch
 .tmp/

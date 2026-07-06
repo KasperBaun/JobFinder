@@ -21,6 +21,12 @@
     <ProjectReference Include="..\..\backend\Jobmatch.Api\Jobmatch.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NReco.Logging.File" />
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+  </ItemGroup>
+
   <Target Name="BuildFrontend"
           BeforeTargets="Build;Publish"
           Condition="'$(BuildGui)' == 'true'"

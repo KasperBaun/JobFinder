@@ -1,0 +1,23 @@
+{
+  "name": "jobfinder-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Jobfinder desktop shell — an Electron window over the bundled .NET backend.",
+  "author": "Kasper Baun",
+  "homepage": "https://github.com/KasperBaun/JobFinder",
+  "main": "dist/main.js",
+  "scripts": {
+    "build:ts": "tsc -p tsconfig.json",
+    "icons": "node scripts/make-icons.mjs",
+    "start": "npm run build:ts && electron .",
+    "dist": "npm run build:ts && electron-builder --config electron-builder.yml"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "png-to-ico": "^2.1.8",
+    "sharp": "^0.33.5",
+    "typescript": "^5.7.2"
+  }
+}
