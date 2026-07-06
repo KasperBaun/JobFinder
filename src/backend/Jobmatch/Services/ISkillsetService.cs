@@ -18,7 +18,8 @@ public sealed record SkillsetUpdate(
     IReadOnlyList<string>? EmploymentTypes,
     string? Country,
     string? Region,
-    IReadOnlyList<string>? Metro);
+    IReadOnlyList<string>? Metro,
+    IReadOnlyList<string>? PreferredCompanies = null);
 
 public interface ISkillsetService
 {
@@ -30,18 +31,40 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
 {
     private readonly object _fileLock = new();
 
-    public Skillset Get() => SkillsetParser.Load(ctx.SkillsetPath);
+    public Skillset Get()
+    {
+        if (!File.Exists(ctx.SkillsetPath))
+            throw new InvalidRequestException("No profile set up yet.");
+        return SkillsetParser.Load(ctx.SkillsetPath);
+    }
 
     public Skillset Update(SkillsetUpdate input)
     {
         lock (_fileLock)
         {
-            var existing = SkillsetParser.Load(ctx.SkillsetPath);
+            // Create-or-update: on first write there is no file yet, so merge onto an empty baseline.
+            var existing = File.Exists(ctx.SkillsetPath)
+                ? SkillsetParser.Load(ctx.SkillsetPath)
+                : EmptyBaseline();
             var merged = Merge(existing, input);
             AtomicWriteText(ctx.SkillsetPath, SkillsetParser.Serialize(merged));
             return merged;
         }
     }
+
+    private static Skillset EmptyBaseline() => new(
+        Name: "",
+        Location: "",
+        ExperienceYears: 0,
+        TargetRoles: [],
+        RemotePreference: RemotePreference.Any,
+        Seniority: Seniority.Any,
+        PrimaryStack: [],
+        SecondaryStack: [],
+        Domains: [],
+        Disqualifiers: [],
+        Languages: [],
+        EmploymentTypes: []);
 
     private static Skillset Merge(Skillset existing, SkillsetUpdate input)
     {
@@ -73,6 +96,7 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
             Country = NullIfBlank(input.Country),
             Region = NullIfBlank(input.Region),
             Metro = input.Metro is null ? existing.Metro : CleanList(input.Metro),
+            PreferredCompanies = input.PreferredCompanies is null ? existing.PreferredCompanies : CleanList(input.PreferredCompanies),
         };
     }
 

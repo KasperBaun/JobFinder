@@ -33,6 +33,12 @@ require_primary_stack_hit: true
 # for users who are mid-with-experience.
 seniority_adjacency_credit: 1.0
 
+# Score multiplier applied to listings whose company name matches one of the
+# user's preferred companies (the "Preferred companies" skillset section).
+# Multiplicative, capped at 1.0. 1.0 = no boost. Deal-breakers still win:
+# a disqualified listing stays at 0 regardless of employer.
+preferred_company_boost: 1.25
+
 # Score multiplier applied when a listing's title looks clearly non-engineering
 # (Product/Project/Account Manager, Marketing/Sales/Finance roles, Customer
 # Success, Recruiter, Data/Business/Fraud Analyst, etc.) — even if the
@@ -64,11 +70,13 @@ llm:
   # The /api/llm/download-model endpoint streams from this URL to model_path.
   model_download_url: https://huggingface.co/mradermacher/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it.Q4_K_M.gguf
   base_url: http://localhost:11434
-  top_n: 50              # judge only the top-N from keyword ranker (0 = all deduped)
+  top_n: 25              # judge only the top-N from keyword ranker (0 = all deduped)
   weight: 0.5            # 0.0 = keyword-only, 1.0 = LLM-only
   temperature: 0.0       # deterministic
   context_size: 4096     # llamasharp only
-  gpu_layer_count: 0     # llamasharp only — 0 = CPU. Bump for GPU offload.
+  gpu_layer_count: 999   # llamasharp only — 0 = CPU. 999 = offload all layers to
+                         # GPU (needs a GPU backend pkg; clamped to the model's
+                         # layer count; no-op on CPU-only builds). Lower if VRAM-tight.
 
 # Per-tier multipliers applied to the location_remote signal.
 #   city    — listing is in your declared city

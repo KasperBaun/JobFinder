@@ -29,6 +29,11 @@ public static class Routes
         public const string Update = ById;
         public const string Test = $"{ById}/test";
         public const string SetSecrets = $"{ById}/secrets";
+        // Add-a-source flow: detect a pasted URL, preview-test the candidate, create, delete.
+        public const string Create = Base;
+        public const string Delete = ById;
+        public const string Detect = $"{Base}/detect";
+        public const string PreviewTest = $"{Base}/detect/test";
     }
 
     public static class Skillset
@@ -43,7 +48,13 @@ public static class Routes
     {
         public const string Tag = "Search";
         public const string Base = $"{ApiConstants.RouteBase}/search";
+        // POST: enqueue a background run, returns { id }. Repurposed from the old synchronous SSE run.
         public const string Run = Base;
+        // GET literal — must stay above ById so routing prefers it over the {id} parameter.
+        public const string Active = $"{Base}/active";
+        public const string ById = $"{Base}/{{id}}";
+        public const string Stream = $"{Base}/{{id}}/stream";
+        public const string Cancel = $"{Base}/{{id}}/cancel";
     }
 
     public static class History
@@ -69,5 +80,21 @@ public static class Routes
         public const string Base = $"{ApiConstants.RouteBase}/llm";
         public const string Status = $"{Base}/status";
         public const string DownloadModel = $"{Base}/download-model";
+    }
+
+    public static class Config
+    {
+        public const string Tag = "Config";
+        public const string Base = $"{ApiConstants.RouteBase}/config";
+        public const string Export = $"{Base}/export";
+        public const string Import = $"{Base}/import";
+    }
+
+    public static class Setup
+    {
+        public const string Tag = "Setup";
+        public const string Base = $"{ApiConstants.RouteBase}/setup";
+        public const string Status = $"{Base}/status";
+        public const string Complete = Base;
     }
 }

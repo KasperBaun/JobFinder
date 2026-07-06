@@ -54,3 +54,9 @@ Listings matching any of these drop to score 0.
 - unpaid
 - commission only
 - relocation required
+
+## Preferred companies
+Employers you'd love to work for. Their listings get a rating boost. Matched against the company name only.
+
+- Example Corp
+- Another Company

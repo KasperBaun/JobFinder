@@ -52,7 +52,7 @@
       "name": "greenhouse-unity",
       "displayName": "Greenhouse Unity",
       "type": "api",
-      "enabled": true,
+      "enabled": false,
       "endpoint": "https://boards-api.greenhouse.io/v1/boards/unity3d/jobs",
       "queryParams": {
         "content": "true"
@@ -69,7 +69,8 @@
       "staticFields": {
         "company": "Unity"
       },
-      "rateLimitRps": 1.0
+      "rateLimitRps": 1.0,
+      "notes": "Disabled 2026-07-05: the Greenhouse board token 'unity3d' now 404s (all token variants tried). Unity moved ATS; re-enable with the correct board/endpoint if found."
     },
     {
       "id": 4,
@@ -128,7 +129,15 @@
       "endpoint": "https://thehub.io/api/jobs",
       "queryParams": {
         "country_code": "DK",
-        "limit": 100
+        "search": "developer"
+      },
+      "pagination": {
+        "param": "page",
+        "start": 1,
+        "step": 1,
+        "sizeParam": "limit",
+        "size": 15,
+        "maxPages": 20
       },
       "responseMapping": {
         "items_path": "docs",
@@ -231,7 +240,7 @@
       "displayName": "LinkedIn",
       "type": "manual",
       "enabled": false,
-      "notes": "LinkedIn requires a logged-in account, so it can't be queried automatically. Use LinkedIn's email job alerts, or save manual exports to your data/imports/ folder."
+      "notes": "LinkedIn requires a logged-in account and gates its API behind the partner-only Talent Solutions program, so it can't be queried automatically. To include LinkedIn listings: set up LinkedIn job-alert emails for your searches, then save the roles you care about as a CSV in your data/imports/ folder named linkedin-<anything>.csv (e.g. linkedin-2026-06.csv). Required columns: url, title. Optional: company, location, description, posted_at (ISO date). Headers are case-insensitive. Turn this provider on and the next search run ingests every linkedin-*.csv file."
     },
     {
       "id": 12,
@@ -271,6 +280,7 @@
       "queryParams": {
         "q": "+softwareudvikler"
       },
+      "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
       "rateLimitRps": 0.5,
       "notes": "Jobindex public RSS, AND-query for the Danish term 'softwareudvikler'. Returns ~20 most-recent DK Software Developer listings across every DK ATS that syndicates to Jobindex (Emply, HR-Manager.net, TeamTailor, SmartRecruiters, internal sites). Body enrichment on so the linked page's full text is used for ranking. Confirmed working — 5 of the user's 8 curated example employers appear here when run together with the .NET variant below."
     },
@@ -285,6 +295,7 @@
       "queryParams": {
         "q": "+.net +udvikler"
       },
+      "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
       "rateLimitRps": 0.5,
       "notes": "Jobindex public RSS, AND-query requiring both '.net' and 'udvikler' (Danish for developer). Tighter than the broader 'softwareudvikler' query above — surfaces specifically .NET-tagged DK developer roles. Catches Sundhed.dk, Dansk Sundhedssikring, Sopra Steria, Netcompany Architect, etc. that the softwareudvikler query may not."
     },
@@ -555,6 +566,586 @@
       "staticFields": { "company": "BEUMER Group" },
       "rateLimitRps": 1.0,
       "notes": "DK industrial automation; ~13 DK roles. Includes some software engineering roles around their conveyor / sortation control systems."
+    },
+    {
+      "id": 30,
+      "name": "jobindex-rss-backend-udvikler",
+      "displayName": "Jobindex (Backend udvikler)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+backend +udvikler" },
+      "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, AND-query requiring 'backend' and 'udvikler'. Catches Danish-titled backend roles (Nykredit, Norlys etc.) that the 'softwareudvikler' and '.net udvikler' queries miss. Verified 2026-06-12 (22 items). Body enrichment on."
+    },
+    {
+      "id": 31,
+      "name": "jobindex-rss-csharp",
+      "displayName": "Jobindex (C#)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+c#" },
+      "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, single AND-term 'c#'. Surfaces C#-tagged roles regardless of title language ('Software Engineer', 'Systemudvikler' etc.) that title-word queries miss; the '#' is URL-encoded automatically. Verified 2026-06-12 (20 items, incl. PFA and Arla .NET roles). Body enrichment on."
+    },
+    {
+      "id": 32,
+      "name": "jobindex-rss-azure",
+      "displayName": "Jobindex (Azure)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+azure" },
+      "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, single AND-term 'azure'. Catches cloud/platform/DevOps roles built on the Azure stack that developer-title queries miss. Expect some infrastructure-only noise — the ranker's title gate and stack weights handle it. Verified 2026-06-12 (20 items). Body enrichment on."
+    },
+    {
+      "id": 33,
+      "name": "jobindex-rss-software-engineer",
+      "displayName": "Jobindex (Software Engineer)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
+      "queryParams": { "q": "+software +engineer" },
+      "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
+      "rateLimitRps": 0.5,
+      "notes": "Jobindex public RSS, AND-query for the English title 'software engineer'. International companies hiring in Copenhagen post English titles the Danish queries never match. Verified 2026-06-12 (20 items). Body enrichment on."
+    },
+    {
+      "id": 34,
+      "name": "it-jobbank-rss-dotnet",
+      "displayName": "IT Jobbank (.NET)",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.it-jobbank.dk/jobsoegning.rss",
+      "queryParams": { "q": "+.net" },
+      "rateLimitRps": 0.5,
+      "notes": "IT-jobbank public RSS (same Jobindex backend, pre-filtered to IT roles), single AND-term '.net'. Complements the 'softwareudvikler' it-jobbank feed; cross-feed duplicates are collapsed by the deduper. Verified 2026-06-12 (9 items). Body enrichment on."
+    },
+    {
+      "id": 36,
+      "name": "techjob",
+      "displayName": "TechJob.dk",
+      "type": "manual",
+      "enabled": false,
+      "notes": "Teknologiens Mediehus' tech job board (~400 DK engineering/IT roles; jobfinder.dk redirects here). No public jobs RSS or API, and robots.txt explicitly blocks AI crawlers, so automated ingestion is off the table. To include its listings: browse https://techjob.dk/jobs, copy the roles you care about into a CSV in your data/imports/ folder named techjob-<anything>.csv (e.g. techjob-2026-06.csv). Required columns: url, title. Optional: company, location, description, posted_at (ISO date). Headers are case-insensitive. Turn this provider on and the next search run ingests every techjob-*.csv file."
+    },
+    {
+      "id": 37,
+      "name": "workday-lego",
+      "displayName": "LEGO (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://lego.wd103.myworkdayjobs.com/wday/cxs/lego/LEGO_External/jobs",
+      "bodyTemplate": { "searchText": "software", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 3 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://lego.wd103.myworkdayjobs.com/en-US/LEGO_External{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "LEGO" },
+      "rateLimitRps": 1.0,
+      "notes": "LEGO's Workday career site via the public CXS JSON endpoint (POST, no auth). The list response has no description, so body enrichment fetches each job page and pulls the posting text from its embedded JSON-LD. postedOn is relative text, so the posting date stays unknown. searchText 'software' pre-filters ~40 global engineering roles (Billund-heavy); location ranking handles the rest. Some postings omit locationsText. Verified 2026-06-12."
+    },
+    {
+      "id": 38,
+      "name": "workday-simcorp",
+      "displayName": "SimCorp (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://simcorp.wd3.myworkdayjobs.com/wday/cxs/simcorp/SimCorp_Jobs/jobs",
+      "bodyTemplate": { "searchText": "developer", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 14 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://simcorp.wd3.myworkdayjobs.com/en-US/SimCorp_Jobs{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "SimCorp" },
+      "rateLimitRps": 1.0,
+      "notes": "SimCorp's Workday career site via the public CXS JSON endpoint (POST, no auth). ~270 global roles unfiltered — searchText 'developer' narrows to engineering; Copenhagen HQ roles rank up via location. Body enrichment pulls each posting's text from the job page's embedded JSON-LD; no posting date (relative text only). Verified 2026-06-12."
+    },
+    {
+      "id": 39,
+      "name": "workday-maersk",
+      "displayName": "Maersk (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://maersk.wd3.myworkdayjobs.com/wday/cxs/maersk/Maersk_Careers/jobs",
+      "bodyTemplate": { "searchText": "software", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 5 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://maersk.wd3.myworkdayjobs.com/en-US/Maersk_Careers{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "Maersk" },
+      "rateLimitRps": 1.0,
+      "notes": "Maersk's Workday career site via the public CXS JSON endpoint (POST, no auth). Site name is 'Maersk_Careers' — 'Maersk' alone 404s; the 6-job 'PT_Careers' side board is ignored. ~70 software roles globally, large Copenhagen tech hub. Body enrichment pulls each posting's text from the job page's embedded JSON-LD; no posting date (relative text only). Verified 2026-06-12."
+    },
+    {
+      "id": 40,
+      "name": "lever-h1",
+      "displayName": "H1 (Lever)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://api.lever.co/v0/postings/h1",
+      "queryParams": { "mode": "json" },
+      "responseMapping": {
+        "id": "id",
+        "title": "text",
+        "location": "categories.location",
+        "description": "descriptionPlain",
+        "url": "hostedUrl"
+      },
+      "staticFields": { "company": "H1" },
+      "rateLimitRps": 1.0,
+      "notes": "H1 (h1.co, healthcare-data platform) on Lever's public postings API — no auth, full plain-text descriptions inline. The response is a bare array, so no items_path. ~20 global roles incl. Copenhagen hybrid positions; createdAt is epoch millis which the date parser ignores, so the posting date stays unknown. Verified 2026-06-12."
+    },
+    {
+      "id": 41,
+      "name": "html-nordea",
+      "displayName": "Nordea (careers site)",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://careers.nordea.com/search-jobs",
+      "html": {
+        "listSelector": "tr.data-row",
+        "titleSelector": "a.jobTitle-link",
+        "linkSelector": "a.jobTitle-link",
+        "locationSelector": ".jobLocation",
+        "urlAttribute": "href"
+      },
+      "pagination": { "param": "startrow", "start": 0, "step": 100, "size": 100, "maxPages": 5 },
+      "staticFields": { "company": "Nordea" },
+      "rateLimitRps": 1.0,
+      "notes": "Nordea's SuccessFactors career site — the search page server-renders 100 openings per page (global; Copenhagen roles rank up via location). robots.txt permits the search and job pages. Body enrichment fetches each server-rendered job page for the full description. Verified 2026-06-12."
+    },
+    {
+      "id": 42,
+      "name": "html-pandora",
+      "displayName": "Pandora (careers site)",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://careers.pandoragroup.com/jobs",
+      "html": {
+        "listSelector": "li.results-list__item",
+        "titleSelector": "a.results-list__item-title--link",
+        "linkSelector": "a.results-list__item-title--link",
+        "locationSelector": ".results-list__item-street--label",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "Pandora" },
+      "rateLimitRps": 1.0,
+      "notes": "Pandora Group's careers site (SuccessFactors behind a server-rendered list) — 10 openings per page across all functions; most tech roles sit in Copenhagen HQ. Body enrichment fetches each job page for the full description. Verified 2026-06-12. NOT paginated: the list is JS/XHR-loaded and the server-rendered fallback repeats the same 10 items for every ?page=N (confirmed 2026-07-05), so the adapter's no-new-items guard stops after page 1. Finding the underlying XHR jobs endpoint is the way to get the full list."
+    },
+    {
+      "id": 43,
+      "name": "html-pfa",
+      "displayName": "PFA (job site)",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.pfa.dk/om-pfa/job-i-pfa/ledige-job/",
+      "html": {
+        "listSelector": "li.jobs-listing__list-item:not(.jobs-listing__list-item--header)",
+        "titleSelector": "button",
+        "linkSelector": "a.cta-btn",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "PFA", "location": "København, Danmark" },
+      "rateLimitRps": 1.0,
+      "notes": "PFA Pension's own job page, which server-renders the open positions (the underlying SuccessFactors ATS has no public API). All PFA roles are at the Copenhagen HQ, so location is set statically. robots.txt only disallows /soegning/. Body enrichment fetches each SuccessFactors job page for the full description. Verified 2026-06-12."
+    },
+    {
+      "id": 44,
+      "name": "oracle-danskebank",
+      "displayName": "Danske Bank (Oracle)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://ejqi.fa.ocs.oraclecloud.eu/hcmRestApi/resources/latest/recruitingCEJobRequisitions",
+      "queryParams": {
+        "onlyData": "true",
+        "expand": "requisitionList.secondaryLocations",
+        "finder": "findReqs;siteNumber=CX_1001,limit=200,sortBy=POSTING_DATES_DESC"
+      },
+      "responseMapping": {
+        "items_path": "items.0.requisitionList",
+        "id": "Id",
+        "title": "Title",
+        "location": "PrimaryLocation",
+        "url_template": "https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/job/{Id}",
+        "posted_at": "PostedDate"
+      },
+      "staticFields": { "company": "Danske Bank" },
+      "rateLimitRps": 1.0,
+      "notes": "Danske Bank's Oracle Recruiting Cloud via the anonymous REST endpoint (no auth). The 'expand' param is required or the list comes back empty; requisitions sit at items[0].requisitionList (numeric path segments). ~145 open roles across DK/LT/IN — newest 100 fetched, location ranking sorts the rest. Real ISO posting dates. Body enrichment pulls description text from each job page. Verified 2026-06-12."
+    },
+    {
+      "id": 45,
+      "name": "teamtailor-twoday",
+      "displayName": "twoday (TeamTailor)",
+      "type": "teamtailor",
+      "enabled": true,
+      "endpoint": "https://twodaydenmark.teamtailor.com/sitemap.xml",
+      "staticFields": { "company": "twoday" },
+      "rateLimitRps": 1.0,
+      "notes": "twoday Denmark (large DK .NET/data consultancy, ex-NetCompany Group A/S sibling) on TeamTailor. Sitemap carried 22 open DK roles on 2026-06-12 — architects, DBAs, .NET consultants. Same sitemap + JSON-LD pattern as Danske Spil."
+    },
+    {
+      "id": 46,
+      "name": "teamtailor-templafy",
+      "displayName": "Templafy (TeamTailor)",
+      "type": "teamtailor",
+      "enabled": true,
+      "endpoint": "https://templafy.teamtailor.com/sitemap.xml",
+      "staticFields": { "company": "Templafy" },
+      "rateLimitRps": 1.0,
+      "notes": "Templafy (Copenhagen B2B SaaS, .NET/Azure stack) on TeamTailor. Few openings at a time (3 on 2026-06-12) but squarely in the user's market when they hire."
+    },
+    {
+      "id": 47,
+      "name": "oracle-milestone",
+      "displayName": "Milestone Systems (Oracle)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://fa-ewto-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions",
+      "queryParams": {
+        "onlyData": "true",
+        "expand": "requisitionList.secondaryLocations",
+        "finder": "findReqs;siteNumber=CX_1001,limit=100,sortBy=POSTING_DATES_DESC"
+      },
+      "responseMapping": {
+        "items_path": "items.0.requisitionList",
+        "id": "Id",
+        "title": "Title",
+        "location": "PrimaryLocation",
+        "url_template": "https://fa-ewto-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/{Id}",
+        "posted_at": "PostedDate"
+      },
+      "staticFields": { "company": "Milestone Systems" },
+      "rateLimitRps": 1.0,
+      "notes": "Milestone Systems (Brøndby video-software house, big C#/.NET org) on Oracle Recruiting Cloud — same anonymous REST pattern as Danske Bank. ~25 open roles on 2026-06-12 incl. engineering squads. Body enrichment pulls description text from each job page."
+    },
+    {
+      "id": 48,
+      "name": "hr-manager-eg",
+      "displayName": "EG A/S (HR-Manager.net)",
+      "type": "hrmanager",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://candidate.hr-manager.net/vacancies/list.aspx?customer=eg",
+      "rateLimitRps": 1.0,
+      "notes": "EG A/S (major DK vertical-software house, heavy .NET) on HR-Manager.net — same PositionList JSON pattern as DR and CHANGE, addressed by customer=eg. ~60 open positions across DK/NO/SE on 2026-06-12."
+    },
+    {
+      "id": 49,
+      "name": "workday-stibo",
+      "displayName": "Stibo Systems (Workday)",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://stibosystems.wd3.myworkdayjobs.com/wday/cxs/stibosystems/careers-at-stibo-systems/jobs",
+      "bodyTemplate": { "searchText": "", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 2 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://stibosystems.wd3.myworkdayjobs.com/en-US/careers-at-stibo-systems{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "Stibo Systems" },
+      "rateLimitRps": 1.0,
+      "notes": "Stibo Systems (Aarhus-HQ MDM software, .NET/Java) on Workday — same CXS pattern as LEGO/SimCorp/Maersk. Only ~15 roles globally so no searchText filter; location ranking handles the US offices. Body enrichment via job-page JSON-LD."
+    },
+    {
+      "id": 50,
+      "name": "workday-saxobank",
+      "displayName": "Saxo Bank",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "method": "post",
+      "endpoint": "https://saxobank.wd3.myworkdayjobs.com/wday/cxs/saxobank/CareeratSaxoBank/jobs",
+      "bodyTemplate": { "searchText": "", "limit": 20, "offset": 0 },
+      "pagination": { "param": "offset", "start": 0, "step": 20, "sizeParam": "limit", "size": 20, "maxPages": 10 },
+      "responseMapping": {
+        "items_path": "jobPostings",
+        "id": "externalPath",
+        "title": "title",
+        "location": "locationsText",
+        "url_template": "https://saxobank.wd3.myworkdayjobs.com/en-US/CareeratSaxoBank{externalPath}",
+        "posted_at": "postedOn"
+      },
+      "staticFields": { "company": "Saxo Bank" },
+      "rateLimitRps": 1.0,
+      "notes": "Saxo Bank (Copenhagen trading tech, strong C#/.NET/SQL) on Workday CXS. ~79 roles globally (large Gurugram share); location ranking prunes non-DK. Added 2026-07-06."
+    },
+    {
+      "id": 51,
+      "name": "nykredit-talentsoft",
+      "displayName": "Nykredit",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://www.nykredit.com/api/talentsoft/getfilteredjoblist/",
+      "responseMapping": {
+        "id": "reference",
+        "title": "title",
+        "location": "city",
+        "url_template": "https://www.nykredit.com/karriere/stillinger/stilling/?jobId={reference}"
+      },
+      "staticFields": { "company": "Nykredit" },
+      "rateLimitRps": 1.0,
+      "notes": "Nykredit koncern (incl. Spar Nord) via its own Talentsoft proxy — bare JSON array (no items_path, like Lever). All DK. Detail pages are JS-rendered so no body enrichment. Added 2026-07-06."
+    },
+    {
+      "id": 52,
+      "name": "teamtailor-lunar",
+      "displayName": "Lunar",
+      "type": "teamtailor",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://jobs.lunar.app/sitemap.xml",
+      "staticFields": { "company": "Lunar" },
+      "rateLimitRps": 1.0,
+      "notes": "Lunar (DK/Nordic fintech, Aarhus/Copenhagen) on TeamTailor via vanity domain jobs.lunar.app. Added 2026-07-06."
+    },
+    {
+      "id": 53,
+      "name": "html-jyskebank",
+      "displayName": "Jyske Bank",
+      "type": "html",
+      "enabled": false,
+      "enrichBody": true,
+      "endpoint": "https://medarbejder.jyskebank.dk/job",
+      "headers": {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "da,en;q=0.9"
+      },
+      "html": {
+        "listSelector": "a[href*=\"jobopslag?id=\"]",
+        "titleSelector": "span.decoration-from-font",
+        "linkSelector": ":scope",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "Jyske Bank", "location": "Denmark" },
+      "rateLimitRps": 1.0,
+      "notes": "Jyske Bank self-hosted SSR job list. Disabled 2026-07-06: the site returns 200 to a browser/curl but 403s the app's HTTP client (TLS-fingerprint/WAF bot protection) even with browser headers. Not bypassing anti-bot per policy — left as a manual candidate. Selectors kept for if the block is lifted."
+    },
+    {
+      "id": 54,
+      "name": "html-cbrain",
+      "displayName": "cBrain",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://www.cbrain.com/company/careers",
+      "html": {
+        "listSelector": "a.job",
+        "titleSelector": ".heading-four",
+        "linkSelector": ":scope",
+        "locationSelector": ".job-city-country-wrapper",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "cBrain" },
+      "rateLimitRps": 1.0,
+      "notes": "cBrain (Copenhagen, F2 platform .NET) — Webflow server-rendered job cards; list item is the anchor (linkSelector :scope). Added 2026-07-06."
+    },
+    {
+      "id": 55,
+      "name": "bamboohr-configit",
+      "displayName": "Configit",
+      "type": "api",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://configit.bamboohr.com/careers/list",
+      "responseMapping": {
+        "items_path": "result",
+        "id": "id",
+        "title": "jobOpeningName",
+        "location": "location.city",
+        "url_template": "https://configit.bamboohr.com/careers/{id}"
+      },
+      "staticFields": { "company": "Configit" },
+      "rateLimitRps": 1.0,
+      "notes": "Configit (Copenhagen, C#/.NET configuration software) on BambooHR — public careers/list JSON (items under 'result'). No inline description so body enrichment fetches each /careers/{id}. Added 2026-07-06."
+    },
+    {
+      "id": 56,
+      "name": "teamtailor-e-conomic",
+      "displayName": "Visma e-conomic",
+      "type": "teamtailor",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://career.e-conomic.com/sitemap.xml",
+      "staticFields": { "company": "Visma e-conomic" },
+      "rateLimitRps": 1.0,
+      "notes": "Visma e-conomic (Copenhagen, .NET accounting SaaS) on TeamTailor via vanity domain career.e-conomic.com. Added 2026-07-06."
+    },
+    {
+      "id": 57,
+      "name": "mjolner-rss",
+      "displayName": "Mjølner Informatics",
+      "type": "rss",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "http://api.hr-manager.net/jobportal.svc/mjolner/positionlist/rss/",
+      "staticFields": { "company": "Mjølner Informatics" },
+      "rateLimitRps": 1.0,
+      "notes": "Mjølner Informatics (Aarhus/Silkeborg, C#/.NET & Azure consultancy). Its HR-Manager list.aspx (cid=1245) uses the newer template without the embedded PositionList JSON, so we use the HR-Manager RSS mirror instead — carries the real .NET/Azure roles. Added 2026-07-06."
+    },
+    {
+      "id": 58,
+      "name": "teamtailor-bankdata",
+      "displayName": "Bankdata",
+      "type": "teamtailor",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://bankdata.teamtailor.com/sitemap.xml",
+      "staticFields": { "company": "Bankdata" },
+      "rateLimitRps": 1.0,
+      "notes": "Bankdata (Fredericia banking IT, .NET/data) on TeamTailor. All DK. Added 2026-07-06."
+    },
+    {
+      "id": 59,
+      "name": "hr-manager-bec",
+      "displayName": "BEC Financial Technologies",
+      "type": "hrmanager",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://candidate.hr-manager.net/vacancies/list.aspx?cid=1017",
+      "staticFields": { "company": "BEC Financial Technologies" },
+      "rateLimitRps": 1.0,
+      "notes": "BEC Financial Technologies (Roskilde banking IT) on HR-Manager.net — ~24 roles (DK + some Warsaw). Added 2026-07-06."
+    },
+    {
+      "id": 60,
+      "name": "greenhouse-solita",
+      "displayName": "Solita (ex-Commentor)",
+      "type": "api",
+      "enabled": true,
+      "endpoint": "https://boards-api.greenhouse.io/v1/boards/solita/jobs",
+      "queryParams": { "content": "true" },
+      "responseMapping": {
+        "items_path": "jobs",
+        "id": "id",
+        "title": "title",
+        "location": "location.name",
+        "description": "content",
+        "url": "absolute_url",
+        "posted_at": "updated_at"
+      },
+      "staticFields": { "company": "Solita" },
+      "rateLimitRps": 1.0,
+      "notes": "Solita (absorbed the Danish Commentor .NET team) on Greenhouse — Nordic-wide board, ~5-6 DK roles incl. Microsoft full-stack; location ranking prunes FI/SE. Added 2026-07-06."
+    },
+    {
+      "id": 61,
+      "name": "html-systematic",
+      "displayName": "Systematic",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://jobs.systematic.com/go/All-Jobs/4281501/?sortColumn=referencedate&sortDirection=desc",
+      "html": {
+        "listSelector": "tr.data-row",
+        "titleSelector": "a.jobTitle-link",
+        "linkSelector": "a.jobTitle-link",
+        "locationSelector": "span.jobLocation",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "Systematic" },
+      "rateLimitRps": 1.0,
+      "notes": "Systematic (Aarhus, C#/.NET defence & health software) on a SuccessFactors 'go' career site — same tr.data-row markup as Nordea, server-rendered. This endpoint ignores the startrow cursor (returns the 10 newest regardless), so no pagination — it surfaces the 10 most-recent roles only. Added 2026-07-06."
+    },
+    {
+      "id": 62,
+      "name": "html-nine",
+      "displayName": "Nine",
+      "type": "html",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://nine.dk/karriere/ledige-stillinger/",
+      "headers": {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "da,en;q=0.9"
+      },
+      "html": {
+        "listSelector": "a.job-item",
+        "titleSelector": "h3[itemprop='title']",
+        "linkSelector": ":scope",
+        "locationSelector": "p[itemprop='jobLocation']",
+        "urlAttribute": "href"
+      },
+      "staticFields": { "company": "Nine" },
+      "rateLimitRps": 1.0,
+      "notes": "Nine (Copenhagen, Trifork group) — WordPress SSR job list with schema.org microdata; list item is the anchor (linkSelector :scope). Small; currently Java-heavy. Added 2026-07-06."
+    },
+    {
+      "id": 63,
+      "name": "teamtailor-trifork",
+      "displayName": "Trifork",
+      "type": "teamtailor",
+      "enabled": true,
+      "enrichBody": true,
+      "endpoint": "https://trifork.teamtailor.com/sitemap.xml",
+      "staticFields": { "company": "Trifork" },
+      "rateLimitRps": 1.0,
+      "notes": "Trifork group TeamTailor. Note: Trifork is federated (~69 units); this feed carries mostly group/UK corporate roles, not the Aarhus/Copenhagen .NET dev jobs — low DK yield. Added 2026-07-06."
+    },
+    {
+      "id": 64,
+      "name": "successfactors-grundfos",
+      "displayName": "Grundfos (SuccessFactors CSB)",
+      "type": "api",
+      "enabled": false,
+      "method": "post",
+      "endpoint": "https://jobs.grundfos.com/services/recruiting/v1/jobs",
+      "bodyTemplate": { "searchText": "", "locale": "en_GB", "start": 0, "count": 10 },
+      "pagination": { "param": "start", "start": 0, "step": 10, "sizeParam": "count", "size": 10, "maxPages": 3 },
+      "responseMapping": {
+        "items_path": "jobSearchResult",
+        "id": "response.id",
+        "title": "response.unifiedStandardTitle",
+        "location": "response.jobLocationShort.0",
+        "url_template": "https://jobs.grundfos.com/job/{response.urlTitle}/{response.id}",
+        "posted_at": "response.unifiedStandardStart"
+      },
+      "staticFields": { "company": "Grundfos" },
+      "rateLimitRps": 1.0,
+      "notes": "Reference example for SAP SuccessFactors Career Site Builder (CSB): the no-auth JSON API POST /services/recruiting/v1/jobs, items wrapped in a 'response' object, location as an array — all handled by the generic api adapter (response.* dot-paths + .0 array index in responseMapping and, since 2026-07-06, in url_template). DISABLED on purpose: Grundfos is a global industrial employer (239 roles, mostly pumps/mechanical/sales outside DK) and CSB's searchText does not filter, so enabling it would flood the pool with irrelevant non-DK/non-.NET roles. Kept as a working template — clone it for a DK .NET-heavy CSB tenant and flip enabled. maxPages capped at 3 for the same reason."
     }
   ]
 }

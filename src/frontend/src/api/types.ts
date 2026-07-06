@@ -4,7 +4,7 @@ export type WhoamiResponse = {
   toolVersion: string
 }
 
-export type ProviderType = 'api' | 'rss' | 'html' | 'manual'
+export type ProviderType = 'api' | 'rss' | 'html' | 'manual' | 'teamtailor' | 'hrmanager'
 
 export type ProviderSummary = {
   id: number
@@ -19,6 +19,7 @@ export type ProviderSummary = {
   lastFetchCount?: number
   requiresSecret?: string
   hasSecret: boolean
+  removable: boolean
 }
 
 export type ProvidersResponse = { providers: ProviderSummary[] }
@@ -50,6 +51,19 @@ export type ProviderTestResult = {
 
 export type CreateResponse = { success: boolean; id: number; error?: string }
 
+// Add-a-source flow. A detected candidate is referenced back to the server by `kind` (+ the pasted
+// url) so the client never authors a raw endpoint or field mapping.
+export type DetectedSource = {
+  kind: string
+  displayName: string
+  summary: string
+  duplicateWarning?: string
+}
+
+export type DetectSourceResponse = { candidates: DetectedSource[] }
+
+export type ProviderCreatedResponse = { id: number }
+
 export type SkillsetResponse = {
   name: string
   location: string
@@ -66,6 +80,7 @@ export type SkillsetResponse = {
   country?: string | null
   region?: string | null
   metro: string[]
+  preferredCompanies: string[]
 }
 
 export type SkillsetUpdateRequest = {
@@ -84,6 +99,7 @@ export type SkillsetUpdateRequest = {
   country?: string | null
   region?: string | null
   metro: string[]
+  preferredCompanies: string[]
 }
 
 export type SearchRequest = {
@@ -106,23 +122,76 @@ export type ListingMatch = {
   reasoning: string
   primaryStackHits: string[]
   secondaryStackHits: string[]
+  favoriteCompany?: boolean
 }
-
-export type SearchProgressEvent =
-  | { type: 'started'; total: number }
-  | { type: 'provider_running'; provider: string; index: number; total: number }
-  | { type: 'provider_done'; provider: string; fetchedCount: number; index: number; total: number }
-  | { type: 'provider_failed'; provider: string; error: string; index: number; total: number }
-  | { type: 'dedupe'; mergedCount: number }
-  | { type: 'rank'; rankedCount: number; topScore: number }
-  | { type: 'complete'; runId: string; shortlist: ListingMatch[] }
-  | { type: 'error'; message: string }
 
 export type ProviderRunStatus = {
   name: string
-  status: 'ok' | 'failed'
+  status: 'pending' | 'running' | 'ok' | 'failed'
   fetchedCount?: number
   error?: string
+}
+
+// Background search lifecycle — mirrors the backend JobSearch aggregate. Enum values are camelCase
+// to match the API's JsonStringEnumConverter (e.g. JobSearchPhase.LlmJudging → "llmJudging").
+export type JobSearchState =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled'
+  | 'interrupted'
+
+export type JobSearchPhase =
+  | 'pending'
+  | 'fetching'
+  | 'deduping'
+  | 'ranking'
+  | 'llmJudging'
+  | 'writing'
+  | 'done'
+
+export type JobSearchEvent = {
+  timestamp: string
+  level: 'info' | 'warn' | 'error'
+  phase: JobSearchPhase
+  message: string
+  provider?: string
+  count?: number
+}
+
+export type JobSearch = {
+  id: string
+  state: JobSearchState
+  phase: JobSearchPhase
+  request: SearchRequest
+  createdAt: string
+  startedAt?: string
+  finishedAt?: string
+  providers: ProviderRunStatus[]
+  fetchedCount: number
+  dedupedCount: number
+  rankedCount: number
+  shortlistCount: number
+  topScore: number
+  error?: string
+  hangfireJobId?: string
+  attempt: number
+  lastHeartbeat: string
+  timeline: JobSearchEvent[]
+}
+
+export type StartSearchResponse = { id: string }
+
+export const JOB_SEARCH_TERMINAL_STATES: JobSearchState[] = [
+  'succeeded',
+  'failed',
+  'cancelled',
+  'interrupted',
+]
+
+export function isTerminalState(state: JobSearchState): boolean {
+  return JOB_SEARCH_TERMINAL_STATES.includes(state)
 }
 
 export type RunSummary = {
@@ -135,6 +204,8 @@ export type RunSummary = {
   shortlistCount: number
   topScore: number
   goodMarks: number
+  state?: JobSearchState
+  phase?: JobSearchPhase
 }
 
 export type HistoryResponse = { runs: RunSummary[] }
@@ -206,6 +277,7 @@ export type RunDetail = RunSummary & {
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
   dropped?: DroppedEntry[]
+  timeline?: JobSearchEvent[]
 }
 
 export type MarkRequest = {
@@ -219,3 +291,17 @@ export type SaveResponse = { success: boolean; error?: string }
 
 export type DeleteHistoryRequest = { runIds: string[] }
 export type DeleteHistoryResponse = { deleted: number; missing: string[]; error?: string }
+
+export type ImportResponse = { restored: number; skipped: number; warnings: string[] }
+
+export type SetupStatusResponse = {
+  configured: boolean
+  profileExists: boolean
+  email: string | null
+  dataDir: string | null
+  suggestedEmail: string
+  suggestedDataDir: string
+  bootstrapPath: string
+}
+
+export type SetupRequest = { email: string; dataDir: string }

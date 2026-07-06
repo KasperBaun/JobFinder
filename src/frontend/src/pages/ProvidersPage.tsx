@@ -4,18 +4,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getProviders, setProviderEnabled, testProvider } from '../api/client'
 import type { ProviderSummary, ProviderTestResult } from '../api/types'
 import { Toast } from '../components/Toast'
+import { AddSourceModal } from '../components/AddSourceModal'
 import { formatRelative } from '../utils/time'
 
-type Health = 'working' | 'failing' | 'stale' | 'untested'
+type Health = 'working' | 'failing' | 'stale' | 'untested' | 'blocked'
 
 type SessionTest = { kind: 'pending' } | { kind: 'done'; result: ProviderTestResult }
 
 const STALE_DAYS = 14
 
+// A source needs a key it doesn't have. Search skips it (see ProviderStateMerger), so it's "On but
+// won't run" — flag it here instead of letting it read as OK/stale.
+function isBlocked(p: ProviderSummary): boolean {
+  return p.enabled && !!p.requiresSecret && !p.hasSecret
+}
+
 function classifyHealth(p: ProviderSummary, sessionTest?: SessionTest): Health {
   if (sessionTest?.kind === 'done') {
     return sessionTest.result.ok ? 'working' : 'failing'
   }
+  if (isBlocked(p)) return 'blocked'
   if (!p.lastFetchedAt) return 'untested'
   const ageMs = Date.now() - new Date(p.lastFetchedAt).getTime()
   const stale = ageMs > STALE_DAYS * 24 * 60 * 60 * 1000
@@ -28,6 +36,25 @@ const HEALTH_LABEL: Record<Health, string> = {
   failing: 'failing',
   stale: 'stale',
   untested: 'not tested yet',
+  blocked: 'needs key',
+}
+
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'on', label: 'On' },
+  { key: 'off', label: 'Off' },
+  { key: 'failing', label: 'Failing' },
+] as const
+type FilterKey = (typeof FILTERS)[number]['key']
+
+// The filter chips double as the source summary, so their counts carry the same tone the old
+// stats card used: enabled = good, failing = bad, off = muted. Zero failing stays neutral so an
+// empty "Failing 0" doesn't read as an alert.
+function countTone(key: FilterKey, counts: Record<FilterKey, number>): 'good' | 'bad' | 'muted' | undefined {
+  if (key === 'on') return counts.on > 0 ? 'good' : undefined
+  if (key === 'failing') return counts.failing > 0 ? 'bad' : undefined
+  if (key === 'off') return 'muted'
+  return undefined
 }
 
 export function ProvidersPage() {
@@ -35,6 +62,9 @@ export function ProvidersPage() {
   const { data, isLoading, error } = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
   const [tests, setTests] = useState<Record<number, SessionTest>>({})
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<FilterKey>('all')
+  const [adding, setAdding] = useState(false)
 
   const toggle = useMutation({
     mutationFn: async ({ p, enabled }: { p: ProviderSummary; enabled: boolean }) => {
@@ -88,12 +118,35 @@ export function ProvidersPage() {
     },
   })
 
-  const stats = useMemo(() => {
-    if (!data) return null
-    const total = data.providers.length
-    const enabled = data.providers.filter((p) => p.enabled).length
-    return { total, enabled, disabled: total - enabled }
-  }, [data])
+  // Health depends on session test results as well as last-fetch metadata, so both the "failing"
+  // count and the "failing" filter recompute when a Test finishes.
+  const health = useMemo(() => {
+    const m = new Map<number, Health>()
+    for (const p of data?.providers ?? []) m.set(p.id, classifyHealth(p, tests[p.id]))
+    return m
+  }, [data, tests])
+
+  const counts = useMemo(() => {
+    const ps = data?.providers ?? []
+    return {
+      all: ps.length,
+      on: ps.filter((p) => p.enabled).length,
+      off: ps.filter((p) => !p.enabled).length,
+      failing: ps.filter((p) => health.get(p.id) === 'failing').length,
+    }
+  }, [data, health])
+
+  const filtered = useMemo(() => {
+    const ps = data?.providers ?? []
+    const q = query.trim().toLowerCase()
+    return ps.filter((p) => {
+      if (filter === 'on' && !p.enabled) return false
+      if (filter === 'off' && p.enabled) return false
+      if (filter === 'failing' && health.get(p.id) !== 'failing') return false
+      if (q && !`${p.displayName} ${p.name} ${p.type}`.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [data, query, filter, health])
 
   return (
     <div className="page page--wide">
@@ -104,31 +157,81 @@ export function ProvidersPage() {
           <div className="page__eyebrow">01 / sources</div>
           <h1 className="page__heading">Job <em>sites</em></h1>
           <p className="page__lede">
-            Where listings come from. Turn each one on or off, test it, or edit it.
+            Where listings come from. Turn each one on or off, test it, or add your own.
           </p>
         </div>
+        <button type="button" className="btn btn--primary" onClick={() => setAdding(true)}>
+          + Add a source
+        </button>
       </header>
+
+      {adding && (
+        <AddSourceModal
+          onClose={() => setAdding(false)}
+          onCreated={(_id, name) => {
+            setAdding(false)
+            void queryClient.invalidateQueries({ queryKey: ['providers'] })
+            setToast({ kind: 'ok', message: `Added ${name}.` })
+          }}
+        />
+      )}
 
       {isLoading && <div className="muted">Loading sources…</div>}
       {error && <div className="error-text">Failed to load sources.</div>}
 
-      {stats && (
-        <div className="provider-stats">
-          <Stat label="total" value={stats.total} />
-          <Stat label="on" value={stats.enabled} tone={stats.enabled > 0 ? 'good' : undefined} />
-          <Stat label="off" value={stats.disabled} tone="muted" />
+      {data && data.providers.length > 0 && (
+        <div className="provider-toolbar">
+          <input
+            type="search"
+            className="input provider-toolbar__search"
+            placeholder="Search sources…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search sources by name"
+          />
+          <div className="provider-toolbar__filters" role="group" aria-label="Filter sources">
+            {FILTERS.map((f) => {
+              const tone = countTone(f.key, counts)
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={filter === f.key ? 'chip chip--active' : 'chip'}
+                  onClick={() => setFilter(f.key)}
+                  aria-pressed={filter === f.key}
+                >
+                  {f.label}{' '}
+                  <span
+                    className={`provider-toolbar__count${tone ? ` provider-toolbar__count--${tone}` : ''}`}
+                  >
+                    {counts[f.key]}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 
       {data && data.providers.length === 0 && (
         <div className="hint-card">
-          No job sites set up yet.
+          <p>No job sites set up yet.</p>
+          <button type="button" className="btn btn--primary btn--sm" onClick={() => setAdding(true)}>
+            + Add your first source
+          </button>
         </div>
       )}
 
-      {data && data.providers.length > 0 && (
+      {data && data.providers.length > 0 && filtered.length === 0 && (
+        <div className="hint-card">
+          No sources match{query.trim() ? ` “${query.trim()}”` : ''}
+          {filter !== 'all' ? ` in “${filter}”` : ''}.
+        </div>
+      )}
+
+      {filtered.length > 0 && (
         <div className="provider-grid">
-          {data.providers.map((p) => {
+          {filtered.map((p) => {
             const session = tests[p.id]
             const health = classifyHealth(p, session)
             const testing = session?.kind === 'pending'
@@ -154,6 +257,8 @@ export function ProvidersPage() {
                       session.result.ok
                         ? `tested · ${session.result.fetchedCount} jobs · ${session.result.durationMs}ms`
                         : `tested · ${truncate(session.result.error ?? 'failed', 32)}`
+                    ) : health === 'blocked' ? (
+                      "won't run until keyed"
                     ) : p.lastFetchedAt ? (
                       `${formatRelative(p.lastFetchedAt)}${typeof p.lastFetchCount === 'number' ? ` · ${p.lastFetchCount} jobs` : ''}`
                     ) : (
@@ -163,8 +268,8 @@ export function ProvidersPage() {
                 </div>
 
                 {p.requiresSecret && !p.hasSecret && (
-                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`${p.displayName} needs ${friendlySecretLabel(p.requiresSecret)}`}>
-                    needs {friendlySecretLabel(p.requiresSecret).toLowerCase()} →
+                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`Add ${friendlySecretLabel(p.requiresSecret)} for ${p.displayName}`}>
+                    Add {friendlySecretLabel(p.requiresSecret)} →
                   </Link>
                 )}
 
@@ -186,9 +291,10 @@ export function ProvidersPage() {
                     checked={p.enabled}
                     onChange={(e) => toggle.mutate({ p, enabled: e.target.checked })}
                     disabled={toggle.isPending}
-                    aria-label={`${p.displayName} on`}
+                    aria-label={`Enable ${p.displayName}`}
                   />
-                  <span>{p.enabled ? 'On' : 'Off'}</span>
+                  <span className="provider-tile__switch" aria-hidden="true" />
+                  <span className="provider-tile__toggle-label">{p.enabled ? 'On' : 'Off'}</span>
                 </label>
               </article>
             )
@@ -196,15 +302,6 @@ export function ProvidersPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'good' | 'bad' | 'warn' | 'muted' }) {
-  return (
-    <span className={`provider-stats__item${tone ? ` provider-stats__item--${tone}` : ''}`}>
-      <span className="provider-stats__value">{value}</span>
-      <span className="provider-stats__label">{label}</span>
-    </span>
   )
 }
 
@@ -219,11 +316,13 @@ function truncate(s: string, max: number): string {
 
 function friendlyType(type: string): string {
   switch (type) {
-    case 'api':    return 'Auto-fetched'
-    case 'rss':    return 'News feed'
-    case 'html':   return 'Read from website'
-    case 'manual': return 'Manual import'
-    default:       return type
+    case 'api':        return 'Auto-fetched'
+    case 'rss':        return 'News feed'
+    case 'html':       return 'Read from website'
+    case 'teamtailor': return 'Auto-fetched'
+    case 'hrmanager':  return 'Auto-fetched'
+    case 'manual':     return 'Manual import'
+    default:           return type
   }
 }
 

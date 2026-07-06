@@ -49,6 +49,39 @@ public sealed class RankingConfigLoaderTests
     }
 
     [Fact]
+    public void Parse_PreferredCompanyBoost_When_Present()
+    {
+        var yaml = """
+            weights:
+              primary_stack: 1.0
+              secondary_stack: 0.0
+              seniority: 0.0
+              location_remote: 0.0
+              domain: 0.0
+              freshness: 0.0
+            preferred_company_boost: 1.5
+            """;
+        var cfg = RankingConfigLoader.Parse(yaml);
+        Assert.Equal(1.5, cfg.PreferredCompanyBoost);
+    }
+
+    [Fact]
+    public void Parse_PreferredCompanyBoost_Defaults_When_Missing()
+    {
+        var yaml = """
+            weights:
+              primary_stack: 1.0
+              secondary_stack: 0.0
+              seniority: 0.0
+              location_remote: 0.0
+              domain: 0.0
+              freshness: 0.0
+            """;
+        var cfg = RankingConfigLoader.Parse(yaml);
+        Assert.Equal(1.25, cfg.PreferredCompanyBoost);
+    }
+
+    [Fact]
     public void Parse_MaxAgeDays_When_Present()
     {
         var yaml = """

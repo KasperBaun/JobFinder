@@ -18,6 +18,10 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
         MapUpdate(group);
         MapTest(group);
         MapSetSecrets(group);
+        MapDetect(group);
+        MapPreviewTest(group);
+        MapCreate(group);
+        MapDelete(group);
     }
 
     private static void MapList(RouteGroupBuilder group)
@@ -95,6 +99,73 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
             .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.SetSecrets)}")
             .WithSummary("Set provider secrets")
             .WithDescription("Persists provider-specific secret values (e.g. API keys) for the active user.")
+            .Produces<SaveResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError);
+    }
+
+    private static void MapDetect(RouteGroupBuilder group)
+    {
+        group.MapPost(
+                Routes.Providers.Detect,
+                (
+                    [FromServices] IProvidersHandler handler,
+                    [FromBody] DetectSourceRequest? request)
+                    => handler.Detect(request))
+            .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.Detect)}")
+            .WithSummary("Detect a source from a URL")
+            .WithDescription("Recognises known ATS job boards and RSS feeds from a pasted URL and returns addable candidates.")
+            .Produces<DetectSourceResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError);
+    }
+
+    private static void MapPreviewTest(RouteGroupBuilder group)
+    {
+        group.MapPost(
+                Routes.Providers.PreviewTest,
+                (
+                    [FromServices] IProvidersHandler handler,
+                    [FromBody] PreviewSourceRequest? request,
+                    CancellationToken ct)
+                    => handler.PreviewTest(request, ct))
+            .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.PreviewTest)}")
+            .WithSummary("Preview-test a detected source")
+            .WithDescription("Runs a live fetch against a detected (not-yet-saved) candidate and reports whether listings came back.")
+            .Produces<ProviderTestResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError);
+    }
+
+    private static void MapCreate(RouteGroupBuilder group)
+    {
+        group.MapPost(
+                Routes.Providers.Create,
+                (
+                    [FromServices] IProvidersHandler handler,
+                    [FromBody] CreateSourceRequest? request)
+                    => handler.Create(request))
+            .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.Create)}")
+            .WithSummary("Add a source")
+            .WithDescription("Persists a detected or manual source as a new user provider and returns its id.")
+            .Produces<ProviderCreatedResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status409Conflict)
+            .Produces(StatusCodes.Status500InternalServerError);
+    }
+
+    private static void MapDelete(RouteGroupBuilder group)
+    {
+        group.MapDelete(
+                Routes.Providers.Delete,
+                (
+                    [FromServices] IProvidersHandler handler,
+                    [FromRoute] int id)
+                    => handler.Delete(id))
+            .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.Delete)}")
+            .WithSummary("Remove a source")
+            .WithDescription("Removes a user-added source. Sources from the shipped catalog cannot be removed.")
             .Produces<SaveResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)

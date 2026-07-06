@@ -14,8 +14,25 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
             throw new ConfigException($"portal '{PortalName}': rss adapter requires 'endpoint'");
         }
 
+        // Jobindex / it-jobbank feeds honor a `page` cursor; when Config.Pagination is set
+        // FetchPagesAsync walks the pages (stopping at the first empty/duplicate page) so we
+        // fetch the whole result set instead of just the ~20 most-recent items on page 1.
+        // Enrichment runs once on the merged, de-duplicated set.
+        var listings = await FetchPagesAsync(FetchFeedPageAsync, ct);
+
+        if (Config.EnrichBody && listings.Count > 0)
+        {
+            return await EnrichBodiesAsync(listings, ct);
+        }
+
+        return listings;
+    }
+
+    private async Task<IReadOnlyList<Listing>> FetchFeedPageAsync(
+        IReadOnlyDictionary<string, object?>? queryParams, CancellationToken ct)
+    {
         await ThrottleAsync(ct);
-        var feedUrl = AppendQueryParams(Config.Endpoint, Config.QueryParams);
+        var feedUrl = AppendQueryParams(Config.Endpoint!, queryParams);
         // FeedReader.ReadAsync silently re-encodes the URL — confirmed empirically that
         // it strips literal `+` characters from the query string, breaking boolean AND
         // queries on Jobindex.dk (`?q=+.net+udvikler` arrives at the server as just
@@ -52,11 +69,6 @@ public sealed class RssAdapter(PortalConfig config, HttpClient http, ILogger log
             {
                 Logger.LogWarning(ex, "portal={Portal} skipped malformed feed item", PortalName);
             }
-        }
-
-        if (Config.EnrichBody && listings.Count > 0)
-        {
-            return await EnrichBodiesAsync(listings, ct);
         }
 
         return listings;

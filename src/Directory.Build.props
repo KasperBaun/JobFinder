@@ -10,4 +10,13 @@
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
 
+  <!-- Transitive-only advisory in SQLitePCLRaw.lib.e_sqlite3, pulled by Hangfire.Storage.SQLite
+       (0.4.3 is the latest; it pins the old sqlite-net-pcl, and bumping SQLitePCLRaw to 3.x breaks
+       that provider contract). The advisory concerns processing untrusted SQLite databases/SQL;
+       jobfinder's only SQLite is Hangfire's local job queue with no untrusted input, so it is not
+       reachable. Suppressed narrowly (audits stay on for everything else). -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
+
 </Project>

@@ -11,12 +11,13 @@ namespace Jobmatch.Api.Handlers;
 public interface ILlmHandler
 {
     Task<IResult> Status();
-    Task DownloadModel(HttpContext http, CancellationToken ct);
+    Task<IResult> StartDownload();
 }
 
 public sealed class LlmHandler(
     UserContext ctx,
     LlmModelDownloader downloader,
+    ModelDownloadManager downloads,
     ILogger<LlmHandler> logger) : HandlerBase(logger), ILlmHandler
 {
     public Task<IResult> Status() => ExecuteAsync(
@@ -27,50 +28,33 @@ public sealed class LlmHandler(
             var llm = ranking.Llm;
             var resolvedPath = ResolveModelPath(llm.ModelPath, ctx.RootDir);
             var status = downloader.GetStatus(resolvedPath, llm.ModelDownloadUrl);
+            var dl = downloads.Snapshot();
             var response = new LlmStatusResponse(
                 Enabled: llm.Enabled,
                 Provider: llm.Provider,
                 ModelPresent: status.Present,
                 ModelPath: status.Path,
                 ModelSizeBytes: status.CurrentBytes,
-                DownloadUrl: status.DownloadUrl);
+                DownloadUrl: status.DownloadUrl,
+                Download: new LlmDownloadStatus(dl.State, dl.DownloadedBytes, dl.TotalBytes, dl.Error));
             return Task.FromResult<IResult>(Results.Ok(response));
         });
 
-    public async Task DownloadModel(HttpContext http, CancellationToken ct)
-    {
-        SseHelper.SetHeaders(http);
-        var ranking = RankingConfigLoader.Load(ctx.RankingPath);
-        var llm = ranking.Llm;
-        var path = ResolveModelPath(llm.ModelPath, ctx.RootDir);
-
-        Logger.LogInformation("Starting LLM model download: {Url} → {Path}", llm.ModelDownloadUrl, path);
-        long lastBytes = 0;
-        try
+    // Starts the download in the background and returns immediately. Idempotent: a repeat call while a
+    // download is already running is a no-op. Progress is observed by polling Status(), so the transfer
+    // is not tied to this request and survives the client navigating away or reloading.
+    public Task<IResult> StartDownload() => ExecuteAsync(
+        "start llm model download",
+        () =>
         {
-            await foreach (var p in downloader.DownloadAsync(llm.ModelDownloadUrl, path, ct).ConfigureAwait(false))
-            {
-                ct.ThrowIfCancellationRequested();
-                lastBytes = p.DownloadedBytes;
-                await SseHelper.SendAsync(http, new { type = "progress", downloadedBytes = p.DownloadedBytes, totalBytes = p.TotalBytes }).ConfigureAwait(false);
-            }
-            await SseHelper.SendAsync(http, new { type = "complete", modelPath = path, bytes = lastBytes }).ConfigureAwait(false);
-            Logger.LogInformation("LLM model download finished ({Bytes} bytes)", lastBytes);
-        }
-        catch (OperationCanceledException)
-        {
-            Logger.LogInformation("LLM model download cancelled by client");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "LLM model download failed");
-            var message = ex.InnerException is { Message: var inner }
-                ? $"{ex.Message} ({inner})"
-                : ex.Message;
-            try { await SseHelper.SendAsync(http, new { type = "error", message }).ConfigureAwait(false); }
-            catch { /* connection may be torn down */ }
-        }
-    }
+            var ranking = RankingConfigLoader.Load(ctx.RankingPath);
+            var llm = ranking.Llm;
+            var path = ResolveModelPath(llm.ModelPath, ctx.RootDir);
+            var snapshot = downloads.Start(llm.ModelDownloadUrl, path);
+            Logger.LogInformation("LLM model download requested → state {State}", snapshot.State);
+            var body = new LlmDownloadStatus(snapshot.State, snapshot.DownloadedBytes, snapshot.TotalBytes, snapshot.Error);
+            return Task.FromResult<IResult>(Results.Ok(body));
+        });
 
     private static string ResolveModelPath(string configured, string userDataDir)
         => Path.IsPathRooted(configured) ? configured : Path.Combine(userDataDir, configured);

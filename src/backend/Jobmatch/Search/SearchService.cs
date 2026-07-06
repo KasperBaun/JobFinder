@@ -1,6 +1,5 @@
-using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
+using System.Threading.Channels;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
@@ -18,6 +17,9 @@ namespace Jobmatch.Search;
 public interface ISearchService
 {
     IAsyncEnumerable<SearchProgressEvent> RunAsync(SearchRequest req, CancellationToken ct = default);
+
+    /// <summary>Run with a caller-supplied run id (used by the background job so the id is known before execution).</summary>
+    IAsyncEnumerable<SearchProgressEvent> RunAsync(SearchRequest req, string runId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -25,10 +27,8 @@ public interface ISearchService
 /// rank → write reports → persist a history entry. Yields progress events so callers (CLI or
 /// GUI) can stream a live view of the run.
 /// </summary>
-public sealed class SearchService : ISearchService
+public sealed partial class SearchService : ISearchService
 {
-    private static readonly JsonSerializerOptions HistoryJsonOptions = Json.JobmatchJsonOptions.Indented;
-
     private readonly UserContext _ctx;
     private readonly IFileSystem _fs;
     private readonly ILoggerFactory _loggerFactory;
@@ -40,8 +40,14 @@ public sealed class SearchService : ISearchService
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
     }
 
+    public IAsyncEnumerable<SearchProgressEvent> RunAsync(
+        SearchRequest req,
+        CancellationToken ct = default)
+        => RunAsync(req, BuildRunId(DateTimeOffset.UtcNow), ct);
+
     public async IAsyncEnumerable<SearchProgressEvent> RunAsync(
         SearchRequest req,
+        string runId,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var catalogPath = Path.Combine(AppContext.BaseDirectory, "portals.json");
@@ -49,190 +55,165 @@ public sealed class SearchService : ISearchService
         var state = ProviderStateLoader.LoadOrEmpty(_ctx.ProviderStatePath);
         var allPortals = ProviderStateMerger.Merge(catalog, state);
 
-        await foreach (var evt in RunAsync(req, allPortals, ct).ConfigureAwait(false))
+        await foreach (var evt in RunAsync(req, runId, allPortals, ct).ConfigureAwait(false))
             yield return evt;
     }
 
+    internal IAsyncEnumerable<SearchProgressEvent> RunAsync(
+        SearchRequest req,
+        IReadOnlyList<PortalConfig> allPortals,
+        CancellationToken ct = default)
+        => RunAsync(req, BuildRunId(DateTimeOffset.UtcNow), allPortals, ct);
+
     internal async IAsyncEnumerable<SearchProgressEvent> RunAsync(
         SearchRequest req,
+        string runId,
         IReadOnlyList<PortalConfig> allPortals,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var skillset = SkillsetParser.Load(_ctx.SkillsetPath);
-        var ranking = RankingConfigLoader.Load(_ctx.RankingPath);
-
-        var requested = req.Providers is { Count: > 0 }
-            ? new HashSet<string>(req.Providers, StringComparer.OrdinalIgnoreCase)
-            : null;
-
-        var enabled = allPortals
-            .Where(p => p.Enabled)
-            .Where(p => requested is null || requested.Contains(p.Name))
-            .ToList();
-
-        var startedAt = DateTimeOffset.UtcNow;
-        var runId = BuildRunId(startedAt);
-
-        yield return new StartedEvent(enabled.Count);
+        var prep = Prepare(req, allPortals);
+        yield return new StartedEvent(runId, prep.Enabled.Count);
 
         using var http = new HttpClient();
-        var statuses = new List<ProviderRunStatus>(enabled.Count);
+        var statuses = new List<ProviderRunStatus>(prep.Enabled.Count);
         var rawByProvider = new Dictionary<string, IReadOnlyList<Listing>>(StringComparer.Ordinal);
         var fetched = new List<Listing>();
-
-        for (var i = 0; i < enabled.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            var portal = enabled[i];
-            var index = i + 1;
-
-            yield return new ProviderRunningEvent(portal.Name, index, enabled.Count);
-
-            var (results, error) = await FetchSafe(portal, http, ct).ConfigureAwait(false);
-            if (error is null)
-            {
-                fetched.AddRange(results);
-                rawByProvider[portal.Name] = results;
-                statuses.Add(new ProviderRunStatus(portal.Name, "ok", results.Count, null));
-                yield return new ProviderDoneEvent(portal.Name, results.Count, index, enabled.Count);
-            }
-            else
-            {
-                rawByProvider[portal.Name] = [];
-                statuses.Add(new ProviderRunStatus(portal.Name, "failed", null, error));
-                yield return new ProviderFailedEvent(portal.Name, error, index, enabled.Count);
-            }
-        }
+        await foreach (var evt in FetchAll(prep.Enabled, http, statuses, rawByProvider, fetched, ct).ConfigureAwait(false))
+            yield return evt;
 
         var dedupeResult = Deduper.Deduplicate(fetched);
         var deduped = dedupeResult.Deduped;
         yield return new DedupeEvent(deduped.Count);
-
         JsonReportWriter.WriteListings(deduped, _ctx.AllListingsPath);
 
-        var topN = req.TopN ?? ranking.TopN;
-        var minScore = req.MinScore ?? ranking.MinScoreToInclude;
+        var scoredAll = Ranker.Score(deduped, prep.Skillset, prep.Ranking);
 
-        var scoredAll = Ranker.Score(deduped, skillset, ranking);
-
-        // Optional LLM re-rank layer. Picks the top-N from the keyword ranker, asks
-        // the model to score each one against the user's skillset + curated examples,
-        // then blends LLM and keyword scores. Falls back transparently to keyword-only
-        // when the model can't be loaded (file missing, Ollama not running, etc.).
-        // Sequential — gemma 3 4B on CPU does ~1-3 sec per call, so judging the
-        // default top 50 takes ~1-2 minutes; SSE stream stays open but silent.
-        if (ranking.Llm.Enabled)
+        // Optional LLM re-rank layer. Picks the top-N from the keyword ranker, asks the model to
+        // score each against the user's skillset + curated examples, then blends LLM and keyword
+        // scores. Falls back transparently to keyword-only when the model can't be loaded (file
+        // missing, Ollama not running, etc.). Sequential — gemma 3 4B on CPU does ~1-3 sec per call,
+        // so judging the default top 50 takes ~1-2 minutes; SSE stream stays open but silent.
+        if (prep.Ranking.Llm.Enabled)
         {
             var examples = ExamplesLoader.Load(_ctx.ExamplesDir);
-            var llmTopN = ranking.Llm.TopN <= 0 ? scoredAll.Count : Math.Min(ranking.Llm.TopN, scoredAll.Count);
+            var llmTopN = prep.Ranking.Llm.TopN <= 0 ? scoredAll.Count : Math.Min(prep.Ranking.Llm.TopN, scoredAll.Count);
             yield return new LlmJudgingEvent(llmTopN);
-            scoredAll = await JudgeAndBlend(scoredAll, skillset, examples, ranking.Llm, llmTopN, http, ct).ConfigureAwait(false);
+            scoredAll = await JudgeAndBlend(scoredAll, prep.Skillset, examples, prep.Ranking.Llm, llmTopN, http, ct).ConfigureAwait(false);
         }
 
-        var dropped = new List<DroppedEntry>();
-        var passed = new List<Match>();
-        foreach (var m in scoredAll)
-        {
-            var reason = ClassifyDrop(m, ranking, minScore);
-            if (reason is null)
-            {
-                passed.Add(m);
-            }
-            else
-            {
-                dropped.Add(BuildDroppedEntry(m, reason.Value.Reason, reason.Value.Context));
-            }
-        }
+        var (shortlist, dropped) = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN);
+        yield return new RankEvent(shortlist.Count, shortlist.Count > 0 ? shortlist[0].Score : 0.0);
 
-        var ordered = passed.OrderByDescending(m => m.Score).ToList();
-        var shortlist = ordered.Take(topN).ToList();
-        for (var i = topN; i < ordered.Count; i++)
-        {
-            var m = ordered[i];
-            dropped.Add(BuildDroppedEntry(m, "beyond_top_n", $"rank {i + 1} of {ordered.Count} (top {topN} taken)"));
-        }
-
-        var topScore = shortlist.Count > 0 ? shortlist[0].Score : 0.0;
-        yield return new RankEvent(shortlist.Count, topScore);
-
-        JsonReportWriter.WriteMatches(shortlist, _ctx.RankedListingsPath);
-        var mdTitle = $"Top matches — {skillset.Name} — {startedAt:yyyy-MM-dd HH:mm} UTC";
-        MarkdownReportWriter.WriteMatches(shortlist, _ctx.TopJobsPath, mdTitle);
-
-        var portalDisplayNames = allPortals.ToDictionary(
-            p => p.Name,
-            p => string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name : p.DisplayName!,
-            StringComparer.Ordinal);
-        var listingMatches = shortlist.Select(m => ToListingMatch(m, portalDisplayNames)).ToList();
-
-        var rawSection = rawByProvider
-            .Select(kvp => new ProviderRaw(kvp.Key, kvp.Value.Select(ToRawListing).ToList()))
-            .ToList();
-        var scoredSection = scoredAll.Select(m => ToScoredEntry(m, portalDisplayNames)).ToList();
-
-        WriteHistory(
-            runId,
-            startedAt,
-            statuses,
-            fetched.Count,
-            deduped.Count,
-            shortlist.Count,
-            listingMatches,
-            rawSection,
-            dedupeResult.Merges,
-            scoredSection,
-            dropped);
-
+        var listingMatches = WriteReportsAndHistory(
+            runId, prep, statuses, rawByProvider, fetched, deduped, dedupeResult.Merges, scoredAll, shortlist, dropped);
         yield return new CompleteEvent(runId, listingMatches);
     }
 
-    private async Task<IReadOnlyList<Match>> JudgeAndBlend(
-        IReadOnlyList<Match> scored,
-        Skillset skillset,
-        IReadOnlyList<ExampleListing> examples,
-        LlmConfig llmConfig,
-        int topN,
-        HttpClient http,
-        CancellationToken ct)
+    private RunPrep Prepare(SearchRequest req, IReadOnlyList<PortalConfig> allPortals)
     {
-        var client = LlmClientFactory.Create(llmConfig, _ctx.RootDir, http, _loggerFactory);
-        if (client is null) return scored;
-        try
-        {
-            var ordered = scored.OrderByDescending(m => m.Score).ToList();
-            var toJudge = ordered.Take(topN).ToList();
-            var judge = new LlmJudge(client, _loggerFactory.CreateLogger<LlmJudge>());
-            var verdicts = await judge.JudgeAsync(toJudge, skillset, examples, ct).ConfigureAwait(false);
+        if (!File.Exists(_ctx.SkillsetPath))
+            throw new InvalidRequestException("Set up your profile before running a search.");
 
-            var verdictById = verdicts.ToDictionary(v => v.Match.Listing.Id, v => v.Verdict);
-            var w = llmConfig.Weight;
-            var blended = new List<Match>(scored.Count);
-            foreach (var m in scored)
-            {
-                if (verdictById.TryGetValue(m.Listing.Id, out var v) && v is not null)
-                {
-                    var newScore = Math.Clamp(w * v.Score + (1 - w) * m.Score, 0.0, 1.0);
-                    var notes = string.IsNullOrWhiteSpace(v.Reason)
-                        ? m.Reasoning.Notes
-                        : $"{m.Reasoning.Notes} AI review: {v.Score:0.00} — {v.Reason}";
-                    blended.Add(m with
-                    {
-                        Score = newScore,
-                        Reasoning = m.Reasoning with { Notes = notes },
-                    });
-                }
-                else
-                {
-                    blended.Add(m);
-                }
-            }
-            return blended;
-        }
-        finally
+        var ranking = RankingConfigLoader.Load(_ctx.RankingPath);
+        var requested = req.Providers is { Count: > 0 }
+            ? new HashSet<string>(req.Providers, StringComparer.OrdinalIgnoreCase)
+            : null;
+        var enabled = allPortals
+            .Where(p => p.Enabled)
+            .Where(p => requested is null || requested.Contains(p.Name))
+            .ToList();
+        return new RunPrep(
+            SkillsetParser.Load(_ctx.SkillsetPath),
+            ranking,
+            allPortals,
+            enabled,
+            req.TopN ?? ranking.TopN,
+            req.MinScore ?? ranking.MinScoreToInclude,
+            DateTimeOffset.UtcNow);
+    }
+
+    private async IAsyncEnumerable<SearchProgressEvent> FetchAll(
+        IReadOnlyList<PortalConfig> enabled,
+        HttpClient http,
+        List<ProviderRunStatus> statuses,
+        Dictionary<string, IReadOnlyList<Listing>> rawByProvider,
+        List<Listing> fetched,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var total = enabled.Count;
+        if (total == 0) yield break;
+
+        // Fetch every provider concurrently — they're independent I/O. Each result lands in a
+        // fixed-position slot so `fetched` is reassembled in enabled-order once all complete,
+        // keeping first-wins dedupe deterministic regardless of which provider returns first.
+        var slots = new ProviderFetchResult[total];
+        var channel = Channel.CreateUnbounded<SearchProgressEvent>();
+
+        async Task FetchOne(int i)
         {
-            (client as IDisposable)?.Dispose();
+            var portal = enabled[i];
+            var index = i + 1;
+            await channel.Writer.WriteAsync(new ProviderRunningEvent(portal.Name, index, total), ct).ConfigureAwait(false);
+            var (results, error) = await FetchSafe(portal, http, ct).ConfigureAwait(false);
+            slots[i] = new ProviderFetchResult(portal.Name, results, error);
+            await channel.Writer.WriteAsync(
+                error is null
+                    ? new ProviderDoneEvent(portal.Name, results.Count, index, total)
+                    : new ProviderFailedEvent(portal.Name, error, index, total),
+                ct).ConfigureAwait(false);
+        }
+
+        var pending = new Task[total];
+        for (var i = 0; i < total; i++) pending[i] = FetchOne(i);
+
+        async Task DrainToCompletion()
+        {
+            try { await Task.WhenAll(pending).ConfigureAwait(false); }
+            finally { channel.Writer.Complete(); }
+        }
+        var completion = DrainToCompletion();
+
+        await foreach (var evt in channel.Reader.ReadAllAsync().ConfigureAwait(false))
+            yield return evt;
+
+        await completion.ConfigureAwait(false);
+        Collect(slots, fetched, statuses, rawByProvider);
+    }
+
+    private static void Collect(
+        ProviderFetchResult[] slots,
+        List<Listing> fetched,
+        List<ProviderRunStatus> statuses,
+        Dictionary<string, IReadOnlyList<Listing>> rawByProvider)
+    {
+        foreach (var slot in slots)
+        {
+            if (slot.Error is null)
+            {
+                fetched.AddRange(slot.Results);
+                rawByProvider[slot.Name] = slot.Results;
+                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Ok, slot.Results.Count, null));
+            }
+            else
+            {
+                rawByProvider[slot.Name] = [];
+                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Failed, null, slot.Error));
+            }
         }
     }
+
+    /// <summary>One provider's fetch outcome, held in enabled-order so result assembly stays deterministic.</summary>
+    private readonly record struct ProviderFetchResult(string Name, IReadOnlyList<Listing> Results, string? Error);
+
+    /// <summary>Resolved inputs for a single run — config + the filtered portal set + run-level knobs.</summary>
+    private readonly record struct RunPrep(
+        Skillset Skillset,
+        RankingConfig Ranking,
+        IReadOnlyList<PortalConfig> AllPortals,
+        List<PortalConfig> Enabled,
+        int TopN,
+        double MinScore,
+        DateTimeOffset StartedAt);
 
     private async Task<(IReadOnlyList<Listing> Results, string? Error)> FetchSafe(
         PortalConfig portal,
@@ -261,135 +242,5 @@ public sealed class SearchService : ISearchService
         }
     }
 
-    private static string BuildRunId(DateTimeOffset startedAt)
-    {
-        var stamp = startedAt.UtcDateTime.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        return $"{stamp}-{suffix}";
-    }
-
-    private static ListingMatch ToListingMatch(Match match, IReadOnlyDictionary<string, string> portalDisplayNames)
-    {
-        var l = match.Listing;
-        return new ListingMatch(
-            Id: l.Id,
-            Portal: l.Portal,
-            Title: l.Title,
-            Company: l.Company,
-            Location: l.Location,
-            RemoteMode: l.RemoteMode.ToString().ToLowerInvariant(),
-            Url: l.Url.ToString(),
-            PostedAt: l.PostedAt,
-            Score: match.Score,
-            Reasoning: match.Reasoning.Notes,
-            PrimaryStackHits: match.Reasoning.PrimaryStackHits,
-            SecondaryStackHits: match.Reasoning.SecondaryStackHits,
-            PortalDisplayName: portalDisplayNames.TryGetValue(l.Portal, out var dn) ? dn : l.Portal);
-    }
-
-    private static RawListing ToRawListing(Listing l) => new(
-        Id: l.Id,
-        Title: l.Title,
-        Company: l.Company,
-        Location: l.Location,
-        Url: l.Url.ToString(),
-        PostedAt: l.PostedAt);
-
-    private static ScoredEntry ToScoredEntry(Match m, IReadOnlyDictionary<string, string> portalDisplayNames) => new(
-        Id: m.Listing.Id,
-        Title: m.Listing.Title,
-        Company: m.Listing.Company,
-        Location: m.Listing.Location,
-        Url: m.Listing.Url.ToString(),
-        PostedAt: m.Listing.PostedAt,
-        Portal: m.Listing.Portal,
-        Score: m.Score,
-        Breakdown: m.Breakdown,
-        PrimaryStackHits: m.Reasoning.PrimaryStackHits,
-        SecondaryStackHits: m.Reasoning.SecondaryStackHits,
-        PortalDisplayName: portalDisplayNames.TryGetValue(m.Listing.Portal, out var dn) ? dn : m.Listing.Portal);
-
-    private static DroppedEntry BuildDroppedEntry(Match m, string reason, string? context) => new(
-        Id: m.Listing.Id,
-        Title: m.Listing.Title,
-        Company: m.Listing.Company,
-        Score: m.Score,
-        Reason: reason,
-        Context: context);
-
-    /// <summary>
-    /// Classifies why a scored match would be excluded from the shortlist. Order of
-    /// precedence: above_max_age (hard cutoff) → missing_required_primary →
-    /// disqualifier → below_min_score. Returns null if the match should pass to
-    /// shortlist consideration. beyond_top_n is decided after sorting, not here.
-    /// </summary>
-    private static (string Reason, string? Context)? ClassifyDrop(Match m, RankingConfig ranking, double minScore)
-    {
-        if (ranking.MaxAgeDays is int maxAge && m.Listing.PostedAt is DateTimeOffset posted)
-        {
-            var ageDays = (DateTimeOffset.UtcNow - posted).TotalDays;
-            if (ageDays > maxAge)
-            {
-                return ("above_max_age", $"posted {(int)Math.Round(ageDays)} days ago, max {maxAge}");
-            }
-        }
-
-        if (ranking.RequirePrimaryStackHit && m.Reasoning.PrimaryStackHits.Count == 0)
-        {
-            return ("missing_required_primary", "no primary-stack keyword matched in title or description");
-        }
-
-        if (m.Reasoning.DisqualifierHits.Count > 0)
-        {
-            return ("disqualifier", $"matched disqualifier: {string.Join(", ", m.Reasoning.DisqualifierHits)}");
-        }
-
-        if (m.Score < minScore)
-        {
-            return ("below_min_score", $"score {m.Score:0.00} below threshold {minScore:0.00}");
-        }
-
-        return null;
-    }
-
-    private void WriteHistory(
-        string runId,
-        DateTimeOffset startedAt,
-        IReadOnlyList<ProviderRunStatus> providers,
-        int fetchedCount,
-        int dedupedCount,
-        int shortlistCount,
-        IReadOnlyList<ListingMatch> shortlist,
-        IReadOnlyList<ProviderRaw> raw,
-        IReadOnlyList<DedupeGroup> dedupeMerges,
-        IReadOnlyList<ScoredEntry> scored,
-        IReadOnlyList<DroppedEntry> dropped)
-    {
-        Directory.CreateDirectory(_ctx.HistoryDir);
-
-        var topScore = shortlist.Count > 0 ? shortlist[0].Score : 0.0;
-
-        // Persist the full RunDetail shape (without marks — those live in marks.json) so the
-        // history-detail endpoint can deserialise this directly.
-        var detail = new RunDetail(
-            RunId: runId,
-            StartedAt: startedAt,
-            Providers: providers,
-            FetchedCount: fetchedCount,
-            DedupedCount: dedupedCount,
-            RankedCount: shortlistCount,
-            ShortlistCount: shortlistCount,
-            TopScore: topScore,
-            GoodMarks: 0,
-            Shortlist: shortlist,
-            Marks: new Dictionary<string, string>(),
-            Raw: raw,
-            DedupeMerges: dedupeMerges,
-            Scored: scored,
-            Dropped: dropped);
-
-        var path = Path.Combine(_ctx.HistoryDir, $"{runId}.json");
-        var json = JsonSerializer.Serialize(detail, HistoryJsonOptions);
-        File.WriteAllText(path, json);
-    }
+    private static string BuildRunId(DateTimeOffset startedAt) => Jobmatch.Jobs.RunId.New(startedAt);
 }

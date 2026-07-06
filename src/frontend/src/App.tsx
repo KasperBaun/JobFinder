@@ -1,13 +1,18 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { getSetupStatus } from './api/client'
 import { useServerConnection } from './hooks/useServerConnection'
 import { ServerDisconnectedOverlay } from './components/ServerDisconnectedOverlay'
 import { TopNav } from './components/TopNav'
+import { SearchRunIndicator } from './components/SearchRunIndicator'
 import { HomePage } from './pages/HomePage'
 import { ProvidersPage } from './pages/ProvidersPage'
 import { ProviderDetailPage } from './pages/ProviderDetailPage'
 import { SkillsetPage } from './pages/SkillsetPage'
 import { SearchPage } from './pages/SearchPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { SetupPage } from './pages/SetupPage'
 import { ClosedPage } from './pages/ClosedPage'
 
 function NotFoundPage() {
@@ -27,10 +32,20 @@ export function App() {
   const location = useLocation()
   const isClosed = location.pathname === '/closed'
 
+  // First-run gate: until the user has confirmed where their data lives, show only the setup screen.
+  const setup = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
+  if (!isClosed && setup.isLoading) {
+    return <div className="app-boot" />
+  }
+  if (!isClosed && setup.data && !setup.data.configured) {
+    return <SetupPage />
+  }
+
   return (
     <>
       {!isClosed && connectionStatus === 'disconnected' && <ServerDisconnectedOverlay />}
       {!isClosed && <TopNav />}
+      {!isClosed && <SearchRunIndicator />}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/providers" element={<ProvidersPage />} />
@@ -39,6 +54,7 @@ export function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/history/:runId" element={<HistoryPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/closed" element={<ClosedPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

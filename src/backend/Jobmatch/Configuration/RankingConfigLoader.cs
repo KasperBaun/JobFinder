@@ -40,13 +40,14 @@ public static class RankingConfigLoader
         var requirePrimaryStackHit = ReadBool(map, "require_primary_stack_hit", false);
         var seniorityAdjacencyCredit = ReadDouble(map, "seniority_adjacency_credit", 1.0);
         var nonEngineeringTitleMultiplier = ReadDouble(map, "non_engineering_title_multiplier", 0.2);
+        var preferredCompanyBoost = ReadDouble(map, "preferred_company_boost", 1.25);
         var tierWeights = BuildTierWeights(map);
         var llm = BuildLlmConfig(map);
 
         return new RankingConfig(
             weights, disqualifierPenalty, topN, halfLife, minScore,
             maxAgeDays, requirePrimaryStackHit,
-            seniorityAdjacencyCredit, nonEngineeringTitleMultiplier)
+            seniorityAdjacencyCredit, nonEngineeringTitleMultiplier, preferredCompanyBoost)
         {
             LocationTierWeights = tierWeights,
             Llm = llm,

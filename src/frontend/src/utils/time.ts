@@ -17,6 +17,17 @@ export function formatRelative(iso: string | undefined): string {
   return `${yr} year${yr === 1 ? '' : 's'} ago`
 }
 
+// Elapsed duration as m:ss (or h:mm:ss past an hour). Used for the live search timer.
+export function formatDuration(ms: number): string {
+  const totalSec = Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 1000) : 0
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  const ss = String(s).padStart(2, '0')
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${ss}`
+  return `${m}:${ss}`
+}
+
 export function formatAbsolute(iso: string | undefined): string {
   if (!iso) return '—'
   const date = new Date(iso)

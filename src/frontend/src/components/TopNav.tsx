@@ -7,12 +7,22 @@ const links: { to: string; label: string; end?: boolean }[] = [
   { to: '/skillset', label: 'Profile' },
   { to: '/search', label: 'Search' },
   { to: '/history', label: 'History' },
+  { to: '/settings', label: 'Settings' },
 ]
 
 export function TopNav() {
   const navigate = useNavigate()
 
   async function handleQuit() {
+    // Desktop app: one click closes the native window and quits — the same as the titlebar X.
+    // No confirm, no goodbye screen (a stray quit is cheap: searches run as durable background
+    // jobs that survive restart).
+    if (window.jobfinderDesktop) {
+      window.jobfinderDesktop.quit()
+      return
+    }
+    // Browser web-shell: there's no window to close, so confirm, stop the backend, then land on
+    // the goodbye page telling the user they can close the tab.
     if (!confirm('Close jobfinder?')) return
     try {
       await shutdown()
