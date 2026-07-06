@@ -1124,6 +1124,28 @@
       "staticFields": { "company": "Trifork" },
       "rateLimitRps": 1.0,
       "notes": "Trifork group TeamTailor. Note: Trifork is federated (~69 units); this feed carries mostly group/UK corporate roles, not the Aarhus/Copenhagen .NET dev jobs — low DK yield. Added 2026-07-06."
+    },
+    {
+      "id": 64,
+      "name": "successfactors-grundfos",
+      "displayName": "Grundfos (SuccessFactors CSB)",
+      "type": "api",
+      "enabled": false,
+      "method": "post",
+      "endpoint": "https://jobs.grundfos.com/services/recruiting/v1/jobs",
+      "bodyTemplate": { "searchText": "", "locale": "en_GB", "start": 0, "count": 10 },
+      "pagination": { "param": "start", "start": 0, "step": 10, "sizeParam": "count", "size": 10, "maxPages": 3 },
+      "responseMapping": {
+        "items_path": "jobSearchResult",
+        "id": "response.id",
+        "title": "response.unifiedStandardTitle",
+        "location": "response.jobLocationShort.0",
+        "url_template": "https://jobs.grundfos.com/job/{response.urlTitle}/{response.id}",
+        "posted_at": "response.unifiedStandardStart"
+      },
+      "staticFields": { "company": "Grundfos" },
+      "rateLimitRps": 1.0,
+      "notes": "Reference example for SAP SuccessFactors Career Site Builder (CSB): the no-auth JSON API POST /services/recruiting/v1/jobs, items wrapped in a 'response' object, location as an array — all handled by the generic api adapter (response.* dot-paths + .0 array index in responseMapping and, since 2026-07-06, in url_template). DISABLED on purpose: Grundfos is a global industrial employer (239 roles, mostly pumps/mechanical/sales outside DK) and CSB's searchText does not filter, so enabling it would flood the pool with irrelevant non-DK/non-.NET roles. Kept as a working template — clone it for a DK .NET-heavy CSB tenant and flip enabled. maxPages capped at 3 for the same reason."
     }
   ]
 }

@@ -264,21 +264,16 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
     private string RenderTemplate(string template, JsonElement item) =>
         StringTemplate.Render(template, key =>
         {
-            if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var prop))
+            // Resolve dot-paths and array indices (e.g. {response.id}, {location.0}) the same way
+            // the response mapping does, so url_template can reach nested fields — not just
+            // top-level ones. SuccessFactors CSB wraps every item in a `response` object.
+            var value = JsonValueReader.AsString(JsonValueReader.Walk(item, key));
+            if (value is null)
             {
-                var value = JsonValueReader.AsString(prop);
-                if (value is null)
-                {
-                    Logger.LogWarning(
-                        "portal={Portal} url_template references '{{{Key}}}' which is not in this item; the produced URL will be malformed and the listing will be dropped",
-                        PortalName, key);
-                    return string.Empty;
-                }
-                return value;
+                Logger.LogWarning(
+                    "portal={Portal} url_template references '{{{Key}}}' which did not resolve to a value on this item; the produced URL will be malformed and the listing will be dropped",
+                    PortalName, key);
             }
-            Logger.LogWarning(
-                "portal={Portal} url_template references '{{{Key}}}' which is not in this item; the produced URL will be malformed and the listing will be dropped",
-                PortalName, key);
-            return null;
+            return value;
         });
 }
