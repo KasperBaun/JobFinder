@@ -10,12 +10,11 @@ Current status of work on `jobfinder`.
   to re-run it or point at a different data folder (updates `bootstrap.json`).
 - **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
   currently user-disabled) — still the single widest DK net we have.
-- **Recruit IT html scrape — Playwright `:scope` smoke test.** The disabled
-  `recruit-it` portal stub uses `:scope` as `link_selector` to target the
-  wrapping `<a>`. Verify Playwright resolves `:scope` inside
-  `IElementHandle.QuerySelectorAsync` before flipping `enabled: true`;
-  otherwise extend `HtmlAdapter` to read attributes from the matched list
-  element directly.
+- **Recruit IT html scrape — re-verify endpoint, then enable.** `HtmlAdapter` now
+  resolves a `:scope` `link_selector` to the matched list element itself (done
+  2026-07-06, covered by a test — same pattern used by the new cBrain/Nine
+  sources), so the adapter side is handled. Remaining: confirm `recruit-it.dk`
+  still serves the expected server-rendered markup, then flip `enabled: true`.
 - **Recruit IT location parsing.** Location renders as a plain text node
   next to an icon with no wrapper class; `location_selector` is intentionally
   omitted and listings will have null location until the markup changes.
