@@ -427,7 +427,8 @@ a.btn--danger:hover {
   background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto; /* wide tables (the 8-col longlist) scroll instead of clipping on narrow windows */
+  overflow-y: hidden;
   box-shadow: var(--shadow-1);
 }
 
