@@ -51,6 +51,11 @@ public sealed class SourceDetectionServiceTests
         Assert.Equal("https://api.smartrecruiters.com/v1/companies/Netcompany1/postings", c.Draft.Endpoint!.ToString());
         Assert.Equal("dk", c.Draft.QueryParams!["country"]);
         Assert.Equal("https://jobs.smartrecruiters.com/Netcompany1/{id}", c.Draft.ResponseMapping!["url_template"]);
+        // Paginated by offset so a company with >100 DK roles isn't truncated at the first page.
+        Assert.NotNull(c.Draft.Pagination);
+        Assert.Equal("offset", c.Draft.Pagination!.Param);
+        Assert.Equal(100, c.Draft.Pagination!.Step);
+        Assert.Equal("limit", c.Draft.Pagination!.SizeParam);
     }
 
     [Fact]
@@ -77,6 +82,11 @@ public sealed class SourceDetectionServiceTests
         var c = DetectOne("https://www.jobindex.dk/jobsoegning.rss?q=c%23");
         Assert.Equal("rss", c.Kind);
         Assert.Equal(PortalType.Rss, c.Draft.Type);
+        // Feeds that cap a page at ~20 items are paged via `page`; Size stays unset for a generic
+        // feed, and the no-new-items guard makes it safe for feeds that ignore the cursor.
+        Assert.NotNull(c.Draft.Pagination);
+        Assert.Equal("page", c.Draft.Pagination!.Param);
+        Assert.Null(c.Draft.Pagination!.Size);
     }
 
     [Fact]

@@ -140,6 +140,9 @@ public sealed class SourceDetectionService : ISourceDetectionService
                 ["url_template"] = $"https://jobs.smartrecruiters.com/{slug}/{{id}}",
                 ["posted_at"] = "releasedDate",
             },
+            // SmartRecruiters caps the postings list at 100/page and pages via offset; without
+            // this a company with >100 DK roles would silently return only the first 100.
+            pagination: new PaginationConfig(Param: "offset", Start: 0, Step: 100, SizeParam: "limit", Size: 100, MaxPages: 10),
             enrichBody: true);
         return new SourceCandidate("smartrecruiters", draft.DisplayName!,
             $"SmartRecruiters job board for {draft.DisplayName} (Denmark) — fetched automatically.", draft);
@@ -200,6 +203,11 @@ public sealed class SourceDetectionService : ISourceDetectionService
             Enabled: true,
             Endpoint: url,
             DisplayName: $"{display} (feed)",
+            // Many job feeds (Jobindex/it-jobbank family) cap a page at ~20 items and honor a
+            // `page` cursor. Size is left unset because a generic feed's page length is unknown;
+            // the loop stops on the first empty page, or on the first page that adds nothing new
+            // when a feed ignores `page` — so this is safe even for single-page feeds.
+            Pagination: new PaginationConfig(Param: "page", Start: 1, Step: 1, MaxPages: 8),
             EnrichBody: true);
         return new SourceCandidate("rss", draft.DisplayName!,
             "Looks like a job feed — fetched automatically.", draft);
@@ -211,6 +219,7 @@ public sealed class SourceDetectionService : ISourceDetectionService
         string endpoint,
         Dictionary<string, object?>? query,
         Dictionary<string, string> mapping,
+        PaginationConfig? pagination = null,
         bool enrichBody = false) =>
         new(
             Name: name,
@@ -221,6 +230,7 @@ public sealed class SourceDetectionService : ISourceDetectionService
             ResponseMapping: mapping,
             StaticFields: new Dictionary<string, string> { ["company"] = display },
             DisplayName: display,
+            Pagination: pagination,
             EnrichBody: enrichBody);
 
     private static string? HrManagerKey(string query)
