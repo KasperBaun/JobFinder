@@ -2553,11 +2553,25 @@ a.btn--danger:hover {
 }
 
 .setup__eyebrow {
+  margin-bottom: var(--space-4);
+}
+
+.setup__eyebrow-title {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--c-navy-500);
+}
+
+.setup__step {
+  display: block;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.72rem;
   color: var(--c-text-muted);
-  margin-bottom: var(--space-4);
+  margin-top: 0.3rem;
 }
 
 .setup__heading {
