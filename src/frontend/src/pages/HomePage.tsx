@@ -24,8 +24,8 @@ export function HomePage() {
         <div className="page__eyebrow">00 / overview</div>
         <h1 className="hero__headline">Find work that <em>fits.</em></h1>
         <p className="hero__lede">
-          A local tool that pulls openings from your chosen job sites, rates them against your profile,
-          and gets out of your way. Nothing leaves your computer.
+          Jobfinder helps you find work the easy way. It retreieves job openings from your chosen job sites, rates them against your profile and preferences,
+          and suggests the best matches. Everything runs locally so nothing leaves your computer.
         </p>
         <div className="hero__meta">
           <span className="hero__meta-item">
