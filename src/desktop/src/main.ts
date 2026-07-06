@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, ipcMain } from 'electron'
 import { startBackend, shutdownBackend, killChild, type BackendHandle } from './backend'
 import { createMainWindow } from './window'
 import { showErrorWindow } from './error-window'
@@ -22,6 +22,10 @@ if (!app.requestSingleInstanceLock()) {
       showErrorWindow(err)
     }
   })
+
+  // The SPA's "Close jobfinder" button routes here (see preload). `app.quit()` runs the same
+  // graceful path as the native close: `before-quit` stops the backend, then `app.exit(0)`.
+  ipcMain.on('jobfinder:quit', () => app.quit())
 
   app.on('window-all-closed', () => {
     void shutdown()
