@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import * as path from 'node:path'
 import { loadWindowState, trackWindowState } from './window-state'
 import { appIconPath } from './icon'
 
@@ -20,6 +21,7 @@ export function createMainWindow(port: number): BrowserWindow {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js'),
     },
   })
 
