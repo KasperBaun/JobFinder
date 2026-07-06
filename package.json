@@ -15,6 +15,8 @@
     "test:e2e": "npm --prefix src/tests/playwright test",
     "package": "node src/scripts/package.mjs",
     "package:win": "node src/scripts/package-installer.mjs",
+    "publish:backend": "node src/scripts/publish-backend.mjs",
+    "package:desktop": "node src/scripts/publish-backend.mjs && npm --prefix src/desktop install && npm --prefix src/desktop run dist",
     "install:tool": "node src/scripts/install-tool.mjs",
     "uninstall:tool": "node src/scripts/uninstall-tool.mjs",
     "refresh": "node src/scripts/refresh.mjs",
