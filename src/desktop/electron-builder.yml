@@ -29,7 +29,9 @@ win:
 linux:
   target:
     - deb
-  icon: build/icon.png
+  # A directory of NxN.png files — electron-builder installs each into hicolor/NxN/apps so
+  # GNOME finds a standard size. A lone 1024x1024 png is ignored by the icon theme.
+  icon: build/icons
   category: Utility
   maintainer: Kasper Baun <tappah2510@gmail.com>
   extraResources:
@@ -37,6 +39,11 @@ linux:
       to: backend
       filter:
         - "**/*"
+
+deb:
+  # Force the SUID chrome-sandbox so the app launches on Ubuntu 24.04 (apparmor blocks the
+  # userns sandbox for /opt apps). See build/deb-after-install.sh for the full rationale.
+  afterInstall: build/deb-after-install.sh
 
 nsis:
   oneClick: false
