@@ -1703,6 +1703,7 @@ a.btn--danger:hover {
 .provider-tile__health--failing  .provider-tile__dot { background: var(--c-bad);  box-shadow: 0 0 0 3px rgba(169, 52, 37, 0.18); }
 .provider-tile__health--stale    .provider-tile__dot { background: var(--c-warn); box-shadow: 0 0 0 3px rgba(138, 83, 0, 0.18); }
 .provider-tile__health--untested .provider-tile__dot { background: var(--c-slate-300); box-shadow: 0 0 0 3px rgba(118, 145, 192, 0.18); }
+.provider-tile__health--blocked  .provider-tile__dot { background: var(--c-warn); box-shadow: 0 0 0 3px rgba(138, 83, 0, 0.18); }
 
 .provider-tile__health-label {
   font-family: var(--font-mono);
@@ -1715,6 +1716,7 @@ a.btn--danger:hover {
 .provider-tile__health--failing  .provider-tile__health-label { color: var(--c-bad); }
 .provider-tile__health--stale    .provider-tile__health-label { color: var(--c-warn); }
 .provider-tile__health--untested .provider-tile__health-label { color: var(--c-text-subtle); }
+.provider-tile__health--blocked  .provider-tile__health-label { color: var(--c-warn); }
 
 .provider-tile__health-meta {
   font-family: var(--font-mono);
