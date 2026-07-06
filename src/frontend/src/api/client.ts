@@ -184,6 +184,15 @@ export async function setMark(req: MarkRequest): Promise<MarkResponse> {
   })
 }
 
+export type LlmDownloadState = 'idle' | 'downloading' | 'completed' | 'failed'
+
+export type LlmDownloadStatus = {
+  state: LlmDownloadState
+  downloadedBytes: number
+  totalBytes: number | null
+  error: string | null
+}
+
 export type LlmStatus = {
   enabled: boolean
   provider: string
@@ -191,38 +200,18 @@ export type LlmStatus = {
   modelPath: string
   modelSizeBytes: number | null
   downloadUrl: string
+  download: LlmDownloadStatus
 }
 
 export async function getLlmStatus(): Promise<LlmStatus> {
   return apiFetch<LlmStatus>('/api/llm/status')
 }
 
-export type LlmDownloadEvent =
-  | { type: 'progress'; downloadedBytes: number; totalBytes: number | null }
-  | { type: 'complete'; modelPath: string; bytes: number }
-  | { type: 'error'; message: string }
-
-export async function* downloadLlmModel(signal?: AbortSignal): AsyncGenerator<LlmDownloadEvent> {
-  const res = await fetch('/api/llm/download-model', {
-    method: 'POST',
-    headers: { Accept: 'text/event-stream' },
-    signal,
-  })
-  if (!res.ok || !res.body) throw new Error(`Download failed: ${res.status}`)
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  while (true) {
-    const { value, done } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const events = buffer.split('\n\n')
-    buffer = events.pop() ?? ''
-    for (const block of events) {
-      const dataLine = block.split('\n').find(l => l.startsWith('data: '))
-      if (dataLine) yield JSON.parse(dataLine.slice(6)) as LlmDownloadEvent
-    }
-  }
+// Kicks off the background download (idempotent — a no-op if one is already running) and returns
+// immediately. Progress is not streamed here; the caller polls getLlmStatus() for live state, which
+// is what lets the download survive navigation and reload.
+export async function startLlmDownload(): Promise<LlmDownloadStatus> {
+  return apiFetch<LlmDownloadStatus>('/api/llm/download-model', { method: 'POST' })
 }
 
 // Enqueue a background search run. Returns immediately with the run id; progress arrives via the SSE

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getLlmStatus, downloadLlmModel } from '../api/client'
+import { getLlmStatus, startLlmDownload } from '../api/client'
 
 function formatBytes(n: number | null): string {
   if (n === null || n === undefined) return '?'
@@ -10,54 +10,49 @@ function formatBytes(n: number | null): string {
   return mb.toFixed(1) + ' MB'
 }
 
-// Surfaced on the Search page when the LLM is enabled but the model file isn't on
-// disk yet. Single click triggers an SSE-streaming download from Hugging Face;
-// progress shows in a thin bar; on complete, query cache invalidates so the
-// banner disappears on next render.
+// Surfaced on the Search page when the LLM is enabled but the model file isn't on disk yet.
+// Clicking Download starts a background download server-side; progress is read by polling
+// /api/llm/status. Because the state lives on the server (not in this component), the download —
+// and its progress bar — survive navigating away and reloading: the query just refetches on
+// remount and picks the transfer back up.
 export function LlmModelBanner() {
   const queryClient = useQueryClient()
   const { data: status, isLoading } = useQuery({
     queryKey: ['llm-status'],
     queryFn: getLlmStatus,
     refetchOnWindowFocus: false,
+    // Poll only while a download is in flight; stops once it completes/fails or the model is present.
+    refetchInterval: (query) =>
+      query.state.data?.download.state === 'downloading' ? 1000 : false,
   })
-  const [progress, setProgress] = useState<{ downloaded: number; total: number | null } | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
 
-  useEffect(() => {
-    if (done) {
-      queryClient.invalidateQueries({ queryKey: ['llm-status'] })
-    }
-  }, [done, queryClient])
+  const [starting, setStarting] = useState(false)
+  const [startError, setStartError] = useState<string | null>(null)
 
   if (isLoading || !status) return null
   if (!status.enabled) return null
-  if (status.modelPresent && !done) return null
+  if (status.modelPresent) return null
 
-  async function startDownload() {
-    setError(null)
-    setProgress({ downloaded: 0, total: null })
+  const dl = status.download
+  const downloading = dl.state === 'downloading' || starting
+  const error = startError ?? (dl.state === 'failed' ? dl.error : null)
+
+  async function onDownload() {
+    setStartError(null)
+    setStarting(true)
     try {
-      for await (const evt of downloadLlmModel()) {
-        if (evt.type === 'progress') {
-          setProgress({ downloaded: evt.downloadedBytes, total: evt.totalBytes })
-        } else if (evt.type === 'complete') {
-          setDone(true)
-          setProgress({ downloaded: evt.bytes, total: evt.bytes })
-        } else if (evt.type === 'error') {
-          setError(evt.message)
-        }
-      }
+      await startLlmDownload()
+      await queryClient.invalidateQueries({ queryKey: ['llm-status'] })
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setStartError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setStarting(false)
     }
   }
 
-  const pct = progress?.total
-    ? Math.min(100, Math.round((progress.downloaded / progress.total) * 100))
+  const pct = dl.totalBytes
+    ? Math.min(100, Math.round((dl.downloadedBytes / dl.totalBytes) * 100))
     : null
-  const downloading = progress !== null && !done && error === null
 
   return (
     <aside
@@ -78,9 +73,9 @@ export function LlmModelBanner() {
             <code style={{ wordBreak: 'break-all' }}>{status.modelPath}</code>.
           </div>
         </div>
-        {!downloading && !done && (
+        {!downloading && (
           <button
-            onClick={startDownload}
+            onClick={onDownload}
             style={{
               padding: '8px 16px',
               background: '#1d3557',
@@ -91,7 +86,7 @@ export function LlmModelBanner() {
               whiteSpace: 'nowrap',
             }}
           >
-            Download model (~2.3 GB)
+            {dl.state === 'failed' ? 'Retry download' : 'Download model (~2.3 GB)'}
           </button>
         )}
       </div>
@@ -99,8 +94,8 @@ export function LlmModelBanner() {
       {downloading && (
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 13 }}>
-            Downloading {formatBytes(progress!.downloaded)}{' '}
-            {progress!.total ? `of ${formatBytes(progress!.total)}` : ''}
+            Downloading {formatBytes(dl.downloadedBytes)}{' '}
+            {dl.totalBytes ? `of ${formatBytes(dl.totalBytes)}` : ''}
             {pct !== null ? ` (${pct}%)` : ''}
           </div>
           <div style={{ height: 4, background: '#e0e0e0', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
@@ -113,12 +108,6 @@ export function LlmModelBanner() {
               }}
             />
           </div>
-        </div>
-      )}
-
-      {done && (
-        <div style={{ marginTop: 12, fontSize: 13, color: '#0a7d3a' }}>
-          ✓ Model downloaded ({formatBytes(progress!.downloaded)}). AI review will run on the next search.
         </div>
       )}
 

@@ -40,6 +40,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-036** The system should run a search as a background job (Hangfire, durable SQLite-backed queue) decoupled from the HTTP request, so the run survives the user navigating away, reloading the page, and restarting the host process. Navigating away or closing the tab must not cancel the run. (Deliberate exception to the general "no background jobs / no DB" rule, scoped to one user-initiated run; not a daemon or scheduler.)
 - **R-037** The system should stream live run progress to the GUI over SSE — current snapshot on connect (replay), then updates — and let the GUI reconnect to an in-flight run by id after a reload. A disconnected viewer must not affect the run.
 - **R-038** The system should let the user cancel an in-flight (queued or running) search from the GUI.
+- **R-093** The system should run the local AI-model download decoupled from the HTTP request that starts it, holding live progress in a process-singleton so the download survives the user navigating away and reloading the page; the GUI reconnects by polling model status and shows current progress. Starting a download is idempotent — a repeat request while one is already running is a no-op — and partial bytes are written to a temp file that is promoted only on completion, so an interrupted transfer never reports as a present model.
 
 ## Ranking
 
