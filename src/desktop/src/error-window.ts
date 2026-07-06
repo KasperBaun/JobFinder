@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import { appIconPath } from './icon'
 
 function escapeHtml(s: string): string {
   return s
@@ -16,6 +17,7 @@ export function showErrorWindow(err: unknown): BrowserWindow {
     height: 460,
     title: 'Jobfinder — startup error',
     backgroundColor: '#F4F6FB',
+    icon: appIconPath(),
   })
   win.setMenuBarVisibility(false)
 
