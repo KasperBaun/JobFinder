@@ -91,6 +91,10 @@ public static class JobmatchApiExtensions
                 },
             });
 
+        // Singleton so the in-flight download's live progress outlives the request that started it
+        // (the SPA polls /api/llm/status to reconnect after navigation/reload).
+        services.AddSingleton<ModelDownloadManager>();
+
         // Handlers
         services.AddScoped<ISetupHandler, SetupHandler>();
         services.AddScoped<ISystemHandler, SystemHandler>();
