@@ -7,24 +7,36 @@ directories:
   buildResources: build
 
 # What goes inside the app (asar). The 204 MB self-contained backend is NOT here — it rides along
-# as extraResources so it stays outside asar and isn't double-packed.
+# as per-platform extraResources so it stays outside asar and isn't double-packed. Each OS block
+# below bundles only its own publish/<rid> output.
 files:
   - dist/**/*
   - package.json
-
-extraResources:
-  - from: ../../publish/win-x64
-    to: backend
-    filter:
-      - "**/*"
 
 win:
   target:
     - nsis
   icon: build/icon.ico
   artifactName: jobfinder-setup-${version}.exe
+  extraResources:
+    - from: ../../publish/win-x64
+      to: backend
+      filter:
+        - "**/*"
   # Unsigned for now — SmartScreen will warn "unknown publisher". Code-signing is a tracked backlog
   # item; add signtool config here once a cert is available.
+
+linux:
+  target:
+    - deb
+  icon: build/icon.png
+  category: Utility
+  maintainer: Kasper Baun <tappah2510@gmail.com>
+  extraResources:
+    - from: ../../publish/linux-x64
+      to: backend
+      filter:
+        - "**/*"
 
 nsis:
   oneClick: false
