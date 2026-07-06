@@ -5,32 +5,10 @@ import { getHistory, getProviders, getRun, getSetupStatus } from '../api/client'
 import { useSearchRun } from '../context/SearchRunContext'
 import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
+import { SearchProgress } from '../components/SearchProgress'
 import { formatRelative } from '../utils/time'
 import { lastCompletedRun } from '../utils/runs'
-import { PHASE_LABEL, STATE_LABEL } from '../utils/searchLabels'
-import { isTerminalState } from '../api/types'
-import type { JobSearch, SearchRequest } from '../api/types'
-
-type ProviderRowState = {
-  name: string
-  status: 'pending' | 'running' | 'ok' | 'failed'
-  fetchedCount?: number
-  error?: string
-}
-
-function buildRows(job: JobSearch | null, initialNames: string[]): ProviderRowState[] {
-  const rows = new Map<string, ProviderRowState>()
-  for (const name of initialNames) rows.set(name, { name, status: 'pending' })
-  for (const p of job?.providers ?? []) {
-    rows.set(p.name, { name: p.name, status: p.status, fetchedCount: p.fetchedCount, error: p.error })
-  }
-  return Array.from(rows.values())
-}
-
-function reached(phase: JobSearch['phase'], target: JobSearch['phase']): boolean {
-  const order: JobSearch['phase'][] = ['pending', 'fetching', 'deduping', 'ranking', 'llmJudging', 'writing', 'done']
-  return order.indexOf(phase) >= order.indexOf(target)
-}
+import type { SearchRequest } from '../api/types'
 
 export function SearchPage() {
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
@@ -50,8 +28,6 @@ export function SearchPage() {
     [providersQuery.data],
   )
   const effectiveProviders = selectedProviders ?? enabledProviderNames
-
-  const rows = useMemo(() => buildRows(job, effectiveProviders), [job, effectiveProviders])
 
   const succeeded = job?.state === 'succeeded'
   const runDetailQuery = useQuery({
@@ -91,10 +67,6 @@ export function SearchPage() {
       </div>
     )
   }
-
-  const showDedupe = job != null && (job.dedupedCount > 0 || reached(job.phase, 'deduping'))
-  const showRank = job != null && (job.rankedCount > 0 || reached(job.phase, 'ranking'))
-  const statusBadge = job && isTerminalState(job.state) ? STATE_LABEL[job.state] : null
 
   return (
     <div className="page page--wide">
@@ -204,77 +176,13 @@ export function SearchPage() {
       )}
 
       {job != null && (
-        <section className="progress-panel">
-          <div className="progress-panel__head">
-            <h2 className="progress-panel__heading">
-              {statusBadge ?? PHASE_LABEL[job.phase]}
-              {job.attempt > 1 && !statusBadge && <span className="muted"> · attempt {job.attempt}</span>}
-            </h2>
-            <button type="button" className="link-button" onClick={() => setStepsOpen(o => !o)}>
-              {stepsOpen ? 'hide steps ▴' : 'show steps ▾'}
-            </button>
-          </div>
-
-          {stepsOpen && (
-            <>
-              <ul className="progress-list">
-                {rows.map(row => {
-                  const linkable = succeeded && row.status === 'ok'
-                  const body = (
-                    <>
-                      <span className="progress-row__icon"><span className={`dot dot--${row.status}`} /></span>
-                      <span className="progress-row__name">{row.name}</span>
-                      <span className="progress-row__status">
-                        {row.status === 'pending' && 'pending'}
-                        {row.status === 'running' && 'running…'}
-                        {row.status === 'ok' && `ok · ${row.fetchedCount ?? 0} jobs`}
-                        {row.status === 'failed' && `failed: ${row.error ?? 'unknown error'}`}
-                      </span>
-                    </>
-                  )
-                  return (
-                    <li key={row.name} className={`progress-row progress-row--${row.status}${linkable ? ' progress-row--link' : ''}`}>
-                      {linkable ? (
-                        <Link to={`/history/${job.id}#tab=raw&provider=${encodeURIComponent(row.name)}`}>{body}</Link>
-                      ) : body}
-                    </li>
-                  )
-                })}
-                {showDedupe && (
-                  <li className="progress-row progress-row--info">
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">remove duplicates</span>
-                    <span className="progress-row__status">{job.dedupedCount} unique jobs</span>
-                  </li>
-                )}
-                {showRank && (
-                  <li className="progress-row progress-row--info">
-                    <span className="progress-row__icon">·</span>
-                    <span className="progress-row__name">rate jobs</span>
-                    <span className="progress-row__status">
-                      {job.rankedCount} rated · best {job.topScore.toFixed(2)}
-                    </span>
-                  </li>
-                )}
-              </ul>
-
-              {job.timeline.length > 0 && (
-                <ol className="timeline">
-                  {job.timeline.map((ev, i) => (
-                    <li key={i} className={`timeline__item timeline__item--${ev.level}`}>
-                      <span className="timeline__time tabular mono">{formatRelative(ev.timestamp)}</span>
-                      <span className="timeline__msg">{ev.message}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </>
-          )}
-
-          {job.state === 'failed' && job.error && (
-            <div className="error-banner">Search failed: {job.error}</div>
-          )}
-        </section>
+        <SearchProgress
+          job={job}
+          providerNames={effectiveProviders}
+          succeeded={succeeded}
+          stepsOpen={stepsOpen}
+          onToggleSteps={() => setStepsOpen(o => !o)}
+        />
       )}
 
       {succeeded && job && (

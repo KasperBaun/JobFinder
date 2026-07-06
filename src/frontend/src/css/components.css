@@ -1038,6 +1038,116 @@ a.btn--danger:hover {
 .timeline__item--warn .timeline__msg  { color: var(--c-bad); }
 .timeline__item--error .timeline__msg { color: var(--c-bad); font-weight: 500; }
 
+/* ----- live progress: numbered pipeline stepper + hero + dense source grid ----- */
+.pipeline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+.pipeline__step {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--c-text-subtle);
+}
+.pipeline__step:not(:last-child)::after {
+  content: '';
+  width: 1.6rem;
+  height: 2px;
+  margin-left: var(--space-2);
+  background: var(--c-slate-200);
+  border-radius: 1px;
+}
+.pipeline__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--c-slate-300);
+  background: var(--c-surface);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--c-text-subtle);
+  flex-shrink: 0;
+}
+.pipeline__label { white-space: nowrap; }
+
+.pipeline__step--done { color: var(--c-good); }
+.pipeline__step--done .pipeline__num { border-color: var(--c-good); background: var(--c-good-bg); color: var(--c-good); }
+.pipeline__step--done:not(:last-child)::after { background: var(--c-good); }
+
+.pipeline__step--current { color: var(--c-text); font-weight: 600; }
+.pipeline__step--current .pipeline__num { border-color: var(--c-action); color: var(--c-action); animation: pulse 1.4s ease-in-out infinite; }
+
+.pipeline__step--failed { color: var(--c-bad); font-weight: 600; }
+.pipeline__step--failed .pipeline__num { border-color: var(--c-bad); background: var(--c-bad-bg); color: var(--c-bad); }
+
+.progress-hero { margin-bottom: var(--space-4); }
+.progress-hero__bar-row { display: flex; align-items: center; gap: var(--space-3); }
+.progress-bar--fluid { flex: 1; min-width: 4rem; width: auto; height: 8px; }
+.progress-hero__frac { color: var(--c-text-muted); font-size: 0.78rem; white-space: nowrap; }
+.progress-hero__timer { color: var(--c-text-subtle); font-size: 0.78rem; white-space: nowrap; }
+.progress-hero__aggregate { margin-top: var(--space-2); font-size: 0.85rem; color: var(--c-text-muted); }
+.progress-hero__running { color: var(--c-action); }
+.progress-hero__failed { color: var(--c-bad); }
+
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-2);
+  max-height: 22rem;
+  overflow-y: auto;
+  margin-bottom: var(--space-4);
+}
+.source-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  font-size: 0.82rem;
+  color: inherit;
+  text-decoration: none;
+}
+.source-cell__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--c-text);
+}
+.source-cell__count { color: var(--c-text-muted); font-size: 0.76rem; white-space: nowrap; }
+.source-cell--running .source-cell__count { color: var(--c-action); }
+.source-cell--ok .source-cell__count { color: var(--c-good); }
+.source-cell--pending { opacity: 0.6; }
+.source-cell--pending .source-cell__count { color: var(--c-text-subtle); }
+.source-cell--failed { background: var(--c-bad-bg); border-color: var(--c-bad-border); }
+.source-cell--failed .source-cell__count { color: var(--c-bad); }
+.source-cell--link { cursor: pointer; }
+.source-cell--link:hover { background: var(--c-action-soft); border-color: var(--c-slate-300); }
+
+.activity-log { margin-top: var(--space-2); }
+.activity-log__summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--c-text-muted);
+  padding: var(--space-2) 0;
+}
+.activity-log__summary:hover { color: var(--c-action); }
+.activity-log__scroll { max-height: 18rem; overflow-y: auto; }
+.activity-log__scroll .timeline { margin-top: var(--space-2); }
+
 /* ----- run state badge ----- */
 .state-badge {
   display: inline-block;
