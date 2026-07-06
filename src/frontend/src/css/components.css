@@ -1478,55 +1478,6 @@ a.btn--danger:hover {
    providers — index summary strip + compact tile grid
    ============================================================ */
 
-.provider-stats {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-5);
-  padding: var(--space-4) var(--space-5);
-  margin-bottom: var(--space-5);
-  background: var(--c-surface);
-  border: 1px solid var(--c-slate-200);
-  border-top: 2px solid var(--c-navy-500);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-1);
-}
-
-.provider-stats__sep {
-  width: 1px;
-  align-self: stretch;
-  background: var(--c-slate-200);
-  margin: 0 var(--space-2);
-}
-
-.provider-stats__item {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-.provider-stats__value {
-  font-family: var(--font-mono);
-  font-size: 1.35rem;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--c-text-strong);
-  letter-spacing: -0.01em;
-}
-
-.provider-stats__label {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--c-text-subtle);
-}
-
-.provider-stats__item--good   .provider-stats__value { color: var(--c-good); }
-.provider-stats__item--bad    .provider-stats__value { color: var(--c-bad); }
-.provider-stats__item--warn   .provider-stats__value { color: var(--c-warn); }
-.provider-stats__item--muted  .provider-stats__value { color: var(--c-text-subtle); }
-
 .provider-toolbar {
   display: flex;
   align-items: center;
@@ -1547,10 +1498,17 @@ a.btn--danger:hover {
   flex-wrap: wrap;
 }
 
+/* the chips double as the source summary, so the counts carry the old stats-card tones */
 .provider-toolbar__count {
   font-variant-numeric: tabular-nums;
-  opacity: 0.7;
+  font-weight: 600;
+  color: var(--c-text-mid);
 }
+.provider-toolbar__count--good  { color: var(--c-good); }
+.provider-toolbar__count--bad   { color: var(--c-bad); }
+.provider-toolbar__count--muted { color: var(--c-text-subtle); }
+/* on the active (navy) chip a tinted count would be low-contrast — keep it legible */
+.chip--active .provider-toolbar__count { color: rgba(255, 255, 255, 0.85); }
 
 .provider-grid {
   display: grid;
