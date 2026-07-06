@@ -16,7 +16,6 @@ src/                                 ALL source, tests, configs, build infra
   desktop/                           Electron shell (TS) — spawns Jobmatch.Host.exe on a loopback port, renders the SPA in a BrowserWindow (see "Entry point"). src/ is tracked; dist/, node_modules/, release/ are gitignored build output.
   infrastructure/
     Jobmatch.Host/                   bundle (runnable + .NET tool). Ephemeral Kestrel + browser-open + serves bundled SPA + jobfinder tool packaging
-  installer/                         Inno Setup recipe (jobfinder.iss) → Windows Setup.exe. Output/ is gitignored build output.
   scripts/                           Node build/dev wrappers (dev.mjs, package*.mjs, *-tool.mjs, clean/refresh) — driven by root package.json.
   tests/
     Jobmatch.Tests/                  xUnit
@@ -98,8 +97,8 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 
 ## Entry point
 
-- One backend, two front-end shells. The backbone is the self-contained `Jobmatch.Host` (published as the `jobfinder` .NET tool): launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. Shipped as a Windows installer via `src/installer/jobfinder.iss` (Inno Setup).
-- The Electron desktop shell (`src/desktop/`, tracked TypeScript source) is the second front-end and the primary Windows **desktop distribution** (`npm run package:desktop` → electron-builder NSIS installer, artifact under `src/desktop/release/`). It spawns that same `Jobmatch.Host.exe` on an ephemeral loopback port (`JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`, `windowsHide`) and renders the SPA in a native `BrowserWindow` (single-instance lock, graceful backend shutdown, startup-error window, remembered window size/position). The `jobfinder` dotnet tool (browser-based) is unchanged and coexists.
+- One backend, two front-end shells. The backbone is the self-contained `Jobmatch.Host`: launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. This browser experience ships as the `jobfinder` .NET tool (`npm run package` / `install:tool`) and runs via `npm run dev` / `dev:bundled`. It is being retired in favour of the desktop app but stays functional; it no longer has its own Windows installer.
+- The Electron desktop shell (`src/desktop/`, tracked TypeScript source) is the second front-end and **the** Windows installer going forward (`npm run package:win` → electron-builder NSIS installer, artifact under `src/desktop/release/`; also built by CI `release.yml`). It spawns that same `Jobmatch.Host.exe` on an ephemeral loopback port (`JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`, `windowsHide`) and renders the SPA in a native `BrowserWindow` (single-instance lock, graceful backend shutdown, startup-error window, remembered window size/position).
 - There is no separate CLI; headless operation is not part of v1.
 - The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
 - API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
