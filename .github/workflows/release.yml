@@ -35,21 +35,19 @@ jobs:
           # test that touches per-user paths resolves instead of throwing.
           JOBFINDER_USER: ci@jobfinder.local
 
-      - name: Publish (self-contained win-x64, GUI bundled)
-        run: >
-          dotnet publish src/infrastructure/Jobmatch.Host/Jobmatch.Host.csproj
-          -c Release -r win-x64 --self-contained true
-          -p:BuildGui=true -p:Version=0.1.${{ github.run_number }}
-          -o publish/win-x64
+      - name: Publish backend (self-contained win-x64, GUI bundled)
+        run: node src/scripts/publish-backend.mjs
+        env:
+          VERSION: 0.1.${{ github.run_number }}
 
-      - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+      - name: Install desktop dependencies
+        run: npm --prefix src/desktop ci
 
-      - name: Build installer
-        run: >
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          /DAppVersion=0.1.${{ github.run_number }}
-          src\installer\jobfinder.iss
+      - name: Set desktop version
+        run: npm --prefix src/desktop version 0.1.${{ github.run_number }} --no-git-tag-version --allow-same-version
+
+      - name: Build desktop installer (Electron / NSIS)
+        run: npm --prefix src/desktop run dist
 
       - name: Publish rolling "latest" prerelease
         uses: softprops/action-gh-release@v2
@@ -57,7 +55,7 @@ jobs:
           tag_name: latest
           name: Jobfinder (latest)
           prerelease: true
-          files: src/installer/Output/jobfinder-setup-0.1.${{ github.run_number }}.exe
+          files: src/desktop/release/jobfinder-setup-0.1.${{ github.run_number }}.exe
           body: |
             Automated Windows build from the latest commit on `main`
             (version `0.1.${{ github.run_number }}`, commit ${{ github.sha }}).
