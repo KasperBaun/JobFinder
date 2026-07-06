@@ -345,6 +345,50 @@ public sealed class ApiAdapterTests
         RateLimitRps: 0);
 
     [Fact]
+    public async Task FetchAsync_UrlTemplate_And_Location_Resolve_Nested_And_Array_Paths()
+    {
+        // SuccessFactors Career Site Builder shape: every item is wrapped in a `response`
+        // object and location is an array. The response mapping (Walk) already handles both;
+        // this also covers url_template resolving nested {response.*} paths.
+        const string payload = """
+            {
+              "jobSearchResult": [
+                {
+                  "response": {
+                    "id": "70652",
+                    "unifiedStandardTitle": "Senior .NET Engineer",
+                    "urlTitle": "Senior-NET-Engineer",
+                    "jobLocationShort": ["Bjerringbro, Denmark"]
+                  }
+                }
+              ]
+            }
+            """;
+        var cfg = new PortalConfig(
+            Name: "successfactors-x",
+            Type: PortalType.Api,
+            Enabled: true,
+            Endpoint: new Uri("https://jobs.example.com/services/recruiting/v1/jobs"),
+            ResponseMapping: new Dictionary<string, string>
+            {
+                ["items_path"] = "jobSearchResult",
+                ["id"] = "response.id",
+                ["title"] = "response.unifiedStandardTitle",
+                ["location"] = "response.jobLocationShort.0",
+                ["url_template"] = "https://jobs.example.com/job/{response.urlTitle}/{response.id}",
+            });
+        using var http = new HttpClient(new StubHandler(payload));
+        var adapter = new ApiAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Single(results);
+        Assert.Equal("Senior .NET Engineer", results[0].Title);
+        Assert.Equal("Bjerringbro, Denmark", results[0].Location);
+        Assert.Equal("https://jobs.example.com/job/Senior-NET-Engineer/70652", results[0].Url.ToString());
+    }
+
+    [Fact]
     public async Task FetchAsync_Pagination_Stops_On_Empty_Page()
     {
         var pageA = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
