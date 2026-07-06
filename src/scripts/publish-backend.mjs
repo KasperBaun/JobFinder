@@ -1,6 +1,6 @@
 // Publishes the self-contained win-x64 .NET backend (React GUI bundled) to publish/win-x64/.
-// Shared by the Electron desktop packaging (package:desktop) and the legacy Inno installer
-// (package-installer.mjs). Set VERSION to override (default 0.1.0-local).
+// Used by the Windows desktop packaging (npm run package:win → electron-builder, which bundles this
+// as extraResources) and by CI. Set VERSION to override (default 0.1.0-local).
 import { spawnSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
 import { resolve } from 'node:path'

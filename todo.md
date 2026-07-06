@@ -21,8 +21,9 @@ Current status of work on `jobfinder`.
      never reaches the model either — fixing that is part of closing this loop.
   Validate against `examples/` per [[feedback_validate_against_examples]]: success = the
   student/junior/wrong-stack archetypes fall out of the top-10 on the following run.
-- **Code-sign the Windows installer.** Unsigned `Setup.exe`/portable exe trips SmartScreen
-  ("unknown publisher"). Needs a code-signing cert; wire it into the CI publish step.
+- **Code-sign the Windows installer.** The unsigned electron-builder NSIS installer trips
+  SmartScreen ("unknown publisher"). Needs a code-signing cert; wire it into `electron-builder.yml`
+  (`win.signtool`/`signingHashAlgorithms`) and the CI publish step.
 - **Switch data location / user after setup.** First-run setup is one-time; add a Settings action
   to re-run it or point at a different data folder (updates `bootstrap.json`).
 - **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,

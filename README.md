@@ -119,16 +119,16 @@ jobfinder              # launch it from anywhere
 [**latest** release](../../releases/tag/latest). Download it, run it, and launch jobfinder from the
 Start menu. (It's unsigned, so SmartScreen may say "unknown publisher" — choose **More info → Run anyway**.)
 
-Want to build that Windows package yourself without GitHub?
+Want to build that Windows installer yourself without GitHub?
 
 ```bash
-npm run package:win    # self-contained publish + a portable .zip in src/installer/Output/
-                       # …and the Setup.exe too, if Inno Setup (ISCC) is installed
+npm run package:win    # self-contained backend publish + electron-builder NSIS installer
+                       # → src/desktop/release/jobfinder-setup-*.exe
 ```
 
-Copy the resulting folder/zip to a Windows machine and run `Jobmatch.Host.exe`. On first launch
-jobfinder asks you to confirm where to store your data (it suggests a folder; you choose) — nothing
-is written until you agree.
+Run the resulting `jobfinder-setup-*.exe` to install the desktop app. On first launch jobfinder asks
+you to confirm where to store your data (it suggests a folder; you choose) — nothing is written until
+you agree.
 
 Other scripts: `npm run build` (release build), `npm test` (backend suite), `npm run test:client` (frontend), `npm run test:e2e` (Playwright).
 

@@ -42,9 +42,8 @@ node_modules/
 # Local NuGet output from `npm run package`
 pkg/
 
-# Self-contained publish + Windows installer build output
+# Self-contained publish output (bundled into the desktop installer as extraResources)
 publish/
-src/installer/Output/
 
 # Scratch
 .tmp/
