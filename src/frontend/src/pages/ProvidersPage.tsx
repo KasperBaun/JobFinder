@@ -39,6 +39,16 @@ const FILTERS = [
 ] as const
 type FilterKey = (typeof FILTERS)[number]['key']
 
+// The filter chips double as the source summary, so their counts carry the same tone the old
+// stats card used: enabled = good, failing = bad, off = muted. Zero failing stays neutral so an
+// empty "Failing 0" doesn't read as an alert.
+function countTone(key: FilterKey, counts: Record<FilterKey, number>): 'good' | 'bad' | 'muted' | undefined {
+  if (key === 'on') return counts.on > 0 ? 'good' : undefined
+  if (key === 'failing') return counts.failing > 0 ? 'bad' : undefined
+  if (key === 'off') return 'muted'
+  return undefined
+}
+
 export function ProvidersPage() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['providers'], queryFn: getProviders })
@@ -161,15 +171,6 @@ export function ProvidersPage() {
       {isLoading && <div className="muted">Loading sources…</div>}
       {error && <div className="error-text">Failed to load sources.</div>}
 
-      {data && (
-        <div className="provider-stats">
-          <Stat label="total" value={counts.all} />
-          <Stat label="on" value={counts.on} tone={counts.on > 0 ? 'good' : undefined} />
-          <Stat label="off" value={counts.off} tone="muted" />
-          {counts.failing > 0 && <Stat label="failing" value={counts.failing} tone="bad" />}
-        </div>
-      )}
-
       {data && data.providers.length > 0 && (
         <div className="provider-toolbar">
           <input
@@ -181,17 +182,25 @@ export function ProvidersPage() {
             aria-label="Search sources by name"
           />
           <div className="provider-toolbar__filters" role="group" aria-label="Filter sources">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                className={filter === f.key ? 'chip chip--active' : 'chip'}
-                onClick={() => setFilter(f.key)}
-                aria-pressed={filter === f.key}
-              >
-                {f.label} <span className="provider-toolbar__count">{counts[f.key]}</span>
-              </button>
-            ))}
+            {FILTERS.map((f) => {
+              const tone = countTone(f.key, counts)
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={filter === f.key ? 'chip chip--active' : 'chip'}
+                  onClick={() => setFilter(f.key)}
+                  aria-pressed={filter === f.key}
+                >
+                  {f.label}{' '}
+                  <span
+                    className={`provider-toolbar__count${tone ? ` provider-toolbar__count--${tone}` : ''}`}
+                  >
+                    {counts[f.key]}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
@@ -283,15 +292,6 @@ export function ProvidersPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'good' | 'bad' | 'warn' | 'muted' }) {
-  return (
-    <span className={`provider-stats__item${tone ? ` provider-stats__item--${tone}` : ''}`}>
-      <span className="provider-stats__value">{value}</span>
-      <span className="provider-stats__label">{label}</span>
-    </span>
   )
 }
 
