@@ -95,6 +95,27 @@ public sealed class ApiAdapterWorkdayTests
     }
 
     [Fact]
+    public async Task FetchAsync_Workday_ClampedOffset_StopsOnDuplicatePage_NoOverFetch()
+    {
+        // Workday clamps an out-of-range offset and re-serves an earlier FULL page instead of an
+        // empty/short one, so the short-page break never fires. With a page size of 2 the two-job
+        // page is "full"; the loop must stop once a page adds nothing new — returning the jobs once,
+        // not MaxPages x the same page (and, with enrichBody, not enriching duplicates).
+        var config = WorkdayLike() with
+        {
+            Pagination = new PaginationConfig(Param: "offset", Start: 0, Step: 2, SizeParam: "limit", Size: 2, MaxPages: 5),
+        };
+        var handler = new ScriptedHandler(PageOne, PageOne, PageOne, PageOne, PageOne);
+        using var http = new HttpClient(handler);
+        var adapter = new ApiAdapter(config, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Equal(2, results.Count); // deduped, not 5 pages x 2 jobs
+        Assert.Equal(2, handler.RequestBodies.Count); // page 1 (new), page 2 (all dupes => stop)
+    }
+
+    [Fact]
     public async Task FetchAsync_Workday_Missing_LocationsText_Keeps_Item_With_Null_Location()
     {
         var handler = new ScriptedHandler(PageOne, EmptyPage);
