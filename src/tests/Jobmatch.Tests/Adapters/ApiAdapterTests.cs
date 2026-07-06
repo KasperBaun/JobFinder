@@ -347,9 +347,10 @@ public sealed class ApiAdapterTests
     [Fact]
     public async Task FetchAsync_Pagination_Stops_On_Empty_Page()
     {
-        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var pageA = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var pageB = """{"jobs":[{"id":"b","title":"B","link":"https://ex.com/b"}]}""";
         var empty = """{"jobs":[]}""";
-        var handler = new ScriptedHandler(full, full, empty);
+        var handler = new ScriptedHandler(pageA, pageB, empty);
         using var http = new HttpClient(handler);
         var cfg = PaginatedGet() with
         {
@@ -388,8 +389,9 @@ public sealed class ApiAdapterTests
     [Fact]
     public async Task FetchAsync_Pagination_Respects_MaxPages()
     {
-        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
-        var handler = new ScriptedHandler(full, full);
+        var pageA = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var pageB = """{"jobs":[{"id":"b","title":"B","link":"https://ex.com/b"}]}""";
+        var handler = new ScriptedHandler(pageA, pageB);
         using var http = new HttpClient(handler);
         var cfg = PaginatedGet() with
         {
@@ -406,9 +408,10 @@ public sealed class ApiAdapterTests
     [Fact]
     public async Task FetchAsync_Honours_RateLimitRps_Across_Pages()
     {
-        var full = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var pageA = """{"jobs":[{"id":"a","title":"A","link":"https://ex.com/a"}]}""";
+        var pageB = """{"jobs":[{"id":"b","title":"B","link":"https://ex.com/b"}]}""";
         var empty = """{"jobs":[]}""";
-        var handler = new ScriptedHandler(full, full, empty);
+        var handler = new ScriptedHandler(pageA, pageB, empty);
         using var http = new HttpClient(handler);
         var cfg = PaginatedGet() with
         {

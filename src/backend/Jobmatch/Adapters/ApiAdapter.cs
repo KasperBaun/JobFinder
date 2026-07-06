@@ -33,13 +33,23 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
             var p = Config.Pagination;
             var isPost = method == HttpMethod.Post;
             var all = new List<Listing>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             var current = p.Start;
             for (var pageIdx = 0; pageIdx < p.MaxPages; pageIdx++, current += p.Step)
             {
                 var (qp, body) = InjectPagination(baseQueryParams, Config.BodyTemplate, isPost, p, current);
                 var pageResults = await FetchOnePageAsync(renderedEndpoint, qp, body, method, mapping, ct);
                 if (pageResults.Count == 0) break;
-                all.AddRange(pageResults);
+
+                var added = 0;
+                foreach (var listing in pageResults)
+                {
+                    if (seen.Add(listing.Id)) { all.Add(listing); added++; }
+                }
+                // Workday's CXS endpoint clamps an out-of-range offset and re-serves an earlier
+                // page instead of an empty/short one, so a page of pure duplicates means we've run
+                // past the real end — stop rather than fetch (and body-enrich) the same jobs again.
+                if (added == 0) break;
                 if (p.Size is int sz && pageResults.Count < sz) break;
             }
             result = all;
