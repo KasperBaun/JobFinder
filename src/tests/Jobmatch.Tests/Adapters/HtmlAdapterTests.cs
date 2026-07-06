@@ -69,6 +69,48 @@ public sealed class HtmlAdapterTests
     }
 
     [Fact]
+    public async Task FetchAsync_ScopeLinkSelector_UsesCardElementHref()
+    {
+        // "List item is the anchor" pattern: the card itself carries the href, so linkSelector
+        // is ":scope". element.QuerySelector(":scope") returns null per DOM semantics, so the
+        // adapter must resolve it to the card element.
+        const string page = """
+            <html><body>
+              <a class="job" href="/jobs/123"><span class="t">Senior .NET Developer</span></a>
+              <a class="job" href="/jobs/456"><span class="t">Cloud Engineer</span></a>
+            </body></html>
+            """;
+        var cfg = new PortalConfig(
+            Name: "html-scope",
+            Type: PortalType.Html,
+            Enabled: true,
+            Endpoint: new Uri("https://careers.example.com/jobs"),
+            Html: new HtmlSelectors(
+                ListSelector: "a.job",
+                TitleSelector: ".t",
+                LinkSelector: ":scope",
+                UrlAttribute: "href"),
+            RateLimitRps: 0);
+        using var http = new HttpClient(new StaticHandler(page));
+        var adapter = new HtmlAdapter(cfg, http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal("Senior .NET Developer", results[0].Title);
+        Assert.Equal("https://careers.example.com/jobs/123", results[0].Url.ToString());
+    }
+
+    private sealed class StaticHandler(string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/html"),
+            });
+    }
+
+    [Fact]
     public async Task FetchAsync_Without_EnrichBody_Leaves_Description_Empty()
     {
         using var http = new HttpClient(new RoutedHandler());

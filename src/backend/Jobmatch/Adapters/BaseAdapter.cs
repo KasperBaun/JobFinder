@@ -71,6 +71,52 @@ public abstract class BaseAdapter(PortalConfig config, HttpClient http, ILogger 
         return WhitespaceRun.Replace(decoded, " ").Trim();
     }
 
+    // Drives a single-page fetch delegate across pages when Config.Pagination is set,
+    // accumulating de-duplicated listings. Stops at MaxPages, on an empty page, on a
+    // page that adds nothing new (server ignored the page param and re-served an earlier
+    // page — e.g. a JS-paginated list whose SSR fallback is always page 1), or on a short
+    // page (fewer than Size => the last page). With no Pagination it does exactly one
+    // fetch with the base query params, so non-paginated providers behave unchanged.
+    // Shared by RssAdapter and HtmlAdapter; ApiAdapter has its own loop (it also paginates POST bodies).
+    protected async Task<IReadOnlyList<Listing>> FetchPagesAsync(
+        Func<IReadOnlyDictionary<string, object?>?, CancellationToken, Task<IReadOnlyList<Listing>>> fetchPage,
+        CancellationToken ct)
+    {
+        var p = Config.Pagination;
+        if (p is null) return await fetchPage(Config.QueryParams, ct);
+
+        var all = new List<Listing>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var current = p.Start;
+        for (var page = 0; page < p.MaxPages; page++, current += p.Step)
+        {
+            var pageResults = await fetchPage(MergePageParam(Config.QueryParams, p, current), ct);
+            if (pageResults.Count == 0) break;
+
+            var added = 0;
+            foreach (var listing in pageResults)
+            {
+                if (seen.Add(listing.Id)) { all.Add(listing); added++; }
+            }
+            if (added == 0) break;                                       // page param ignored => duplicate page
+            if (p.Size is int size && pageResults.Count < size) break;   // short page => last page
+        }
+        return all;
+    }
+
+    // Copies the base query params and writes the page cursor (and optional page size)
+    // for GET-style paginated feeds/scrapes. Mirrors ApiAdapter's GET pagination branch.
+    private static IReadOnlyDictionary<string, object?> MergePageParam(
+        IReadOnlyDictionary<string, object?>? queryParams, PaginationConfig p, int current)
+    {
+        var qp = queryParams is null
+            ? new Dictionary<string, object?>(StringComparer.Ordinal)
+            : new Dictionary<string, object?>(queryParams, StringComparer.Ordinal);
+        qp[p.Param] = current;
+        if (p.SizeParam is not null && p.Size is int size) qp[p.SizeParam] = size;
+        return qp;
+    }
+
     // Appends Config.QueryParams to the endpoint URL, preserving any pre-existing
     // query string. Used by RssAdapter and any other adapter that doesn't otherwise
     // build a request URI itself.

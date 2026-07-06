@@ -21,9 +21,23 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
             throw new ConfigException($"portal '{PortalName}': html adapter requires 'html' selector block");
         }
 
+        // Server-rendered career sites paginate via a query cursor (Nordea: `startrow` in
+        // steps of 100). When Config.Pagination is set FetchPagesAsync walks the pages,
+        // stopping at the first empty/duplicate page so JS-only lists (whose SSR fallback
+        // repeats page 1) don't loop. Enrichment runs once on the merged set.
+        var results = await FetchPagesAsync(FetchListPageAsync, ct);
+
+        return Config.EnrichBody && results.Count > 0
+            ? await EnrichBodiesAsync(results, ct)
+            : results;
+    }
+
+    private async Task<IReadOnlyList<Listing>> FetchListPageAsync(
+        IReadOnlyDictionary<string, object?>? queryParams, CancellationToken ct)
+    {
         await ThrottleAsync(ct);
 
-        using var req = new HttpRequestMessage(HttpMethod.Get, Config.Endpoint);
+        using var req = new HttpRequestMessage(HttpMethod.Get, AppendQueryParams(Config.Endpoint!, queryParams));
         if (Config.Headers is { } headers)
         {
             foreach (var (k, v) in headers) req.Headers.TryAddWithoutValidation(k, v);
@@ -56,7 +70,10 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
                 Uri? url = null;
                 if (!string.IsNullOrWhiteSpace(html.LinkSelector))
                 {
-                    var link = card.QuerySelector(html.LinkSelector);
+                    // ":scope" means the list item itself is the <a> carrying the href.
+                    // element.QuerySelector(":scope") returns null per DOM semantics (an element
+                    // is not its own descendant), so resolve it to the card element explicitly.
+                    var link = html.LinkSelector == ":scope" ? card : card.QuerySelector(html.LinkSelector);
                     var attr = link?.GetAttribute(html.UrlAttribute ?? "href");
                     if (!string.IsNullOrWhiteSpace(attr) &&
                         Uri.TryCreate(Config.Endpoint, attr, out var resolved) &&
@@ -87,11 +104,7 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
             }
         }
 
-        // Card markup rarely carries the full posting; EnrichBody fetches each listing's
-        // detail page and merges the visible text into Description, same as RssAdapter.
-        return Config.EnrichBody && results.Count > 0
-            ? await EnrichBodiesAsync(results, ct)
-            : results;
+        return results;
     }
 
     private static string? TextOf(IElement card, string selector)
