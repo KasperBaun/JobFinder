@@ -92,7 +92,10 @@ export function SetupPage() {
       <div className="setup__card">
         {step === 1 ? (
           <>
-            <div className="setup__eyebrow">first-time setup · step 1 of 2</div>
+            <div className="setup__eyebrow">
+              <span className="setup__eyebrow-title">first-time setup</span>
+              <span className="setup__step">step 1 of 2</span>
+            </div>
             <h1 className="setup__heading">Welcome to <em>jobfinder</em></h1>
             <p className="setup__lede">
               First, choose where jobfinder should keep your data on this computer — your profile, job
@@ -109,7 +112,7 @@ export function SetupPage() {
                 placeholder="you@example.com"
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <span className="setup__note">Used only to label your data folder — never sent anywhere.</span>
+              <span className="setup__note">Just a label for your data folder — never sent anywhere.</span>
             </label>
 
             <label className="setup__field">
@@ -121,7 +124,7 @@ export function SetupPage() {
                 spellCheck={false}
                 onChange={(e) => setDataDir(e.target.value)}
               />
-              <span className="setup__note">The suggestion is just a starting point — change it to any folder you like.</span>
+              <span className="setup__note">Change it to any folder you like.</span>
             </label>
 
             <label className="setup__ack">
@@ -150,7 +153,10 @@ export function SetupPage() {
           </>
         ) : (
           <>
-            <div className="setup__eyebrow">first-time setup · step 2 of 2</div>
+            <div className="setup__eyebrow">
+              <span className="setup__eyebrow-title">first-time setup</span>
+              <span className="setup__step">step 2 of 2</span>
+            </div>
             <h1 className="setup__heading">Set up your <em>profile</em></h1>
             <p className="setup__lede">
               This is what jobfinder rates every listing against. Just the essentials for now — you can
