@@ -8,7 +8,12 @@ import { LlmModelBanner } from '../components/LlmModelBanner'
 import { SearchProgress } from '../components/SearchProgress'
 import { formatRelative } from '../utils/time'
 import { lastCompletedRun } from '../utils/runs'
-import type { SearchRequest } from '../api/types'
+import type { ProviderSummary, SearchRequest } from '../api/types'
+
+// A source is actually fetched only if the user has it on AND any required secret is set — this
+// mirrors the backend's Prepare() filter (ProviderStateMerger.Merge). A secret-less source stays
+// "enabled" in the list but never runs, so it must not seed the progress grid or the source total.
+const isRunnableSource = (p: ProviderSummary) => p.enabled && (!p.requiresSecret || p.hasSecret)
 
 export function SearchPage() {
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
@@ -24,7 +29,7 @@ export function SearchPage() {
   const [stepsOpen, setStepsOpen] = useState(true)
 
   const enabledProviderNames = useMemo(
-    () => providersQuery.data?.providers.filter(p => p.enabled).map(p => p.name) ?? [],
+    () => providersQuery.data?.providers.filter(isRunnableSource).map(p => p.name) ?? [],
     [providersQuery.data],
   )
   const effectiveProviders = selectedProviders ?? enabledProviderNames
@@ -139,14 +144,21 @@ export function SearchPage() {
               <div className="chip-group">
                 {providersQuery.data?.providers.map(p => {
                   const active = effectiveProviders.includes(p.name)
+                  const needsSecret = !!p.requiresSecret && !p.hasSecret
                   return (
                     <button
                       key={p.name}
                       type="button"
                       className={active ? 'chip chip--active' : 'chip'}
                       onClick={() => toggleProvider(p.name)}
-                      disabled={!p.enabled && !active}
-                      title={p.enabled ? '' : 'Turned off on the Sources page'}
+                      disabled={(!p.enabled || needsSecret) && !active}
+                      title={
+                        !p.enabled
+                          ? 'Turned off on the Sources page'
+                          : needsSecret
+                            ? 'Needs an API key — set it on the Sources page'
+                            : ''
+                      }
                     >
                       {p.displayName}
                     </button>

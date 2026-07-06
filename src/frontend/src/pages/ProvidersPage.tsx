@@ -7,16 +7,23 @@ import { Toast } from '../components/Toast'
 import { AddSourceModal } from '../components/AddSourceModal'
 import { formatRelative } from '../utils/time'
 
-type Health = 'working' | 'failing' | 'stale' | 'untested'
+type Health = 'working' | 'failing' | 'stale' | 'untested' | 'blocked'
 
 type SessionTest = { kind: 'pending' } | { kind: 'done'; result: ProviderTestResult }
 
 const STALE_DAYS = 14
 
+// A source needs a key it doesn't have. Search skips it (see ProviderStateMerger), so it's "On but
+// won't run" — flag it here instead of letting it read as OK/stale.
+function isBlocked(p: ProviderSummary): boolean {
+  return p.enabled && !!p.requiresSecret && !p.hasSecret
+}
+
 function classifyHealth(p: ProviderSummary, sessionTest?: SessionTest): Health {
   if (sessionTest?.kind === 'done') {
     return sessionTest.result.ok ? 'working' : 'failing'
   }
+  if (isBlocked(p)) return 'blocked'
   if (!p.lastFetchedAt) return 'untested'
   const ageMs = Date.now() - new Date(p.lastFetchedAt).getTime()
   const stale = ageMs > STALE_DAYS * 24 * 60 * 60 * 1000
@@ -29,6 +36,7 @@ const HEALTH_LABEL: Record<Health, string> = {
   failing: 'failing',
   stale: 'stale',
   untested: 'not tested yet',
+  blocked: 'needs key',
 }
 
 const FILTERS = [
@@ -249,6 +257,8 @@ export function ProvidersPage() {
                       session.result.ok
                         ? `tested · ${session.result.fetchedCount} jobs · ${session.result.durationMs}ms`
                         : `tested · ${truncate(session.result.error ?? 'failed', 32)}`
+                    ) : health === 'blocked' ? (
+                      "won't run until keyed"
                     ) : p.lastFetchedAt ? (
                       `${formatRelative(p.lastFetchedAt)}${typeof p.lastFetchCount === 'number' ? ` · ${p.lastFetchCount} jobs` : ''}`
                     ) : (
@@ -258,8 +268,8 @@ export function ProvidersPage() {
                 </div>
 
                 {p.requiresSecret && !p.hasSecret && (
-                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`${p.displayName} needs ${friendlySecretLabel(p.requiresSecret)}`}>
-                    needs {friendlySecretLabel(p.requiresSecret).toLowerCase()} →
+                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`Add ${friendlySecretLabel(p.requiresSecret)} for ${p.displayName}`}>
+                    Add {friendlySecretLabel(p.requiresSecret)} →
                   </Link>
                 )}
 
