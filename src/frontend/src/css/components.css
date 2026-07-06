@@ -1686,7 +1686,45 @@ a.btn--danger:hover {
   cursor: pointer;
   user-select: none;
 }
-.provider-tile__toggle input[type="checkbox"] { accent-color: var(--c-action); cursor: pointer; }
+/* visually hidden but keyboard/SR-accessible; it drives the switch below via sibling selectors */
+.provider-tile__toggle input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+}
+
+.provider-tile__switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--c-slate-300);
+  transition: background var(--transition);
+}
+.provider-tile__switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--transition);
+}
+.provider-tile__toggle input:checked ~ .provider-tile__switch { background: var(--c-good); }
+.provider-tile__toggle input:checked ~ .provider-tile__switch::before { transform: translateX(14px); }
+.provider-tile__toggle input:focus-visible ~ .provider-tile__switch {
+  outline: 2px solid var(--c-action);
+  outline-offset: 2px;
+}
+.provider-tile__toggle input:disabled ~ .provider-tile__switch { opacity: 0.5; }
+.provider-tile__toggle-label { color: var(--c-text-subtle); transition: color var(--transition); }
+.provider-tile__toggle input:checked ~ .provider-tile__toggle-label { color: var(--c-good); }
 
 /* tile entrance stagger */
 .provider-grid > .provider-tile { animation: fade-up 360ms cubic-bezier(.2,.7,.2,1) both; }

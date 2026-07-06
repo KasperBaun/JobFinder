@@ -272,9 +272,10 @@ export function ProvidersPage() {
                     checked={p.enabled}
                     onChange={(e) => toggle.mutate({ p, enabled: e.target.checked })}
                     disabled={toggle.isPending}
-                    aria-label={`${p.displayName} on`}
+                    aria-label={`Enable ${p.displayName}`}
                   />
-                  <span>{p.enabled ? 'On' : 'Off'}</span>
+                  <span className="provider-tile__switch" aria-hidden="true" />
+                  <span className="provider-tile__toggle-label">{p.enabled ? 'On' : 'Off'}</span>
                 </label>
               </article>
             )
