@@ -4,9 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Code-sign the Windows installer.** The unsigned electron-builder NSIS installer trips
-  SmartScreen ("unknown publisher"). Needs a code-signing cert; wire it into `electron-builder.yml`
-  (`win.signtool`/`signingHashAlgorithms`) and the CI publish step.
 - **Switch data location / user after setup.** First-run setup is one-time; add a Settings action
   to re-run it or point at a different data folder (updates `bootstrap.json`).
 - **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
@@ -58,6 +55,19 @@ Current status of work on `jobfinder`.
   follow-ups: GPU offload (already a documented `llm.gpu_layer_count`
   knob — needs a `LLamaSharp.Backend.Cuda12` / `.Vulkan` swap in
   `Directory.Packages.props`); lower `llm.top_n` 50 → 25.
+
+## Postponed
+
+- **Code-sign the Windows installer.** Deferred — too much setup (cert acquisition, CI
+  secrets, Windows-only testing) for no valuable result on a personal/single-user tool right
+  now. Revisit if the app is distributed to strangers. Options if resumed: self-signed cert
+  (free; only removes the warning on machines that trust it once — fine if distribution is
+  just you); SignPath Foundation (free, but repo must be public + OSS-licensed + approved);
+  Certum Open Source (~€30/yr, EU-individual friendly); Azure Artifact Signing (~$10/mo);
+  EV cert (~$250/yr — the only one that suppresses the SmartScreen popup instantly). Plain OV
+  `.pfx` signing is no longer issued (2023 hardware-key mandate). Wiring points when resumed:
+  `win.*` in `src/desktop/electron-builder.yml` (the TODO comment at line ~26) + the
+  `npm --prefix src/desktop run dist` step in `.github/workflows/release.yml`.
 
 ## In progress
 
