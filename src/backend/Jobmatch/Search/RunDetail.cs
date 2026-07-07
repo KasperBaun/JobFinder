@@ -27,4 +27,5 @@ public sealed record RunDetail(
     IReadOnlyList<DroppedEntry>? Dropped = null,
     JobSearchState? State = null,
     JobSearchPhase? Phase = null,
-    IReadOnlyList<JobSearchEvent>? Timeline = null);
+    IReadOnlyList<JobSearchEvent>? Timeline = null,
+    IReadOnlyDictionary<string, string>? MarkReasons = null);

@@ -26,7 +26,7 @@ public sealed class MarksEndpoints : IEndpointRegistration
                     => handler.Set(request))
             .WithName($"{nameof(Routes.Marks)}.{nameof(Routes.Marks.Set)}")
             .WithSummary("Set listing mark")
-            .WithDescription("Marks a listing within a run as 'good', 'bad', or null (cleared).")
+            .WithDescription("Marks a listing within a run as 'good', 'bad', or null (cleared), with an optional free-form reason that feeds the LLM judge on later runs.")
             .Produces<MarkResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);

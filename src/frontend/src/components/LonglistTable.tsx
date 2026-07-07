@@ -72,7 +72,7 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
           </thead>
           <tbody>
             {filtered.map((s) => (
-              <Row key={s.id} entry={s} runId={data.runId} mark={data.marks[s.id]} />
+              <Row key={s.id} entry={s} runId={data.runId} mark={data.marks[s.id]} markReason={data.markReasons?.[s.id]} />
             ))}
           </tbody>
         </table>
@@ -263,7 +263,7 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-function Row({ entry, runId, mark }: { entry: ScoredEntry; runId: string; mark?: 'good' | 'bad' }) {
+function Row({ entry, runId, mark, markReason }: { entry: ScoredEntry; runId: string; mark?: 'good' | 'bad'; markReason?: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -281,7 +281,7 @@ function Row({ entry, runId, mark }: { entry: ScoredEntry; runId: string; mark?:
             <BreakdownBar b={entry.breakdown} />
           </div>
         </td>
-        <td><MarkButton runId={runId} listingId={entry.id} current={mark} compact /></td>
+        <td><MarkButton runId={runId} listingId={entry.id} current={mark} reason={markReason} compact /></td>
         <td>
           <button type="button" className="link-button" onClick={() => setOpen(!open)} aria-label={open ? 'collapse' : 'expand'}>
             {open ? '▾' : '▸'}

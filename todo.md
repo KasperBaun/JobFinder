@@ -4,23 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **[TOP PRIORITY] Capture a "why" reason when rating a match, and feed it back to the LLM.**
-  When the user marks a listing "good"/"bad" they should be able to attach a short free-form
-  reason ("I'm not a student", "wrong stack", "too junior"), and that reason must reach the
-  judge on the *next* run so it stops repeating the mistake. Concrete miss this round: an
-  **"AI Engineer - Student"** posting scored **0.81** — a horrible match, because the candidate
-  is not a student, but nothing tells the model that.
-  Two-part change:
-  1. **Store the reason.** Extend `MarksService.Set` / `marks.json` beyond the bare
-     `"good"`/`"bad"` string to carry an optional `reason` (per run/listing), and surface it in
-     the UI mark control (`MarksHandler`, frontend mark button).
-  2. **Feed it into the judge.** Route captured reasons into the LLM judge prompt for the next
-     search — e.g. promote a marked-bad listing + reason into a `disliked` example, or append the
-     reasons to the few-shot block. Note: `ExamplesLoader.ToFewShotPrompt` currently sends only
-     frontmatter and *drops the free-form body*, so the existing "why" prose in `examples/*.md`
-     never reaches the model either — fixing that is part of closing this loop.
-  Validate against `examples/` per [[feedback_validate_against_examples]]: success = the
-  student/junior/wrong-stack archetypes fall out of the top-10 on the following run.
 - **Code-sign the Windows installer.** The unsigned electron-builder NSIS installer trips
   SmartScreen ("unknown publisher"). Needs a code-signing cert; wire it into `electron-builder.yml`
   (`win.signtool`/`signingHashAlgorithms`) and the CI publish step.

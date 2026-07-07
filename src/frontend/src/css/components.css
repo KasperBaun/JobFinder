@@ -1302,7 +1302,7 @@ a.btn--danger:hover {
    mark button
    ============================================================ */
 
-.mark-button-wrap { display: flex; align-items: center; gap: var(--space-2); }
+.mark-button-wrap { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
 .mark-button {
   position: relative;
@@ -1339,6 +1339,45 @@ a.btn--danger:hover {
   color: var(--c-bad);
   font-family: var(--font-mono);
 }
+
+.mark-why {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.45rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.mark-why:hover:not(:disabled) { color: var(--c-navy-700); background: var(--c-slate-100); }
+.mark-why:disabled { opacity: 0.6; }
+
+.mark-why--set {
+  font-style: italic;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mark-why__input {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--c-slate-300);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  width: 14rem;
+  max-width: 100%;
+}
+
+.mark-why__input:focus { outline: none; border-color: var(--c-navy-400); }
 
 /* ============================================================
    progress bar (history list)

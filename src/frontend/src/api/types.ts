@@ -301,6 +301,7 @@ export type DroppedEntry = {
 export type RunDetail = RunSummary & {
   shortlist: ListingMatch[]
   marks: Record<string, 'good' | 'bad'>
+  markReasons?: Record<string, string>
   raw?: ProviderRaw[]
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
@@ -312,6 +313,7 @@ export type MarkRequest = {
   runId: string
   listingId: string
   mark: 'good' | 'bad' | null
+  reason?: string | null
 }
 
 export type MarkResponse = { success: boolean; error?: string }

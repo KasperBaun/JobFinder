@@ -8,6 +8,7 @@ using Jobmatch.Llm;
 using Jobmatch.Models;
 using Jobmatch.Output;
 using Jobmatch.Ranking;
+using Jobmatch.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Match = Jobmatch.Models.Match;
@@ -32,12 +33,14 @@ public sealed partial class SearchService : ISearchService
     private readonly UserContext _ctx;
     private readonly IFileSystem _fs;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IMarksService _marks;
 
-    public SearchService(UserContext ctx, IFileSystem fs, ILoggerFactory? loggerFactory = null)
+    public SearchService(UserContext ctx, IFileSystem fs, ILoggerFactory? loggerFactory = null, IMarksService? marks = null)
     {
         _ctx = ctx;
         _fs = fs;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        _marks = marks ?? new MarksService(ctx);
     }
 
     public IAsyncEnumerable<SearchProgressEvent> RunAsync(
@@ -95,7 +98,7 @@ public sealed partial class SearchService : ISearchService
         // so judging the default top 50 takes ~1-2 minutes; SSE stream stays open but silent.
         if (prep.Ranking.Llm.Enabled)
         {
-            var examples = ExamplesLoader.Load(_ctx.ExamplesDir);
+            var examples = LoadExamples();
             var llmTopN = prep.Ranking.Llm.TopN <= 0 ? scoredAll.Count : Math.Min(prep.Ranking.Llm.TopN, scoredAll.Count);
             yield return new LlmJudgingEvent(llmTopN);
             scoredAll = await JudgeAndBlend(scoredAll, prep.Skillset, examples, prep.Ranking.Llm, llmTopN, http, ct).ConfigureAwait(false);
@@ -107,6 +110,21 @@ public sealed partial class SearchService : ISearchService
         var listingMatches = WriteReportsAndHistory(
             runId, prep, statuses, rawByProvider, fetched, deduped, dedupeResult.Merges, scoredAll, shortlist, dropped);
         yield return new CompleteEvent(runId, listingMatches);
+    }
+
+    // Curated examples/ files plus listings the user marked in previous runs
+    // (with their "why" reasons). Curated wins on a (title, company) collision.
+    internal IReadOnlyList<ExampleListing> LoadExamples()
+    {
+        var curated = ExamplesLoader.Load(_ctx.ExamplesDir);
+        var marked = MarkedExamplesLoader.Load(_ctx.HistoryDir, _marks.LoadAll());
+        if (marked.Count == 0) return curated;
+
+        var seen = new HashSet<string>(
+            curated.Select(e => $"{e.Title}|{e.Company}"), StringComparer.OrdinalIgnoreCase);
+        var merged = new List<ExampleListing>(curated);
+        merged.AddRange(marked.Where(m => seen.Add($"{m.Title}|{m.Company}")));
+        return merged;
     }
 
     private RunPrep Prepare(SearchRequest req, IReadOnlyList<PortalConfig> allPortals)

@@ -344,6 +344,7 @@ function ShortlistTab({ data }: { data: RunDetail }) {
             match={m}
             runId={data.runId}
             mark={data.marks[m.id]}
+            markReason={data.markReasons?.[m.id]}
           />
         ))}
       </div>

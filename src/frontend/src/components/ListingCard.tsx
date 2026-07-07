@@ -5,6 +5,7 @@ interface Props {
   match: ListingMatch
   runId: string
   mark?: 'good' | 'bad'
+  markReason?: string
 }
 
 // Runs ranked before the favorite badge existed carry the boost as a sentence in
@@ -12,7 +13,7 @@ interface Props {
 // badge, and keep it out of the prose.
 const LEGACY_FAVORITE_NOTE = /One of your favorite companies \([^)]*\) — rating boosted\.\s*/
 
-export function ListingCard({ match, runId, mark }: Props) {
+export function ListingCard({ match, runId, mark, markReason }: Props) {
   const subline = [match.company, match.location].filter(Boolean).join(' · ')
   const favorite = match.favoriteCompany || LEGACY_FAVORITE_NOTE.test(match.reasoning)
   const reasoning = match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
@@ -45,7 +46,7 @@ export function ListingCard({ match, runId, mark }: Props) {
       )}
 
       <footer className="listing-card__footer">
-        <MarkButton runId={runId} listingId={match.id} current={mark} />
+        <MarkButton runId={runId} listingId={match.id} current={mark} reason={markReason} />
         <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--primary">
           Open job posting →
         </a>
