@@ -90,4 +90,75 @@ public sealed class ExamplesLoaderTests
         var prompt = ExamplesLoader.ToFewShotPrompt([]);
         Assert.Contains("no examples supplied", prompt);
     }
+
+    [Fact]
+    public void Parse_CapturesBodyAsNote_CollapsedToOneLine()
+    {
+        var content = """
+            ---
+            polarity: disliked
+            title: Some role
+            company: Some Co
+            ---
+
+            # Why this is a bad match
+
+            Wrong stack entirely.
+            And too junior.
+            """;
+
+        var ex = ExamplesLoader.Parse(content);
+
+        Assert.NotNull(ex);
+        Assert.Equal("Why this is a bad match Wrong stack entirely. And too junior.", ex!.Note);
+    }
+
+    [Fact]
+    public void Parse_EmptyBody_LeavesNoteNull()
+    {
+        var content = """
+            ---
+            title: Some role
+            company: Some Co
+            ---
+            """;
+        var ex = ExamplesLoader.Parse(content);
+        Assert.NotNull(ex);
+        Assert.Null(ex!.Note);
+    }
+
+    [Fact]
+    public void Parse_LongBody_TruncatesNote()
+    {
+        var content = $"---\ntitle: T\ncompany: C\n---\n{new string('x', 400)}";
+        var ex = ExamplesLoader.Parse(content);
+        Assert.NotNull(ex);
+        Assert.True(ex!.Note!.Length <= 241);
+        Assert.EndsWith("…", ex.Note);
+    }
+
+    [Fact]
+    public void ToFewShotPrompt_IncludesWhy_WhenNotePresent()
+    {
+        var examples = new List<ExampleListing>
+        {
+            new("disliked", "AI Engineer - Student", "Uni Co", "Copenhagen", null, [], [], null, Note: "I'm not a student"),
+        };
+        var prompt = ExamplesLoader.ToFewShotPrompt(examples);
+
+        Assert.Contains("— why: I'm not a student", prompt);
+    }
+
+    [Fact]
+    public void ToFewShotPrompt_NotedExamples_SurviveTheCap()
+    {
+        var examples = Enumerable.Range(0, 6)
+            .Select(i => new ExampleListing("disliked", $"Role {i}", $"Co {i}", null, null, [], [], null))
+            .Append(new ExampleListing("disliked", "Noted role", "Noted Co", null, null, [], [], null, Note: "the why"))
+            .ToList();
+
+        var prompt = ExamplesLoader.ToFewShotPrompt(examples);
+
+        Assert.Contains("Noted role", prompt);
+    }
 }

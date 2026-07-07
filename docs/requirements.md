@@ -62,6 +62,8 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-051** The system should let a user view previous searches in the GUI, including how many listings the user marked as a good match per run.
 - **R-052** The system should let a user mark a listing as a good match (or not) so the ranking algorithm can be improved over time.
 - **R-053** The system should keep marks per user, per listing, scoped to the run that produced them.
+- **R-094** The system should let a user attach a short free-form reason to a mark ("I'm not a student", "wrong stack") — editable in place, and dropped when the mark is flipped or cleared.
+- **R-095** The system should feed marked listings from previous runs — with their reasons, plus the free-form notes in curated example files — to the LLM judge as few-shot examples on subsequent runs, so a repeated mistake can be corrected by marking it once.
 - **R-054** The system should let a user supply seed listings — hand-picked archetypes of the kind of role they want, independent of any prior search run — so the ranking algorithm has positive signal to learn from from day one.
 - **R-055** The system should accept seed listings of either polarity (liked or disliked) and treat them as input to ranking improvements, not as fixtures or test data.
 
