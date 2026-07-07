@@ -2798,3 +2798,80 @@ a.btn--danger:hover {
 .setup__skip:hover:not(:disabled) { color: var(--c-text); }
 .setup__skip:disabled { opacity: 0.5; cursor: not-allowed; }
 
+
+/* CV import (fill profile from CV) */
+.modal-card--wide {
+  width: min(44rem, calc(100vw - var(--space-6)));
+  max-height: calc(100vh - var(--space-7));
+  overflow-y: auto;
+}
+
+.cv-import__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cv-import__modes {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cv-import__textarea {
+  resize: vertical;
+  min-height: 10rem;
+  font-size: 0.85rem;
+}
+
+.cv-import__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.cv-import__table th,
+.cv-import__table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--c-slate-100);
+  vertical-align: top;
+}
+
+.cv-import__table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-subtle);
+}
+
+.cv-import__current { color: var(--c-text-muted); }
+
+.cv-import__row--off td { opacity: 0.45; }
+
+/* Field just prefilled from a CV — cleared on edit, revert, or save */
+.field--suggested {
+  border-left: 3px solid var(--c-navy-400);
+  padding-left: var(--space-3);
+  border-radius: 2px;
+}
+
+.field--suggested > .field__label::after {
+  content: 'from CV';
+  margin-left: var(--space-2);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-navy-400);
+}
+
+.setup__cv-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--c-navy-500);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.setup__cv-link:hover { color: var(--c-navy-700); }

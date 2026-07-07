@@ -5,6 +5,7 @@ import type { SkillsetResponse, SkillsetUpdateRequest } from '../api/types'
 import { TagInput } from '../components/TagInput'
 import { SaveBar } from '../components/SaveBar'
 import { Toast } from '../components/Toast'
+import { CvImportModal } from '../components/CvImportModal'
 
 type Form = SkillsetUpdateRequest
 
@@ -59,6 +60,9 @@ export function SkillsetPage() {
   const [form, setForm] = useState<Form | null>(null)
   const [original, setOriginal] = useState<Form | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
+  const [cvOpen, setCvOpen] = useState(false)
+  // Fields last prefilled from a CV; highlighted until edited, reverted, or saved.
+  const [suggested, setSuggested] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (original !== null) return
@@ -86,6 +90,7 @@ export function SkillsetPage() {
     },
     onSuccess: (saved) => {
       setOriginal(saved)
+      setSuggested(new Set())
       // Invalidate setup too: a first save flips profileExists true (clears create-mode + nudges).
       void queryClient.invalidateQueries({ queryKey: ['skillset'] })
       void queryClient.invalidateQueries({ queryKey: ['setup'] })
@@ -98,11 +103,28 @@ export function SkillsetPage() {
 
   function patch(p: Partial<Form>) {
     setForm((f) => f ? { ...f, ...p } : f)
+    // A manual edit clears the "from CV" marker for the touched fields.
+    setSuggested((prev) => {
+      if (prev.size === 0) return prev
+      const next = new Set(prev)
+      for (const key of Object.keys(p)) next.delete(key)
+      return next
+    })
   }
 
   function revert() {
     if (original) setForm(original)
+    setSuggested(new Set())
   }
+
+  function applyCv(p: Partial<Form>, keys: (keyof Form)[]) {
+    setForm((f) => f ? { ...f, ...p } : f)
+    setSuggested(new Set(keys))
+    setCvOpen(false)
+    setToast({ kind: 'ok', message: 'Prefilled from CV — review, then save' })
+  }
+
+  const sug = (key: keyof Form) => `field${suggested.has(key) ? ' field--suggested' : ''}`
 
   return (
     <div className="page page--wide">
@@ -116,7 +138,16 @@ export function SkillsetPage() {
             ? "You skipped this during setup. Fill it in so jobfinder can rate listings for you — at least a name and location to start."
             : 'Edit what jobfinder uses to rate every listing. Saved automatically.'}
         </p>
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <button type="button" className="btn btn--secondary" onClick={() => setCvOpen(true)}>
+            Fill from CV
+          </button>
+        </div>
       </header>
+
+      {cvOpen && form && (
+        <CvImportModal current={form} onApply={applyCv} onClose={() => setCvOpen(false)} />
+      )}
 
       {isLoading && <div className="muted">Loading profile…</div>}
       {error && <div className="error-text">Failed to load profile.</div>}
@@ -127,39 +158,39 @@ export function SkillsetPage() {
             <section className="card">
               <h2 className="card__title">About you</h2>
               <div className="field-grid">
-                <div className="field">
+                <div className={sug('name')}>
                   <label className="field__label" htmlFor="sk-name">Name</label>
                   <input id="sk-name" className="input" value={form.name}
                     onChange={(e) => patch({ name: e.target.value })} />
                 </div>
-                <div className="field">
+                <div className={sug('location')}>
                   <label className="field__label" htmlFor="sk-location">Location</label>
                   <input id="sk-location" className="input" value={form.location}
                     onChange={(e) => patch({ location: e.target.value })} />
                 </div>
-                <div className="field">
+                <div className={sug('country')}>
                   <label className="field__label" htmlFor="sk-country">Country</label>
                   <input id="sk-country" className="input" value={form.country ?? ''} placeholder="optional"
                     onChange={(e) => patch({ country: e.target.value })} />
                 </div>
-                <div className="field">
+                <div className={sug('region')}>
                   <label className="field__label" htmlFor="sk-region">Region</label>
                   <input id="sk-region" className="input" value={form.region ?? ''} placeholder="optional"
                     onChange={(e) => patch({ region: e.target.value })} />
                 </div>
-                <div className="field">
+                <div className={sug('experienceYears')}>
                   <label className="field__label" htmlFor="sk-exp">Years of experience</label>
                   <input id="sk-exp" type="number" min={0} className="input input--narrow input--mono tabular"
                     value={form.experienceYears}
                     onChange={(e) => patch({ experienceYears: Number(e.target.value) || 0 })} />
                 </div>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <div className={sug('languages')} style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Languages</label>
                   <TagInput values={form.languages}
                     onChange={(v) => patch({ languages: v })}
                     placeholder="e.g. en, da" ariaLabel="Languages" />
                 </div>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <div className={sug('metro')} style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Cities / areas</label>
                   <TagInput values={form.metro}
                     onChange={(v) => patch({ metro: v })}
@@ -171,7 +202,7 @@ export function SkillsetPage() {
             <section className="card">
               <h2 className="card__title">Roles &amp; preferences</h2>
               <div className="field-grid">
-                <div className="field">
+                <div className={sug('seniority')}>
                   <label className="field__label" htmlFor="sk-seniority">Experience level</label>
                   <select id="sk-seniority" className="select"
                     value={form.seniority}
@@ -179,7 +210,7 @@ export function SkillsetPage() {
                     {SENIORITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-                <div className="field">
+                <div className={sug('remotePreference')}>
                   <label className="field__label" htmlFor="sk-remote">Where you want to work</label>
                   <select id="sk-remote" className="select"
                     value={form.remotePreference}
@@ -187,13 +218,13 @@ export function SkillsetPage() {
                     {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <div className={sug('targetRoles')} style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Roles you want</label>
                   <TagInput values={form.targetRoles}
                     onChange={(v) => patch({ targetRoles: v })}
                     placeholder="e.g. Senior Backend Engineer" ariaLabel="Roles you want" />
                 </div>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <div className={sug('employmentTypes')} style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Employment types</label>
                   <TagInput values={form.employmentTypes}
                     onChange={(v) => patch({ employmentTypes: v })}
@@ -205,14 +236,14 @@ export function SkillsetPage() {
             <section className="card">
               <h2 className="card__title">Skills</h2>
               <div className="field-grid">
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <div className={sug('primaryStack')} style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Must-have skills — <span className="subtle">the job has to mention these. More matches = higher rating</span></label>
                   <TagInput variant="primary"
                     values={form.primaryStack}
                     onChange={(v) => patch({ primaryStack: v })}
                     placeholder="e.g. C#, .NET, Postgres" ariaLabel="Must-have skills" />
                 </div>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <div className={sug('secondaryStack')} style={{ gridColumn: '1 / -1' }}>
                   <label className="field__label">Nice-to-have skills — <span className="subtle">small bonus when mentioned</span></label>
                   <TagInput
                     values={form.secondaryStack}
@@ -225,9 +256,11 @@ export function SkillsetPage() {
             <section className="card">
               <h2 className="card__title">Industries</h2>
               <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Areas you'd like to work in.</p>
-              <TagInput values={form.domains}
-                onChange={(v) => patch({ domains: v })}
-                placeholder="e.g. fintech, b2b saas" ariaLabel="Industries" />
+              <div className={sug('domains')}>
+                <TagInput values={form.domains}
+                  onChange={(v) => patch({ domains: v })}
+                  placeholder="e.g. fintech, b2b saas" ariaLabel="Industries" />
+              </div>
             </section>
 
             <section className="card">

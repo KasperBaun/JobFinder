@@ -42,6 +42,9 @@ public static class Routes
         public const string Base = $"{ApiConstants.RouteBase}/skillset";
         public const string Get = Base;
         public const string Update = Base;
+        // CV-driven profile setup (R-011): background extraction + status poll.
+        public const string Extract = $"{Base}/extract";
+        public const string ExtractStatus = $"{Base}/extract/status";
     }
 
     public static class Search

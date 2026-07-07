@@ -102,6 +102,34 @@ export type SkillsetUpdateRequest = {
   preferredCompanies: string[]
 }
 
+export type CvExtractionState = 'idle' | 'extracting' | 'completed' | 'failed'
+
+// All fields optional: the extractor only reports what the CV states, and the
+// server omits nulls from the JSON.
+export type ExtractedProfile = {
+  name?: string | null
+  location?: string | null
+  country?: string | null
+  region?: string | null
+  metro?: string[]
+  experienceYears?: number | null
+  seniority?: string | null
+  remotePreference?: string | null
+  targetRoles?: string[]
+  primaryStack?: string[]
+  secondaryStack?: string[]
+  domains?: string[]
+  languages?: string[]
+  employmentTypes?: string[]
+}
+
+export type CvExtractionStatus = {
+  state: CvExtractionState
+  startedAt?: string | null
+  error?: string | null
+  profile?: ExtractedProfile | null
+}
+
 export type SearchRequest = {
   providers?: string[]
   topN?: number

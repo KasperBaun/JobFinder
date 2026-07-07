@@ -53,6 +53,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<IProvidersService, ProvidersService>();
         services.AddScoped<ISearchService, SearchService>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();
+        services.AddScoped<ICvExtractionService, CvExtractionService>();
 
         // Background job search: the JobSearch lifecycle store, the live SSE fan-out bus, and the
         // orchestrating service/job. The bus is a singleton (one in-proc broker); the store and service
@@ -95,6 +96,10 @@ public static class JobmatchApiExtensions
         // (the SPA polls /api/llm/status to reconnect after navigation/reload).
         services.AddSingleton<ModelDownloadManager>();
 
+        // Singleton for the same reason: a CV extraction takes 30-90s on CPU and must survive the
+        // SPA navigating away (the client polls /api/skillset/extract/status to reconnect).
+        services.AddSingleton<CvExtractionManager>();
+
         // Handlers
         services.AddScoped<ISetupHandler, SetupHandler>();
         services.AddScoped<ISystemHandler, SystemHandler>();
@@ -102,6 +107,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<IMarksHandler, MarksHandler>();
         services.AddScoped<IHistoryHandler, HistoryHandler>();
         services.AddScoped<ISkillsetHandler, SkillsetHandler>();
+        services.AddScoped<ISkillsetExtractHandler, SkillsetExtractHandler>();
         services.AddScoped<IProvidersHandler, ProvidersHandler>();
         services.AddScoped<IJobSearchHandler, JobSearchHandler>();
         services.AddScoped<ILlmHandler, LlmHandler>();
@@ -151,6 +157,7 @@ public static class JobmatchApiExtensions
             new MarksEndpoints(),
             new HistoryEndpoints(),
             new SkillsetEndpoints(),
+            new SkillsetExtractEndpoints(),
             new ProvidersEndpoints(),
             new SearchEndpoints(),
             new LlmEndpoints(),

@@ -12,7 +12,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## Skillset
 
 - **R-010** The system should assist a user with remembering their skillset and preferences to use in future job searches.
-- **R-011** The system should let a user author or refresh their skillset interactively, from a CV file, or from a CV URL.
+- **R-011** The system should let a user author or refresh their skillset interactively, from a CV file, or from a CV URL. The CV path runs the local AI model over the CV text (pasted, uploaded `.pdf`/`.txt`/`.md`, or fetched from a URL) as a background extraction the GUI polls, and only prefills the profile form — persistence always requires the user's explicit save (R-012).
 - **R-012** The system should refuse to silently overwrite an existing skillset and instead surface a diff for confirmation.
 - **R-013** The system should ship a generic example skillset so a new user sees the expected shape.
 
