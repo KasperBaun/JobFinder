@@ -298,10 +298,13 @@ export type DroppedEntry = {
   context?: string
 }
 
+export type ApplicationStatus = 'applied' | 'interview' | 'offer' | 'rejected' | 'no-response'
+
 export type RunDetail = RunSummary & {
   shortlist: ListingMatch[]
   marks: Record<string, 'good' | 'bad'>
   markReasons?: Record<string, string>
+  markStatuses?: Record<string, ApplicationStatus>
   raw?: ProviderRaw[]
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
@@ -316,7 +319,31 @@ export type MarkRequest = {
   reason?: string | null
 }
 
+export type MarkStatusRequest = {
+  runId: string
+  listingId: string
+  status: ApplicationStatus | null
+}
+
 export type MarkResponse = { success: boolean; error?: string }
+
+export type ApplicationEntry = {
+  listingId: string
+  runId: string
+  runStartedAt: string
+  status: ApplicationStatus
+  mark?: 'good' | 'bad'
+  reason?: string
+  title: string
+  company?: string
+  location?: string
+  url: string
+  portal: string
+  portalDisplayName?: string
+  score: number
+}
+
+export type ApplicationsResponse = { applications: ApplicationEntry[] }
 export type SaveResponse = { success: boolean; error?: string }
 
 export type DeleteHistoryRequest = { runIds: string[] }

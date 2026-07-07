@@ -1,4 +1,5 @@
 import type {
+  ApplicationsResponse,
   CvExtractionStatus,
   DeleteHistoryResponse,
   DetectSourceResponse,
@@ -7,6 +8,7 @@ import type {
   JobSearch,
   MarkRequest,
   MarkResponse,
+  MarkStatusRequest,
   ProviderCreatedResponse,
   ProviderDetail,
   ProvidersResponse,
@@ -206,6 +208,18 @@ export async function setMark(req: MarkRequest): Promise<MarkResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   })
+}
+
+export async function setMarkStatus(req: MarkStatusRequest): Promise<MarkResponse> {
+  return apiFetch<MarkResponse>('/api/marks/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+}
+
+export async function getApplications(): Promise<ApplicationsResponse> {
+  return apiFetch<ApplicationsResponse>('/api/applications')
 }
 
 export type LlmDownloadState = 'idle' | 'downloading' | 'completed' | 'failed'

@@ -64,6 +64,7 @@ The system fulfils the user's goals through the following responsibilities and q
 - Aggregation, deduplication, and ranking of listings against the profile.
 - Multiple interaction styles drawing on the same set of capabilities.
 - Per-run history and user-applied "good match" feedback.
+- Application-outcome tracking: a per-listing application status (applied / interview / offer / rejected / no-response) independent of the good/bad mark, a cross-run Applications view, and positive outcomes (interview, offer) feeding back into ranking calibration.
 
 **Out of scope**
 

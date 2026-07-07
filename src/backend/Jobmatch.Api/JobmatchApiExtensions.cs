@@ -47,6 +47,7 @@ public static class JobmatchApiExtensions
         // Domain services
         services.AddScoped<IWhoamiService, WhoamiService>();
         services.AddScoped<IMarksService, MarksService>();
+        services.AddScoped<IApplicationsService, ApplicationsService>();
         services.AddScoped<IHistoryService, HistoryService>();
         services.AddScoped<ISkillsetService, SkillsetService>();
         services.AddSingleton<ISourceDetectionService, SourceDetectionService>();
@@ -105,6 +106,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<ISystemHandler, SystemHandler>();
         services.AddScoped<IWhoamiHandler, WhoamiHandler>();
         services.AddScoped<IMarksHandler, MarksHandler>();
+        services.AddScoped<IApplicationsHandler, ApplicationsHandler>();
         services.AddScoped<IHistoryHandler, HistoryHandler>();
         services.AddScoped<ISkillsetHandler, SkillsetHandler>();
         services.AddScoped<ISkillsetExtractHandler, SkillsetExtractHandler>();
@@ -155,6 +157,7 @@ public static class JobmatchApiExtensions
             new SystemEndpoints(),
             new WhoamiEndpoints(),
             new MarksEndpoints(),
+            new ApplicationsEndpoints(),
             new HistoryEndpoints(),
             new SkillsetEndpoints(),
             new SkillsetExtractEndpoints(),

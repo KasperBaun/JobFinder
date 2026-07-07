@@ -99,4 +99,99 @@ public sealed class MarksServiceTests : IDisposable
         var reason = new string('x', 501);
         Assert.Throws<Jobmatch.InvalidRequestException>(() => _marks.Set("run-1", "l1", "bad", reason));
     }
+
+    [Fact]
+    public void SetStatus_RoundTrips()
+    {
+        _marks.Set("run-1", "l1", "good", "great fit");
+        _marks.SetStatus("run-1", "l1", "applied");
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal(new ListingMark("good", "great fit", "applied"), mark);
+    }
+
+    [Fact]
+    public void SetStatus_WithoutMark_PersistsEntry()
+    {
+        _marks.SetStatus("run-1", "l1", "interview");
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal(new ListingMark(null, null, "interview"), mark);
+    }
+
+    [Fact]
+    public void Set_NullMark_KeepsStatus()
+    {
+        _marks.Set("run-1", "l1", "bad", "wrong stack");
+        _marks.SetStatus("run-1", "l1", "applied");
+        _marks.Set("run-1", "l1", null, null);
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal(new ListingMark(null, null, "applied"), mark);
+    }
+
+    [Fact]
+    public void SetStatus_Null_KeepsMark()
+    {
+        _marks.Set("run-1", "l1", "good", "great fit");
+        _marks.SetStatus("run-1", "l1", "applied");
+        _marks.SetStatus("run-1", "l1", null);
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal(new ListingMark("good", "great fit"), mark);
+    }
+
+    [Fact]
+    public void ClearingBoth_RemovesEntry()
+    {
+        _marks.Set("run-1", "l1", "good", null);
+        _marks.SetStatus("run-1", "l1", "applied");
+        _marks.Set("run-1", "l1", null, null);
+        _marks.SetStatus("run-1", "l1", null);
+
+        Assert.Empty(_marks.GetForRun("run-1"));
+    }
+
+    [Fact]
+    public void SetStatus_Invalid_Throws()
+    {
+        Assert.Throws<Jobmatch.InvalidRequestException>(() => _marks.SetStatus("run-1", "l1", "ghosted"));
+    }
+
+    [Fact]
+    public void SetStatus_Uppercase_Normalises()
+    {
+        _marks.SetStatus("run-1", "l1", "Interview");
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal("interview", mark.Status);
+    }
+
+    [Fact]
+    public void SetStatus_WithoutMark_WritesStatusOnlyObjectShape()
+    {
+        _marks.SetStatus("run-1", "l1", "applied");
+
+        var json = File.ReadAllText(_ctx.MarksPath);
+        Assert.Contains("\"status\": \"applied\"", json);
+        Assert.DoesNotContain("\"mark\"", json);
+    }
+
+    [Fact]
+    public void LoadAll_ReadsStatusOnlyObject()
+    {
+        File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "status": "offer" } } }""");
+
+        var run = _marks.LoadAll()["run-1"];
+        Assert.Equal(new ListingMark(null, null, "offer"), run["l1"]);
+    }
+
+    [Fact]
+    public void LoadAll_DropsInvalidStatus_KeepsValidMark()
+    {
+        File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "mark": "good", "status": "ghosted" } } }""");
+
+        var run = _marks.LoadAll()["run-1"];
+        Assert.Equal(new ListingMark("good", null), run["l1"]);
+    }
 }

@@ -77,6 +77,7 @@ function HistoryListView() {
       }
       setSelected(new Set())
       void queryClient.invalidateQueries({ queryKey: ['history'] })
+      void queryClient.invalidateQueries({ queryKey: ['applications'] })
       const skipped = res.missing.length
       const msg = skipped > 0
         ? `Deleted ${res.deleted} search${res.deleted === 1 ? '' : 'es'} (${skipped} skipped)`
@@ -345,6 +346,7 @@ function ShortlistTab({ data }: { data: RunDetail }) {
             runId={data.runId}
             mark={data.marks[m.id]}
             markReason={data.markReasons?.[m.id]}
+            markStatus={data.markStatuses?.[m.id]}
           />
         ))}
       </div>

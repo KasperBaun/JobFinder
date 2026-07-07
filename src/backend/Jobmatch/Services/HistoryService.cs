@@ -83,10 +83,15 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
 
         var runMarks = marks.GetForRun(safeId);
         var goodMarks = runMarks.Values.Count(v => string.Equals(v.Mark, "good", StringComparison.OrdinalIgnoreCase));
-        var marksMap = runMarks.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Mark, StringComparer.Ordinal);
+        var marksMap = runMarks
+            .Where(kvp => kvp.Value.Mark is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Mark!, StringComparer.Ordinal);
         var reasonsMap = runMarks
             .Where(kvp => kvp.Value.Reason is not null)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Reason!, StringComparer.Ordinal);
+        var statusesMap = runMarks
+            .Where(kvp => kvp.Value.Status is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Status!, StringComparer.Ordinal);
 
         if (detail is not null)
         {
@@ -95,6 +100,7 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
             {
                 Marks = marksMap,
                 MarkReasons = reasonsMap.Count > 0 ? reasonsMap : null,
+                MarkStatuses = statusesMap.Count > 0 ? statusesMap : null,
                 GoodMarks = goodMarks,
                 State = job?.State ?? JobSearchState.Succeeded,
                 Phase = job?.Phase ?? JobSearchPhase.Done,
@@ -116,6 +122,7 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
             Shortlist: [],
             Marks: marksMap,
             MarkReasons: reasonsMap.Count > 0 ? reasonsMap : null,
+            MarkStatuses: statusesMap.Count > 0 ? statusesMap : null,
             State: job.State,
             Phase: job.Phase,
             Timeline: job.Timeline);
