@@ -37,9 +37,11 @@ public static class JobmatchApiExtensions
         // Active user — resolution is deferred through the provider so the app can boot and show a
         // first-run setup screen (on a machine with no git identity) instead of crashing. The provider
         // loads the persisted bootstrap config on construction and runs the one-time portals migration.
+        // UserContext itself is scoped so a Settings profile switch applies to the next request/job
+        // scope instead of leaving services pinned to the first resolved directory.
         services.AddSingleton<BootstrapStore>(_ => new BootstrapStore());
         services.AddSingleton<IUserContextProvider, UserContextProvider>();
-        services.AddSingleton<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
+        services.AddScoped<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
 
         // Filesystem abstraction — physical by default; tests stage in-memory.
         services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();

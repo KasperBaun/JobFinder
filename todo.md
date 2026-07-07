@@ -4,8 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Switch data location / user after setup.** First-run setup is one-time; add a Settings action
-  to re-run it or point at a different data folder (updates `bootstrap.json`).
 - **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
   currently user-disabled) — still the single widest DK net we have.
 - **Recruit IT html scrape — re-verify endpoint, then enable.** `HtmlAdapter` now
