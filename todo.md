@@ -51,6 +51,25 @@ Current status of work on `jobfinder`.
   `employmentType`. Per-adapter: pull the structured value first, fall
   through to `BaseAdapter.InferRemoteMode` only when those fields are
   silent.
+- **"New since last run" flag.** Mark listings in results/longlist that never appeared in any
+  prior history run (compare canonical dedupe keys against `history/*.json`); badge + filter in
+  `LonglistTable`. *(Concept from MadsLorentzen/ai-job-search `seen_jobs.json` cross-run dedupe.)*
+- **Career-goals/motivation signal for the judge.** Add a free-text "career goals / what
+  energizes & drains me" section to the skillset (form + `skillset.md` + `SkillsetParser`) and
+  include it in the `LlmJudge` prompt. Complements the top-priority mark-reason item. Add an
+  R-NNN to `docs/requirements.md` when implemented. *(Concept: ai-job-search's career-alignment
+  scoring dimension.)*
+- **Skill-gap heatmap (local-only).** Aggregate skills required by ranked/dropped listings but
+  absent from the skillset, weighted by `(1 − fit_score) × frequency`; render as a prioritized
+  table on the History run view. No web-searched learning resources (local-only constraint).
+  Scope extension — add a requirement when implemented. *(Concept: ai-job-search `/upskill`.)*
+- **Application-status tracking + outcome calibration.** Extend marks beyond good/bad with an
+  application status (applied / interview / rejected / no-response); later feed outcomes into the
+  examples loop ("role type reached interview → strong-fit signal"). Requires a PRD scope note +
+  new requirements when picked up. *(Concept: ai-job-search `job_search_tracker.csv`.)*
+- **Evaluate Jobdanmark.dk.** Run the T-007 portal playbook (`docs/tasks/T-007/`) — a portal
+  ai-job-search supports that we never evaluated. (LinkedIn `jobs-guest` public endpoints were
+  considered and rejected: explicitly against LinkedIn ToS; LinkedIn stays `manual`.)
 - **LLM judging speed-up — system-prompt KV caching.** Current run is
   ~19 sec/listing on CPU → 50 listings ≈ 16 min. The system prompt is
   identical across every call; only the user prompt varies. Pre-tokenise
