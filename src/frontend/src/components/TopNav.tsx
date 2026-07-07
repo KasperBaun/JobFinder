@@ -7,6 +7,7 @@ const links: { to: string; label: string; end?: boolean }[] = [
   { to: '/skillset', label: 'Profile' },
   { to: '/search', label: 'Search' },
   { to: '/history', label: 'History' },
+  { to: '/applications', label: 'Applications' },
   { to: '/settings', label: 'Settings' },
 ]
 

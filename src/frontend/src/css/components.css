@@ -1380,6 +1380,69 @@ a.btn--danger:hover {
 .mark-why__input:focus { outline: none; border-color: var(--c-navy-400); }
 
 /* ============================================================
+   application status select
+   ============================================================ */
+
+.status-select-wrap { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+.status-select {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-slate-300);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+
+.status-select--compact { font-size: 0.72rem; padding: 0.15rem 0.45rem; }
+
+.status-select:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+.status-select:disabled { opacity: 0.6; }
+.status-select:focus { outline: none; border-color: var(--c-navy-400); }
+
+.status-select--applied {
+  background: var(--c-surface-alt);
+  color: var(--c-navy-600);
+  border-color: var(--c-slate-300);
+}
+
+.status-select--interview {
+  background: var(--c-warn-bg);
+  color: var(--c-warn);
+  border-color: var(--c-warn-border);
+}
+
+.status-select--offer {
+  background: var(--c-good-bg);
+  color: var(--c-good);
+  border-color: var(--c-good-border);
+}
+
+.status-select--rejected {
+  background: var(--c-bad-bg);
+  color: var(--c-bad);
+  border-color: var(--c-bad-border);
+}
+
+.status-select--no-response {
+  background: var(--c-slate-100);
+  color: var(--c-text-subtle);
+  border-color: var(--c-slate-200);
+}
+
+.longlist__mark-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ============================================================
    progress bar (history list)
    ============================================================ */
 

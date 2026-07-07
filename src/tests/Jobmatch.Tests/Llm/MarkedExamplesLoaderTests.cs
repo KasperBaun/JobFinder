@@ -127,4 +127,71 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
 
         Assert.Empty(MarkedExamplesLoader.Load(_historyDir, marks));
     }
+
+    [Fact]
+    public void Load_StatusOnlyInterview_BecomesLikedWithOutcomeNote()
+    {
+        WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Interview Co")]);
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, "interview")));
+
+        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        Assert.Equal("liked", example.Polarity);
+        Assert.Equal("reached interview", example.Note);
+    }
+
+    [Fact]
+    public void Load_OfferWithGoodMarkAndReason_MergesNote()
+    {
+        WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Offer Co")]);
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", "great stack", "offer")));
+
+        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        Assert.Equal("liked", example.Polarity);
+        Assert.Equal("great stack — received an offer", example.Note);
+    }
+
+    [Fact]
+    public void Load_BadMarkOverridesPositiveOutcome()
+    {
+        WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Mixed Co")]);
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("bad", "toxic culture", "interview")));
+
+        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        Assert.Equal("disliked", example.Polarity);
+        Assert.Equal("toxic culture", example.Note);
+    }
+
+    [Theory]
+    [InlineData("applied")]
+    [InlineData("rejected")]
+    [InlineData("no-response")]
+    public void Load_StatusOnlyNeutralOutcome_ProducesNoExample(string status)
+    {
+        WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Some Co")]);
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, status)));
+
+        Assert.Empty(MarkedExamplesLoader.Load(_historyDir, marks));
+    }
+
+    [Fact]
+    public void Load_OverCap_OutcomeBackedExamplesSurvive()
+    {
+        var scored = Enumerable.Range(1, 14)
+            .Select(i => Scored($"l{i}", $"Role {i}", $"Co {i}"))
+            .ToList();
+        WriteHistory("20260701-100000-aaaaaa", scored: scored);
+
+        // 13 plain good marks fill the cap; the interview and offer at the end must still make it.
+        var entries = Enumerable.Range(1, 12)
+            .Select(i => ("20260701-100000-aaaaaa", $"l{i}", new ListingMark("good", null)))
+            .Append(("20260701-100000-aaaaaa", "l13", new ListingMark(null, null, "interview")))
+            .Append(("20260701-100000-aaaaaa", "l14", new ListingMark(null, null, "offer")))
+            .ToArray();
+        var marks = Marks(entries);
+
+        var examples = MarkedExamplesLoader.Load(_historyDir, marks);
+        Assert.Equal(12, examples.Count);
+        Assert.Equal("Co 14", examples[0].Company); // offer outranks interview
+        Assert.Equal("Co 13", examples[1].Company); // interview outranks plain marks
+    }
 }

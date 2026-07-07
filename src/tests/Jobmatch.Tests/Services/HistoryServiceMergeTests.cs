@@ -123,4 +123,19 @@ public sealed class HistoryServiceMergeTests : IDisposable
     {
         Assert.Throws<Jobmatch.NotFoundException>(() => _history.GetByRunId("does-not-exist"));
     }
+
+    [Fact]
+    public void GetByRunId_StatusOnlyEntry_PopulatesMarkStatuses_NotMarks()
+    {
+        var id = "20260605-180000-stataa";
+        WriteLegacyHistory(id, DateTimeOffset.UtcNow);
+        var marks = new MarksService(_ctx);
+        marks.SetStatus(id, "l1", "applied");
+
+        var detail = _history.GetByRunId(id);
+        Assert.NotNull(detail.MarkStatuses);
+        Assert.Equal("applied", detail.MarkStatuses!["l1"]);
+        Assert.Empty(detail.Marks);
+        Assert.Equal(0, detail.GoodMarks);
+    }
 }

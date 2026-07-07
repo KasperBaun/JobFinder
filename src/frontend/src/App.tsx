@@ -11,6 +11,7 @@ import { ProviderDetailPage } from './pages/ProviderDetailPage'
 import { SkillsetPage } from './pages/SkillsetPage'
 import { SearchPage } from './pages/SearchPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { ApplicationsPage } from './pages/ApplicationsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SetupPage } from './pages/SetupPage'
 import { ClosedPage } from './pages/ClosedPage'
@@ -54,6 +55,7 @@ export function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/history/:runId" element={<HistoryPage />} />
+        <Route path="/applications" element={<ApplicationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/closed" element={<ClosedPage />} />
         <Route path="*" element={<NotFoundPage />} />
