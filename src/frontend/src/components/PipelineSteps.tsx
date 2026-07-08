@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { isTerminalState } from '../api/types'
 import type { JobSearch, JobSearchEvent } from '../api/types'
 import { useElapsed } from '../hooks/useElapsed'
-import { phaseDurations } from '../utils/progress'
+import { finalAttemptStart, phaseDurations } from '../utils/progress'
 import { formatStepDuration } from '../utils/time'
 
 type Step = { phase: JobSearch['phase']; label: string }
@@ -43,9 +43,14 @@ export function PipelineSteps({ phase, state, aiEnabled, timeline, startedAt, fi
   const current = currentIndex(phase, steps)
 
   const durations = useMemo(() => phaseDurations(timeline, finishedAt), [timeline, finishedAt])
-  const currentStartIso = timeline.find(ev => ev.phase === phase)?.timestamp
+  // A resumed run's timeline spans every attempt; time only the final one so a restart's dead time
+  // isn't counted (see finalAttemptStart). Falls back to the whole timeline / startedAt for legacy runs.
+  const attemptStart = useMemo(() => finalAttemptStart(timeline), [timeline])
+  const attemptEvents = attemptStart >= 0 ? timeline.slice(attemptStart) : timeline
+  const attemptStartIso = attemptStart >= 0 ? timeline[attemptStart].timestamp : startedAt
+  const currentStartIso = attemptEvents.find(ev => ev.phase === phase)?.timestamp
   const live = useElapsed(currentStartIso, undefined, !isTerminalState(state))
-  const totalMs = startedAt && finishedAt ? Date.parse(finishedAt) - Date.parse(startedAt) : undefined
+  const totalMs = attemptStartIso && finishedAt ? Date.parse(finishedAt) - Date.parse(attemptStartIso) : undefined
 
   return (
     <div className="pipeline" role="list" aria-label="Search steps">
