@@ -4,28 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **[TOP PRIORITY] Capture a "why" reason when rating a match, and feed it back to the LLM.**
-  When the user marks a listing "good"/"bad" they should be able to attach a short free-form
-  reason ("I'm not a student", "wrong stack", "too junior"), and that reason must reach the
-  judge on the *next* run so it stops repeating the mistake. Concrete miss this round: an
-  **"AI Engineer - Student"** posting scored **0.81** — a horrible match, because the candidate
-  is not a student, but nothing tells the model that.
-  Two-part change:
-  1. **Store the reason.** Extend `MarksService.Set` / `marks.json` beyond the bare
-     `"good"`/`"bad"` string to carry an optional `reason` (per run/listing), and surface it in
-     the UI mark control (`MarksHandler`, frontend mark button).
-  2. **Feed it into the judge.** Route captured reasons into the LLM judge prompt for the next
-     search — e.g. promote a marked-bad listing + reason into a `disliked` example, or append the
-     reasons to the few-shot block. Note: `ExamplesLoader.ToFewShotPrompt` currently sends only
-     frontmatter and *drops the free-form body*, so the existing "why" prose in `examples/*.md`
-     never reaches the model either — fixing that is part of closing this loop.
-  Validate against `examples/` per [[feedback_validate_against_examples]]: success = the
-  student/junior/wrong-stack archetypes fall out of the top-10 on the following run.
-- **Code-sign the Windows installer.** The unsigned electron-builder NSIS installer trips
-  SmartScreen ("unknown publisher"). Needs a code-signing cert; wire it into `electron-builder.yml`
-  (`win.signtool`/`signingHashAlgorithms`) and the CI publish step.
-- **Switch data location / user after setup.** First-run setup is one-time; add a Settings action
-  to re-run it or point at a different data folder (updates `bootstrap.json`).
 - **Reconsider re-enabling `jobindex-rss-softwareudvikler`** (id 14,
   currently user-disabled) — still the single widest DK net we have.
 - **Recruit IT html scrape — re-verify endpoint, then enable.** `HtmlAdapter` now
@@ -51,6 +29,21 @@ Current status of work on `jobfinder`.
   `employmentType`. Per-adapter: pull the structured value first, fall
   through to `BaseAdapter.InferRemoteMode` only when those fields are
   silent.
+- **"New since last run" flag.** Mark listings in results/longlist that never appeared in any
+  prior history run (compare canonical dedupe keys against `history/*.json`); badge + filter in
+  `LonglistTable`. *(Concept from MadsLorentzen/ai-job-search `seen_jobs.json` cross-run dedupe.)*
+- **Career-goals/motivation signal for the judge.** Add a free-text "career goals / what
+  energizes & drains me" section to the skillset (form + `skillset.md` + `SkillsetParser`) and
+  include it in the `LlmJudge` prompt. Complements the top-priority mark-reason item. Add an
+  R-NNN to `docs/requirements.md` when implemented. *(Concept: ai-job-search's career-alignment
+  scoring dimension.)*
+- **Skill-gap heatmap (local-only).** Aggregate skills required by ranked/dropped listings but
+  absent from the skillset, weighted by `(1 − fit_score) × frequency`; render as a prioritized
+  table on the History run view. No web-searched learning resources (local-only constraint).
+  Scope extension — add a requirement when implemented. *(Concept: ai-job-search `/upskill`.)*
+- **Evaluate Jobdanmark.dk.** Run the T-007 portal playbook (`docs/tasks/T-007/`) — a portal
+  ai-job-search supports that we never evaluated. (LinkedIn `jobs-guest` public endpoints were
+  considered and rejected: explicitly against LinkedIn ToS; LinkedIn stays `manual`.)
 - **LLM judging speed-up — system-prompt KV caching.** Current run is
   ~19 sec/listing on CPU → 50 listings ≈ 16 min. The system prompt is
   identical across every call; only the user prompt varies. Pre-tokenise
@@ -60,6 +53,19 @@ Current status of work on `jobfinder`.
   follow-ups: GPU offload (already a documented `llm.gpu_layer_count`
   knob — needs a `LLamaSharp.Backend.Cuda12` / `.Vulkan` swap in
   `Directory.Packages.props`); lower `llm.top_n` 50 → 25.
+
+## Postponed
+
+- **Code-sign the Windows installer.** Deferred — too much setup (cert acquisition, CI
+  secrets, Windows-only testing) for no valuable result on a personal/single-user tool right
+  now. Revisit if the app is distributed to strangers. Options if resumed: self-signed cert
+  (free; only removes the warning on machines that trust it once — fine if distribution is
+  just you); SignPath Foundation (free, but repo must be public + OSS-licensed + approved);
+  Certum Open Source (~€30/yr, EU-individual friendly); Azure Artifact Signing (~$10/mo);
+  EV cert (~$250/yr — the only one that suppresses the SmartScreen popup instantly). Plain OV
+  `.pfx` signing is no longer issued (2023 hardware-key mandate). Wiring points when resumed:
+  `win.*` in `src/desktop/electron-builder.yml` (the TODO comment at line ~26) + the
+  `npm --prefix src/desktop run dist` step in `.github/workflows/release.yml`.
 
 ## In progress
 

@@ -1,10 +1,13 @@
-import type { ListingMatch } from '../api/types'
+import type { ApplicationStatus, ListingMatch } from '../api/types'
 import { MarkButton } from './MarkButton'
+import { StatusSelect } from './StatusSelect'
 
 interface Props {
   match: ListingMatch
   runId: string
   mark?: 'good' | 'bad'
+  markReason?: string
+  markStatus?: ApplicationStatus
 }
 
 // Runs ranked before the favorite badge existed carry the boost as a sentence in
@@ -12,7 +15,7 @@ interface Props {
 // badge, and keep it out of the prose.
 const LEGACY_FAVORITE_NOTE = /One of your favorite companies \([^)]*\) — rating boosted\.\s*/
 
-export function ListingCard({ match, runId, mark }: Props) {
+export function ListingCard({ match, runId, mark, markReason, markStatus }: Props) {
   const subline = [match.company, match.location].filter(Boolean).join(' · ')
   const favorite = match.favoriteCompany || LEGACY_FAVORITE_NOTE.test(match.reasoning)
   const reasoning = match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
@@ -45,7 +48,8 @@ export function ListingCard({ match, runId, mark }: Props) {
       )}
 
       <footer className="listing-card__footer">
-        <MarkButton runId={runId} listingId={match.id} current={mark} />
+        <MarkButton runId={runId} listingId={match.id} current={mark} reason={markReason} />
+        <StatusSelect runId={runId} listingId={match.id} current={markStatus} />
         <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--primary">
           Open job posting →
         </a>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { setMark } from '../api/client'
 import type { MarkRequest, RunDetail } from '../api/types'
+import { MarkWhy } from './MarkWhy'
 
 type MarkValue = 'good' | 'bad' | undefined
 
@@ -9,7 +10,13 @@ interface Props {
   runId: string
   listingId: string
   current: MarkValue
+  reason?: string
   compact?: boolean
+}
+
+interface MarkPayload {
+  mark: MarkValue
+  reason: string | null
 }
 
 function nextState(value: MarkValue): MarkValue {
@@ -24,7 +31,7 @@ const TOOLTIPS: Record<'unset' | 'good' | 'bad', string> = {
   bad:   'Marked as Not a match. Click to clear the rating.',
 }
 
-export function MarkButton({ runId, listingId, current, compact }: Props) {
+export function MarkButton({ runId, listingId, current, reason, compact }: Props) {
   const [optimistic, setOptimistic] = useState<MarkValue>(current)
   const [error, setError] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -34,23 +41,29 @@ export function MarkButton({ runId, listingId, current, compact }: Props) {
   }, [current])
 
   const mutation = useMutation({
-    mutationFn: async (target: MarkValue) => {
-      const req: MarkRequest = { runId, listingId, mark: target ?? null }
+    mutationFn: async (payload: MarkPayload) => {
+      const req: MarkRequest = { runId, listingId, mark: payload.mark ?? null, reason: payload.reason }
       const res = await setMark(req)
       if (!res.success) throw new Error(res.error ?? 'Mark failed')
-      return target
+      return payload
     },
-    onSuccess: (target) => {
+    onSuccess: (payload) => {
       setError(null)
       queryClient.setQueryData<RunDetail | undefined>(['run', runId], (prev) => {
         if (!prev) return prev
         const marks = { ...prev.marks }
-        if (target === undefined) {
+        const markReasons = { ...prev.markReasons }
+        if (payload.mark === undefined) {
           delete marks[listingId]
         } else {
-          marks[listingId] = target
+          marks[listingId] = payload.mark
         }
-        return { ...prev, marks }
+        if (payload.mark !== undefined && payload.reason) {
+          markReasons[listingId] = payload.reason
+        } else {
+          delete markReasons[listingId]
+        }
+        return { ...prev, marks, markReasons }
       })
       void queryClient.invalidateQueries({ queryKey: ['history'] })
     },
@@ -66,7 +79,13 @@ export function MarkButton({ runId, listingId, current, compact }: Props) {
     const target = nextState(optimistic)
     setOptimistic(target)
     setError(null)
-    mutation.mutate(target)
+    // Flipping or clearing the mark drops the reason — it explained the old mark.
+    mutation.mutate({ mark: target, reason: null })
+  }
+
+  function handleSaveReason(next: string | null) {
+    setError(null)
+    mutation.mutate({ mark: optimistic, reason: next })
   }
 
   const label =
@@ -96,6 +115,9 @@ export function MarkButton({ runId, listingId, current, compact }: Props) {
       >
         {label}
       </button>
+      {optimistic !== undefined && (
+        <MarkWhy reason={reason} saving={mutation.isPending} onSave={handleSaveReason} />
+      )}
       {error && <span className="mark-button__error">{error}</span>}
     </div>
   )

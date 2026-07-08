@@ -9,7 +9,10 @@ namespace Jobmatch.Llm;
 // data directory so users can manage their own model files there.
 public static class LlmClientFactory
 {
-    public static ILlmClient? Create(LlmConfig config, string userDataDir, HttpClient http, ILoggerFactory loggers)
+    // maxTokens applies to the llamasharp backend only (Ollama generates to the model's own
+    // limit). The 128 default suits the judge's one-line verdict; callers expecting a larger
+    // JSON reply (CV extraction) must raise it or the output silently truncates mid-object.
+    public static ILlmClient? Create(LlmConfig config, string userDataDir, HttpClient http, ILoggerFactory loggers, int maxTokens = 128)
     {
         if (!config.Enabled) return null;
 
@@ -21,6 +24,7 @@ public static class LlmClientFactory
                 loggers.CreateLogger<LlamaSharpClient>(),
                 contextSize: config.ContextSize,
                 gpuLayerCount: config.GpuLayerCount,
+                maxTokens: maxTokens,
                 temperature: (float)config.Temperature),
             _ => throw new ConfigException(
                 $"llm.provider must be one of [llamasharp, ollama]; got '{config.Provider}'"),

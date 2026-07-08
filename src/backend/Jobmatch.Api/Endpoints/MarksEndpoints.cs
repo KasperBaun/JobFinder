@@ -14,6 +14,7 @@ public sealed class MarksEndpoints : IEndpointRegistration
     {
         var group = app.MapGroup("").WithTags(nameof(Routes.Marks));
         MapSetMark(group);
+        MapSetStatus(group);
     }
 
     private static void MapSetMark(RouteGroupBuilder group)
@@ -26,7 +27,23 @@ public sealed class MarksEndpoints : IEndpointRegistration
                     => handler.Set(request))
             .WithName($"{nameof(Routes.Marks)}.{nameof(Routes.Marks.Set)}")
             .WithSummary("Set listing mark")
-            .WithDescription("Marks a listing within a run as 'good', 'bad', or null (cleared).")
+            .WithDescription("Marks a listing within a run as 'good', 'bad', or null (cleared), with an optional free-form reason that feeds the LLM judge on later runs.")
+            .Produces<MarkResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError);
+    }
+
+    private static void MapSetStatus(RouteGroupBuilder group)
+    {
+        group.MapPost(
+                Routes.Marks.SetStatus,
+                (
+                    [FromServices] IMarksHandler handler,
+                    [FromBody] MarkStatusRequest? request)
+                    => handler.SetStatus(request))
+            .WithName($"{nameof(Routes.Marks)}.{nameof(Routes.Marks.SetStatus)}")
+            .WithSummary("Set application status")
+            .WithDescription("Sets a listing's application status within a run — 'applied', 'interview', 'offer', 'rejected', 'no-response', or null (cleared). Independent of the good/bad mark: either can be set or cleared without affecting the other.")
             .Produces<MarkResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);

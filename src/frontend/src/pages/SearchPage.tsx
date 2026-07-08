@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getHistory, getProviders, getRun, getSetupStatus } from '../api/client'
@@ -35,6 +35,17 @@ export function SearchPage() {
   const effectiveProviders = selectedProviders ?? enabledProviderNames
 
   const succeeded = job?.state === 'succeeded'
+
+  // Collapse the steps once, the moment a run finishes, so the top-jobs list is right there. Keyed on
+  // the run id so it fires once per run and never fights the user if they re-open the steps afterward.
+  const collapsedFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (succeeded && job && collapsedFor.current !== job.id) {
+      collapsedFor.current = job.id
+      setStepsOpen(false)
+    }
+  }, [succeeded, job?.id])
+
   const runDetailQuery = useQuery({
     queryKey: ['run', job?.id],
     queryFn: () => getRun(job!.id),

@@ -89,4 +89,38 @@ public sealed class SetupEndpointsTests : IDisposable
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Setup_Complete_CanSwitchActiveDataFolder()
+    {
+        using var factory = Factory();
+        using var client = factory.CreateClient();
+
+        var firstDataDir = Path.Combine(_tempRoot, "first");
+        var first = await client.PostAsJsonAsync(
+            Routes.Setup.Complete, new SetupRequest("first@example.com", firstDataDir));
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        // Resolve UserContext once before switching. A singleton registration would now stay pinned
+        // to this first directory even after bootstrap.json changes.
+        var beforeSwitch = await client.GetFromJsonAsync<WhoamiResponse>(Routes.Whoami.Get);
+        Assert.NotNull(beforeSwitch);
+        Assert.Equal("first@example.com", beforeSwitch!.Email);
+        Assert.Equal(Path.GetFullPath(firstDataDir), beforeSwitch.DataDir);
+
+        var secondDataDir = Path.Combine(_tempRoot, "second");
+        var second = await client.PostAsJsonAsync(
+            Routes.Setup.Complete, new SetupRequest("second@example.com", secondDataDir));
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        var afterSwitch = await client.GetFromJsonAsync<WhoamiResponse>(Routes.Whoami.Get);
+        Assert.NotNull(afterSwitch);
+        Assert.Equal("second@example.com", afterSwitch!.Email);
+        Assert.Equal(Path.GetFullPath(secondDataDir), afterSwitch.DataDir);
+
+        var status = await client.GetFromJsonAsync<SetupStatusResponse>(Routes.Setup.Status);
+        Assert.NotNull(status);
+        Assert.Equal(Path.GetFullPath(secondDataDir), status!.DataDir);
+        Assert.True(File.Exists(_bootstrapPath));
+    }
 }

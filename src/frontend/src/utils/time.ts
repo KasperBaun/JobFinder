@@ -28,6 +28,16 @@ export function formatDuration(ms: number): string {
   return `${m}:${ss}`
 }
 
+// Discrete per-step duration: 340ms · 0.4s · 12.3s · 1m 04s. Empty string when not measurable.
+export function formatStepDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return ''
+  if (ms < 1000) return `${Math.round(ms)}ms`
+  const sec = ms / 1000
+  if (sec < 60) return `${sec.toFixed(1)}s`
+  const total = Math.round(sec)
+  return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, '0')}s`
+}
+
 export function formatAbsolute(iso: string | undefined): string {
   if (!iso) return '—'
   const date = new Date(iso)
