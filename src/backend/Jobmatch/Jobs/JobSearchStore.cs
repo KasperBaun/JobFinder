@@ -8,6 +8,7 @@ public interface IJobSearchStore
     void Save(JobSearch job);
     JobSearch? Get(string id);
     IReadOnlyList<JobSearch> List();
+    IReadOnlyList<JobSearch> ListPersisted();
     JobSearch? Active();
     int Delete(IReadOnlyList<string> ids);
 }
@@ -34,8 +35,9 @@ public sealed class JobSearchStore(UserContext ctx) : IJobSearchStore
         var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
         File.WriteAllText(tmp, JsonSerializer.Serialize(job, WriteOptions));
 
-        // Atomic replace, retried: a concurrent reader (SSE replay / history list) can briefly hold the
-        // target open, which makes the move fail transiently on Windows.
+        // Atomic replace, retried: a concurrent reader (SSE replay / history list) or an AV / file-sync
+        // scanner can briefly hold the temp or target file, which surfaces on Windows as a transient
+        // IOException (sharing violation) or UnauthorizedAccessException (access denied) from MoveFile.
         for (var attempt = 0; ; attempt++)
         {
             try
@@ -43,7 +45,7 @@ public sealed class JobSearchStore(UserContext ctx) : IJobSearchStore
                 File.Move(tmp, path, overwrite: true);
                 return;
             }
-            catch (IOException) when (attempt < 5)
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && attempt < 10)
             {
                 Thread.Sleep(20);
             }
@@ -58,14 +60,20 @@ public sealed class JobSearchStore(UserContext ctx) : IJobSearchStore
         return job is null ? null : Reconcile(job);
     }
 
-    public IReadOnlyList<JobSearch> List()
+    public IReadOnlyList<JobSearch> List() => ReadAll(reconcile: true);
+
+    /// <summary>Every record in its raw on-disk lifecycle state — no stale→interrupted reconcile. Used by
+    /// startup resume, which must see whether a run was genuinely mid-flight (running) when the process died.</summary>
+    public IReadOnlyList<JobSearch> ListPersisted() => ReadAll(reconcile: false);
+
+    private IReadOnlyList<JobSearch> ReadAll(bool reconcile)
     {
         if (!Directory.Exists(ctx.JobSearchDir)) return [];
         var jobs = new List<JobSearch>();
         foreach (var file in Directory.EnumerateFiles(ctx.JobSearchDir, "*.json"))
         {
             var job = TryRead(file);
-            if (job is not null) jobs.Add(Reconcile(job));
+            if (job is not null) jobs.Add(reconcile ? Reconcile(job) : job);
         }
         return jobs.OrderByDescending(j => j.CreatedAt).ToList();
     }

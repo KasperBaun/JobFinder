@@ -77,10 +77,9 @@ public static class JobmatchApiExtensions
                     new SQLiteStorageOptions { QueuePollInterval = TimeSpan.FromSeconds(1) }));
 
             // Registered before the Hangfire server so it runs first at startup: any run left Running by
-            // a previous process's exit is persisted as Interrupted before the server can dequeue, so a
-            // dev-server restart / host kill clears the GUI's "running" indicator immediately instead of
-            // after JobSearchStore.StaleAfter (R-055).
-            services.AddHostedService<OrphanedRunReconciler>();
+            // a previous process's exit is re-enqueued to resume promptly (R-036), instead of waiting out
+            // Hangfire's SQLite invisibility timeout (~30 min) or lingering as a stuck "running" indicator.
+            services.AddHostedService<OrphanedRunResumer>();
 
             // Single-user tool: one worker serialises runs so two searches don't contend for the LLM.
             services.AddHangfireServer(options => options.WorkerCount = 1);
