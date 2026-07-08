@@ -46,7 +46,14 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
         </button>
       </div>
 
-      <PipelineSteps phase={job.phase} state={job.state} aiEnabled={aiEnabled} />
+      <PipelineSteps
+        phase={job.phase}
+        state={job.state}
+        aiEnabled={aiEnabled}
+        timeline={job.timeline}
+        startedAt={job.startedAt}
+        finishedAt={job.finishedAt}
+      />
 
       <ProgressSummary
         job={job}
