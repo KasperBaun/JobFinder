@@ -54,6 +54,10 @@ public sealed record JobSearch(
     DateTimeOffset CreatedAt,
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
+    // Start of the current run attempt. Unlike StartedAt (pinned to the first attempt), this resets on
+    // every resume, so a run resumed after a host restart reports elapsed time for the active attempt
+    // rather than the wall-clock that includes the dead time the process was down.
+    DateTimeOffset? CurrentAttemptStartedAt,
     IReadOnlyList<ProviderRunStatus> Providers,
     int FetchedCount,
     int DedupedCount,
@@ -79,6 +83,7 @@ public sealed record JobSearch(
         CreatedAt: now,
         StartedAt: null,
         FinishedAt: null,
+        CurrentAttemptStartedAt: null,
         Providers: [],
         FetchedCount: 0,
         DedupedCount: 0,
@@ -145,6 +150,7 @@ public sealed record JobSearch(
             State = JobSearchState.Running,
             Phase = JobSearchPhase.Fetching,
             StartedAt = StartedAt ?? now,
+            CurrentAttemptStartedAt = now,
             Attempt = Attempt + 1,
             LastHeartbeat = now,
         }).AppendLog(JobSearchEventLevel.Info, JobSearchPhase.Fetching, Attempt > 0 ? $"Search resumed (attempt {Attempt + 1})" : "Search started", now);

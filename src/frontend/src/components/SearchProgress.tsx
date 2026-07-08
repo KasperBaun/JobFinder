@@ -53,6 +53,7 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
         timeline={job.timeline}
         startedAt={job.startedAt}
         finishedAt={job.finishedAt}
+        currentAttemptStartedAt={job.currentAttemptStartedAt}
       />
 
       <ProgressSummary

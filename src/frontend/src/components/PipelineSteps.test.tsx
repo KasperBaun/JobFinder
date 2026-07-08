@@ -35,7 +35,7 @@ describe('PipelineSteps', () => {
 
   it('times only the final attempt for a run resumed after a restart', () => {
     // Attempt 1 started at 10:00 and died mid-fetch; attempt 2 resumed 4 hours later and completed.
-    // Timings must reflect attempt 2 only — not the 4-hour gap the process was dead.
+    // currentAttemptStartedAt anchors timings to attempt 2 only — not the 4-hour gap the process was dead.
     const resumedTimeline = [
       ev('fetching', '2026-07-08T10:00:00.000Z', 'Search started'),
       ev('fetching', '2026-07-08T10:00:05.000Z'),
@@ -53,6 +53,7 @@ describe('PipelineSteps', () => {
         timeline={resumedTimeline}
         startedAt="2026-07-08T10:00:00.000Z"
         finishedAt="2026-07-08T14:01:04.000Z"
+        currentAttemptStartedAt="2026-07-08T14:00:00.000Z"
       />,
     )
     expect(screen.getByText('3.0s')).toBeInTheDocument()   // fetching: 14:00:00 → 14:00:03

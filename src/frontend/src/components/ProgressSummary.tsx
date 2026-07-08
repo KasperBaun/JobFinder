@@ -14,7 +14,10 @@ type Props = {
 // timer, and a one-line aggregate — all from fields already on the snapshot. Replaces the old
 // page-long per-source list as the at-a-glance view.
 export function ProgressSummary({ job, counts, active, showDedupe, showRank }: Props) {
-  const elapsed = useElapsed(job.startedAt, job.finishedAt, active)
+  // Time from the current attempt's start so a run resumed after a host restart reflects the active run,
+  // not the (possibly hours-long) gap the process was down (matches the stepper). Legacy runs without the
+  // anchor fall back to startedAt.
+  const elapsed = useElapsed(job.currentAttemptStartedAt ?? job.startedAt, job.finishedAt, active)
   const pct = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0
 
   return (

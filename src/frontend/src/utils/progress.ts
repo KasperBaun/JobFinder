@@ -15,36 +15,29 @@ export function reached(phase: JobSearch['phase'], target: JobSearch['phase']): 
   return PHASE_ORDER.indexOf(phase) >= PHASE_ORDER.indexOf(target)
 }
 
-// Start of the final run attempt within a timeline. A run interrupted by a host restart resumes by
-// re-driving the whole pipeline, so its timeline concatenates every attempt separated by the (possibly
-// hours-long) dead time between them. The backend's MarkRunning opens each attempt with a fetching-phase
-// marker ("Search started" / "Search resumed (attempt N)"); timings must be read from the last one only,
-// or a resumed run reports spans that include the time it was not running. Returns -1 when no marker is
-// present (legacy timelines), meaning "use the whole timeline".
-export function finalAttemptStart(timeline: JobSearchEvent[]): number {
-  let idx = -1
-  for (let i = 0; i < timeline.length; i++) {
-    const ev = timeline[i]
-    if (ev.phase === 'fetching' && (ev.message === 'Search started' || ev.message.startsWith('Search resumed'))) {
-      idx = i
-    }
-  }
-  return idx
+// Events belonging to the current run attempt. A run interrupted by a host restart resumes by re-driving
+// the whole pipeline, so its timeline concatenates every attempt separated by the (possibly hours-long)
+// dead time between them. The backend stamps each attempt's start on currentAttemptStartedAt; slicing the
+// timeline at it keeps timings from folding in the time the process was down. Returns the whole timeline
+// when the anchor is absent (legacy runs) or unparseable.
+export function attemptEvents(timeline: JobSearchEvent[], attemptStartIso?: string): JobSearchEvent[] {
+  if (!attemptStartIso) return timeline
+  const start = Date.parse(attemptStartIso)
+  if (Number.isNaN(start)) return timeline
+  return timeline.filter(ev => Date.parse(ev.timestamp) >= start)
 }
 
 // Per-phase durations (ms), derived from the timeline: every phase transition writes a timestamped
 // event, so a phase's span is (start of the next phase that occurred − its own first timestamp). The
 // last occurring phase is closed by finishedAt. Keyed by phase; 'pending' is ignored, and the display
-// 'done' value (total run time) is computed in the component, not here. Only the final attempt's events
-// count, so a resumed run doesn't fold the dead time between attempts into the fetching/judging spans.
+// 'done' value (total run time) is computed in the component, not here. Pass a single attempt's events
+// (see attemptEvents) so a resumed run doesn't fold the dead time between attempts into the spans.
 export function phaseDurations(
   timeline: JobSearchEvent[],
   finishedAt?: string,
 ): Partial<Record<JobSearch['phase'], number>> {
-  const start = finalAttemptStart(timeline)
-  const events = start >= 0 ? timeline.slice(start) : timeline
   const firstTs = new Map<JobSearch['phase'], number>()
-  for (const ev of events) {
+  for (const ev of timeline) {
     if (ev.phase === 'pending') continue
     const t = Date.parse(ev.timestamp)
     if (Number.isNaN(t) || firstTs.has(ev.phase)) continue

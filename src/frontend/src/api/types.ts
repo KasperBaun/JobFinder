@@ -196,6 +196,8 @@ export type JobSearch = {
   createdAt: string
   startedAt?: string
   finishedAt?: string
+  // Start of the current run attempt (resets on resume); absent on legacy runs. See JobSearch.cs.
+  currentAttemptStartedAt?: string
   providers: ProviderRunStatus[]
   fetchedCount: number
   dedupedCount: number
