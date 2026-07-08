@@ -172,6 +172,7 @@ function HistoryListView() {
                   <th>When</th>
                   <th>Status</th>
                   <th>Sources</th>
+                  <th>Fetched</th>
                   <th>Top jobs</th>
                   <th>Best rating</th>
                   <th>Good matches</th>
@@ -212,6 +213,7 @@ function HistoryListView() {
                         <span className="subtle"> / </span>
                         <span style={{ color: failed ? 'var(--c-bad)' : 'var(--c-text-subtle)' }}>{failed}</span>
                       </td>
+                      <td className="tabular">{run.fetchedCount}</td>
                       <td className="tabular">{run.shortlistCount}</td>
                       <td className="tabular mono">{run.topScore.toFixed(2)}</td>
                       <td>
