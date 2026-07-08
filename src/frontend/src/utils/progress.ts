@@ -1,4 +1,4 @@
-import type { JobSearch } from '../api/types'
+import type { JobSearch, JobSearchEvent } from '../api/types'
 
 export type ProviderRowState = {
   name: string
@@ -13,6 +13,33 @@ const PHASE_ORDER: JobSearch['phase'][] = [
 
 export function reached(phase: JobSearch['phase'], target: JobSearch['phase']): boolean {
   return PHASE_ORDER.indexOf(phase) >= PHASE_ORDER.indexOf(target)
+}
+
+// Per-phase durations (ms), derived from the timeline: every phase transition writes a timestamped
+// event, so a phase's span is (start of the next phase that occurred − its own first timestamp). The
+// last occurring phase is closed by finishedAt. Keyed by phase; 'pending' is ignored, and the display
+// 'done' value (total run time) is computed in the component, not here.
+export function phaseDurations(
+  timeline: JobSearchEvent[],
+  finishedAt?: string,
+): Partial<Record<JobSearch['phase'], number>> {
+  const firstTs = new Map<JobSearch['phase'], number>()
+  for (const ev of timeline) {
+    if (ev.phase === 'pending') continue
+    const t = Date.parse(ev.timestamp)
+    if (Number.isNaN(t) || firstTs.has(ev.phase)) continue
+    firstTs.set(ev.phase, t)
+  }
+
+  const finished = finishedAt ? Date.parse(finishedAt) : NaN
+  const occurring = PHASE_ORDER.filter(p => p !== 'pending' && firstTs.has(p))
+  const out: Partial<Record<JobSearch['phase'], number>> = {}
+  for (let i = 0; i < occurring.length; i++) {
+    const start = firstTs.get(occurring[i])!
+    const end = i + 1 < occurring.length ? firstTs.get(occurring[i + 1])! : finished
+    if (!Number.isNaN(end) && end >= start) out[occurring[i]] = end - start
+  }
+  return out
 }
 
 // Merge the enabled-source list (seeded as 'pending') with the live per-source statuses from the

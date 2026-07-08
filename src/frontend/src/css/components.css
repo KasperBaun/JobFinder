@@ -1044,9 +1044,11 @@ a.btn--danger:hover {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin: 0 0 var(--space-4);
+  row-gap: 1.4rem;
+  margin: 0 0 var(--space-5);
 }
 .pipeline__step {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -1077,6 +1079,17 @@ a.btn--danger:hover {
   flex-shrink: 0;
 }
 .pipeline__label { white-space: nowrap; }
+.pipeline__time {
+  position: absolute;
+  top: 100%;
+  left: 1.8rem;
+  margin-top: 0.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--c-text-subtle);
+  white-space: nowrap;
+}
+.pipeline__step--current .pipeline__time { color: var(--c-action); }
 
 .pipeline__step--done { color: var(--c-good); }
 .pipeline__step--done .pipeline__num { border-color: var(--c-good); background: var(--c-good-bg); color: var(--c-good); }
