@@ -59,7 +59,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## History & feedback
 
 - **R-050** The system should remember every previous search run with timestamp, providers fetched, listings count, and shortlist count.
-- **R-055** The system should record every run as a `JobSearch` with an explicit lifecycle state (queued, running, succeeded, failed, cancelled, interrupted) and a timestamped timeline, so abandoned and failed runs are visible in history — not just completed ones. A run whose worker is lost (host killed mid-run) should surface as interrupted.
+- **R-055** The system should record every run as a `JobSearch` with an explicit lifecycle state (queued, running, succeeded, failed, cancelled, interrupted) and a timestamped timeline, so abandoned and failed runs are visible in history — not just completed ones. A run whose worker is lost (host killed mid-run) should surface as interrupted — immediately reconciled at process startup (a fresh process cannot be executing a run left in the running state), and otherwise after the heartbeat goes stale on read.
 - **R-051** The system should let a user view previous searches in the GUI, including how many listings the user marked as a good match per run.
 - **R-052** The system should let a user mark a listing as a good match (or not) so the ranking algorithm can be improved over time.
 - **R-053** The system should keep marks per user, per listing, scoped to the run that produced them.
