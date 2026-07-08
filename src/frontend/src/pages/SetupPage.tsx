@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { completeSetup, getSetupStatus, updateSkillset } from '../api/client'
 import type { SkillsetUpdateRequest } from '../api/types'
 import { TagInput } from '../components/TagInput'
+import { CvImportModal } from '../components/CvImportModal'
 
 const SENIORITY_OPTIONS = ['junior', 'mid', 'senior', 'lead', 'any'] as const
 const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote', 'any'] as const
@@ -47,9 +48,30 @@ export function SetupPage() {
   const [remote, setRemote] = useState('any')
   const [targetRoles, setTargetRoles] = useState<string[]>([])
   const [primaryStack, setPrimaryStack] = useState<string[]>([])
+  const [cvOpen, setCvOpen] = useState(false)
 
   function finishToApp() {
     void queryClient.invalidateQueries()
+  }
+
+  // The wizard only owns the essentials; the CV modal is scoped to those fields.
+  // The full form (incl. domains, languages, …) is available later on the Profile page.
+  const cvCurrent: SkillsetUpdateRequest = {
+    name, location: profileLocation, experienceYears: years, targetRoles,
+    remotePreference: remote, seniority, primaryStack, secondaryStack: [],
+    domains: [], disqualifiers: [], languages: [], employmentTypes: [],
+    country: '', region: '', metro: [], preferredCompanies: [],
+  }
+
+  function applyCv(patch: Partial<SkillsetUpdateRequest>) {
+    if (patch.name !== undefined) setName(patch.name)
+    if (patch.location !== undefined) setProfileLocation(patch.location)
+    if (patch.experienceYears !== undefined) setYears(patch.experienceYears)
+    if (patch.seniority !== undefined) setSeniority(patch.seniority)
+    if (patch.remotePreference !== undefined) setRemote(patch.remotePreference)
+    if (patch.targetRoles !== undefined) setTargetRoles(patch.targetRoles)
+    if (patch.primaryStack !== undefined) setPrimaryStack(patch.primaryStack)
+    setCvOpen(false)
   }
 
   const saveProfile = useMutation({
@@ -160,8 +182,20 @@ export function SetupPage() {
             <h1 className="setup__heading">Set up your <em>profile</em></h1>
             <p className="setup__lede">
               This is what jobfinder rates every listing against. Just the essentials for now — you can
-              fine-tune everything later on the Profile page.
+              fine-tune everything later on the Profile page.{' '}
+              <button type="button" className="setup__cv-link" onClick={() => setCvOpen(true)}>
+                Have a CV? Let AI fill this in.
+              </button>
             </p>
+
+            {cvOpen && (
+              <CvImportModal
+                current={cvCurrent}
+                fields={['name', 'location', 'experienceYears', 'seniority', 'remotePreference', 'targetRoles', 'primaryStack']}
+                onApply={applyCv}
+                onClose={() => setCvOpen(false)}
+              />
+            )}
 
             <label className="setup__field">
               <span className="setup__label">Your name</span>

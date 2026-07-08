@@ -37,9 +37,11 @@ public static class JobmatchApiExtensions
         // Active user — resolution is deferred through the provider so the app can boot and show a
         // first-run setup screen (on a machine with no git identity) instead of crashing. The provider
         // loads the persisted bootstrap config on construction and runs the one-time portals migration.
+        // UserContext itself is scoped so a Settings profile switch applies to the next request/job
+        // scope instead of leaving services pinned to the first resolved directory.
         services.AddSingleton<BootstrapStore>(_ => new BootstrapStore());
         services.AddSingleton<IUserContextProvider, UserContextProvider>();
-        services.AddSingleton<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
+        services.AddScoped<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
 
         // Filesystem abstraction — physical by default; tests stage in-memory.
         services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();
@@ -47,12 +49,14 @@ public static class JobmatchApiExtensions
         // Domain services
         services.AddScoped<IWhoamiService, WhoamiService>();
         services.AddScoped<IMarksService, MarksService>();
+        services.AddScoped<IApplicationsService, ApplicationsService>();
         services.AddScoped<IHistoryService, HistoryService>();
         services.AddScoped<ISkillsetService, SkillsetService>();
         services.AddSingleton<ISourceDetectionService, SourceDetectionService>();
         services.AddScoped<IProvidersService, ProvidersService>();
         services.AddScoped<ISearchService, SearchService>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();
+        services.AddScoped<ICvExtractionService, CvExtractionService>();
 
         // Background job search: the JobSearch lifecycle store, the live SSE fan-out bus, and the
         // orchestrating service/job. The bus is a singleton (one in-proc broker); the store and service
@@ -95,13 +99,19 @@ public static class JobmatchApiExtensions
         // (the SPA polls /api/llm/status to reconnect after navigation/reload).
         services.AddSingleton<ModelDownloadManager>();
 
+        // Singleton for the same reason: a CV extraction takes 30-90s on CPU and must survive the
+        // SPA navigating away (the client polls /api/skillset/extract/status to reconnect).
+        services.AddSingleton<CvExtractionManager>();
+
         // Handlers
         services.AddScoped<ISetupHandler, SetupHandler>();
         services.AddScoped<ISystemHandler, SystemHandler>();
         services.AddScoped<IWhoamiHandler, WhoamiHandler>();
         services.AddScoped<IMarksHandler, MarksHandler>();
+        services.AddScoped<IApplicationsHandler, ApplicationsHandler>();
         services.AddScoped<IHistoryHandler, HistoryHandler>();
         services.AddScoped<ISkillsetHandler, SkillsetHandler>();
+        services.AddScoped<ISkillsetExtractHandler, SkillsetExtractHandler>();
         services.AddScoped<IProvidersHandler, ProvidersHandler>();
         services.AddScoped<IJobSearchHandler, JobSearchHandler>();
         services.AddScoped<ILlmHandler, LlmHandler>();
@@ -149,8 +159,10 @@ public static class JobmatchApiExtensions
             new SystemEndpoints(),
             new WhoamiEndpoints(),
             new MarksEndpoints(),
+            new ApplicationsEndpoints(),
             new HistoryEndpoints(),
             new SkillsetEndpoints(),
+            new SkillsetExtractEndpoints(),
             new ProvidersEndpoints(),
             new SearchEndpoints(),
             new LlmEndpoints(),

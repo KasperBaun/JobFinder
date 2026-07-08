@@ -102,6 +102,34 @@ export type SkillsetUpdateRequest = {
   preferredCompanies: string[]
 }
 
+export type CvExtractionState = 'idle' | 'extracting' | 'completed' | 'failed'
+
+// All fields optional: the extractor only reports what the CV states, and the
+// server omits nulls from the JSON.
+export type ExtractedProfile = {
+  name?: string | null
+  location?: string | null
+  country?: string | null
+  region?: string | null
+  metro?: string[]
+  experienceYears?: number | null
+  seniority?: string | null
+  remotePreference?: string | null
+  targetRoles?: string[]
+  primaryStack?: string[]
+  secondaryStack?: string[]
+  domains?: string[]
+  languages?: string[]
+  employmentTypes?: string[]
+}
+
+export type CvExtractionStatus = {
+  state: CvExtractionState
+  startedAt?: string | null
+  error?: string | null
+  profile?: ExtractedProfile | null
+}
+
 export type SearchRequest = {
   providers?: string[]
   topN?: number
@@ -270,9 +298,13 @@ export type DroppedEntry = {
   context?: string
 }
 
+export type ApplicationStatus = 'applied' | 'interview' | 'offer' | 'rejected' | 'no-response'
+
 export type RunDetail = RunSummary & {
   shortlist: ListingMatch[]
   marks: Record<string, 'good' | 'bad'>
+  markReasons?: Record<string, string>
+  markStatuses?: Record<string, ApplicationStatus>
   raw?: ProviderRaw[]
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
@@ -284,9 +316,34 @@ export type MarkRequest = {
   runId: string
   listingId: string
   mark: 'good' | 'bad' | null
+  reason?: string | null
+}
+
+export type MarkStatusRequest = {
+  runId: string
+  listingId: string
+  status: ApplicationStatus | null
 }
 
 export type MarkResponse = { success: boolean; error?: string }
+
+export type ApplicationEntry = {
+  listingId: string
+  runId: string
+  runStartedAt: string
+  status: ApplicationStatus
+  mark?: 'good' | 'bad'
+  reason?: string
+  title: string
+  company?: string
+  location?: string
+  url: string
+  portal: string
+  portalDisplayName?: string
+  score: number
+}
+
+export type ApplicationsResponse = { applications: ApplicationEntry[] }
 export type SaveResponse = { success: boolean; error?: string }
 
 export type DeleteHistoryRequest = { runIds: string[] }

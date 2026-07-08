@@ -1044,9 +1044,11 @@ a.btn--danger:hover {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin: 0 0 var(--space-4);
+  row-gap: 1.4rem;
+  margin: 0 0 var(--space-5);
 }
 .pipeline__step {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -1077,6 +1079,17 @@ a.btn--danger:hover {
   flex-shrink: 0;
 }
 .pipeline__label { white-space: nowrap; }
+.pipeline__time {
+  position: absolute;
+  top: 100%;
+  left: 1.8rem;
+  margin-top: 0.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--c-text-subtle);
+  white-space: nowrap;
+}
+.pipeline__step--current .pipeline__time { color: var(--c-action); }
 
 .pipeline__step--done { color: var(--c-good); }
 .pipeline__step--done .pipeline__num { border-color: var(--c-good); background: var(--c-good-bg); color: var(--c-good); }
@@ -1302,7 +1315,7 @@ a.btn--danger:hover {
    mark button
    ============================================================ */
 
-.mark-button-wrap { display: flex; align-items: center; gap: var(--space-2); }
+.mark-button-wrap { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
 .mark-button {
   position: relative;
@@ -1338,6 +1351,108 @@ a.btn--danger:hover {
   font-size: 0.72rem;
   color: var(--c-bad);
   font-family: var(--font-mono);
+}
+
+.mark-why {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.45rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.mark-why:hover:not(:disabled) { color: var(--c-navy-700); background: var(--c-slate-100); }
+.mark-why:disabled { opacity: 0.6; }
+
+.mark-why--set {
+  font-style: italic;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mark-why__input {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--c-slate-300);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  width: 14rem;
+  max-width: 100%;
+}
+
+.mark-why__input:focus { outline: none; border-color: var(--c-navy-400); }
+
+/* ============================================================
+   application status select
+   ============================================================ */
+
+.status-select-wrap { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+.status-select {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-slate-300);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+
+.status-select--compact { font-size: 0.72rem; padding: 0.15rem 0.45rem; }
+
+.status-select:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+.status-select:disabled { opacity: 0.6; }
+.status-select:focus { outline: none; border-color: var(--c-navy-400); }
+
+.status-select--applied {
+  background: var(--c-surface-alt);
+  color: var(--c-navy-600);
+  border-color: var(--c-slate-300);
+}
+
+.status-select--interview {
+  background: var(--c-warn-bg);
+  color: var(--c-warn);
+  border-color: var(--c-warn-border);
+}
+
+.status-select--offer {
+  background: var(--c-good-bg);
+  color: var(--c-good);
+  border-color: var(--c-good-border);
+}
+
+.status-select--rejected {
+  background: var(--c-bad-bg);
+  color: var(--c-bad);
+  border-color: var(--c-bad-border);
+}
+
+.status-select--no-response {
+  background: var(--c-slate-100);
+  color: var(--c-text-subtle);
+  border-color: var(--c-slate-200);
+}
+
+.longlist__mark-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 /* ============================================================
@@ -2798,3 +2913,80 @@ a.btn--danger:hover {
 .setup__skip:hover:not(:disabled) { color: var(--c-text); }
 .setup__skip:disabled { opacity: 0.5; cursor: not-allowed; }
 
+
+/* CV import (fill profile from CV) */
+.modal-card--wide {
+  width: min(44rem, calc(100vw - var(--space-6)));
+  max-height: calc(100vh - var(--space-7));
+  overflow-y: auto;
+}
+
+.cv-import__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cv-import__modes {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cv-import__textarea {
+  resize: vertical;
+  min-height: 10rem;
+  font-size: 0.85rem;
+}
+
+.cv-import__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.cv-import__table th,
+.cv-import__table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--c-slate-100);
+  vertical-align: top;
+}
+
+.cv-import__table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-subtle);
+}
+
+.cv-import__current { color: var(--c-text-muted); }
+
+.cv-import__row--off td { opacity: 0.45; }
+
+/* Field just prefilled from a CV — cleared on edit, revert, or save */
+.field--suggested {
+  border-left: 3px solid var(--c-navy-400);
+  padding-left: var(--space-3);
+  border-radius: 2px;
+}
+
+.field--suggested > .field__label::after {
+  content: 'from CV';
+  margin-left: var(--space-2);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-navy-400);
+}
+
+.setup__cv-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--c-navy-500);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.setup__cv-link:hover { color: var(--c-navy-700); }

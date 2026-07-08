@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { RunDetail, ScoredEntry } from '../api/types'
+import type { ApplicationStatus, RunDetail, ScoredEntry } from '../api/types'
 import {
   DEFAULT_FILTERS,
   isDefault as filtersIsDefault,
@@ -8,6 +8,7 @@ import {
 } from './longlist/filterState'
 import { BreakdownBar, BreakdownDetail } from './BreakdownBar'
 import { MarkButton } from './MarkButton'
+import { StatusSelect } from './StatusSelect'
 import { formatRelative } from '../utils/time'
 
 interface Props {
@@ -72,7 +73,14 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
           </thead>
           <tbody>
             {filtered.map((s) => (
-              <Row key={s.id} entry={s} runId={data.runId} mark={data.marks[s.id]} />
+              <Row
+                key={s.id}
+                entry={s}
+                runId={data.runId}
+                mark={data.marks[s.id]}
+                markReason={data.markReasons?.[s.id]}
+                markStatus={data.markStatuses?.[s.id]}
+              />
             ))}
           </tbody>
         </table>
@@ -263,7 +271,13 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-function Row({ entry, runId, mark }: { entry: ScoredEntry; runId: string; mark?: 'good' | 'bad' }) {
+function Row({ entry, runId, mark, markReason, markStatus }: {
+  entry: ScoredEntry
+  runId: string
+  mark?: 'good' | 'bad'
+  markReason?: string
+  markStatus?: ApplicationStatus
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -281,7 +295,12 @@ function Row({ entry, runId, mark }: { entry: ScoredEntry; runId: string; mark?:
             <BreakdownBar b={entry.breakdown} />
           </div>
         </td>
-        <td><MarkButton runId={runId} listingId={entry.id} current={mark} compact /></td>
+        <td>
+          <div className="longlist__mark-cell">
+            <MarkButton runId={runId} listingId={entry.id} current={mark} reason={markReason} compact />
+            <StatusSelect runId={runId} listingId={entry.id} current={markStatus} compact />
+          </div>
+        </td>
         <td>
           <button type="button" className="link-button" onClick={() => setOpen(!open)} aria-label={open ? 'collapse' : 'expand'}>
             {open ? '▾' : '▸'}
