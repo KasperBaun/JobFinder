@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Jobmatch.Configuration;
@@ -561,6 +563,83 @@ public sealed class SearchServiceTests : IDisposable
             var runningIdx = events.FindIndex(e => e is ProviderRunningEvent r && r.Provider == done.Provider);
             var doneIdx = events.FindIndex(e => e is ProviderDoneEvent d && d.Provider == done.Provider);
             Assert.True(runningIdx >= 0 && runningIdx < doneIdx, $"{done.Provider}: running must precede done");
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_SlowProvider_TimesOut_AndRunContinues()
+    {
+        // A source that connects but never responds must not hold up the run: the per-source
+        // budget cancels it, it surfaces as a failed provider, and the healthy provider still
+        // completes. Uses a tiny injected budget so the test is fast.
+        using var blackHole = new BlackHoleListener();
+        var portals = $$"""
+            portals:
+              - name: mine
+                type: manual
+                enabled: true
+              - name: slow
+                type: api
+                enabled: true
+                endpoint: http://127.0.0.1:{{blackHole.Port}}/jobs
+                response_mapping:
+                  items_path: "data"
+                  id: "id"
+                  title: "title"
+                  url_template: "http://x/{id}"
+            """;
+        var (ctx, portalList) = CreateContext("slow-timeout@example.com", portals);
+        File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
+            """[ { "title": "Python Dev", "url": "https://x.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
+
+        var service = new SearchService(ctx, Fs, perSourceTimeout: TimeSpan.FromMilliseconds(300));
+        var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
+
+        var failed = events.OfType<ProviderFailedEvent>().SingleOrDefault(e => e.Provider == "slow");
+        Assert.NotNull(failed);
+        Assert.Contains("timed out", failed!.Error, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(events, e => e is ProviderDoneEvent d && d.Provider == "mine");
+        var complete = Assert.IsType<CompleteEvent>(events[^1]);
+        Assert.Single(complete.Shortlist);
+    }
+
+    // Accepts connections on a loopback ephemeral port and holds them open without ever
+    // responding, so an HTTP GET against it hangs until its CancellationToken fires.
+    private sealed class BlackHoleListener : IDisposable
+    {
+        private readonly TcpListener _listener;
+        private readonly CancellationTokenSource _cts = new();
+        private readonly List<TcpClient> _clients = [];
+
+        public BlackHoleListener()
+        {
+            _listener = new TcpListener(IPAddress.Loopback, 0);
+            _listener.Start();
+            _ = AcceptLoopAsync();
+        }
+
+        public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+        private async Task AcceptLoopAsync()
+        {
+            try
+            {
+                while (!_cts.IsCancellationRequested)
+                    _clients.Add(await _listener.AcceptTcpClientAsync(_cts.Token));
+            }
+            catch
+            {
+                // listener stopped / cancelled
+            }
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            foreach (var c in _clients) c.Dispose();
+            _listener.Stop();
+            _cts.Dispose();
         }
     }
 

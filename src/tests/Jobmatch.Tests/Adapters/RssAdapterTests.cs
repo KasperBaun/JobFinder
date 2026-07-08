@@ -131,6 +131,46 @@ public sealed class RssAdapterTests
         Assert.Equal("rss summary", enriched[0].Description);
     }
 
+    [Fact]
+    public async Task EnrichBodiesAsync_RunsConcurrently_ButPreservesInputOrder()
+    {
+        // Enrichment fetches concurrently; the stub echoes each request's path and delays the
+        // earlier listings longer, so a naive completion-order collector would reorder them. The
+        // contract is that output[i] still corresponds to input[i].
+        using var http = new HttpClient(new PathEchoStub());
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = Enumerable.Range(0, 12)
+            .Select(i => MakeListing($"https://example.com/job{i}", $"summary{i}"))
+            .ToArray();
+
+        var enriched = await adapter.EnrichBodiesAsync(input, CancellationToken.None);
+
+        Assert.Equal(input.Length, enriched.Count);
+        for (var i = 0; i < input.Length; i++)
+        {
+            Assert.StartsWith($"summary{i}", enriched[i].Description);
+            Assert.Contains($"marker-job{i}", enriched[i].Description);
+        }
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_CancellationRequested_Propagates()
+    {
+        // A per-source budget cancels via the token; enrichment must surface that as an
+        // OperationCanceledException (so the caller can mark the source timed out), not swallow
+        // it as a per-item "keep the listing" failure.
+        using var http = new HttpClient(new HtmlStub(HttpStatusCode.OK, "<p>body</p>"));
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = new[] { MakeListing("https://example.com/job1", "rss summary") };
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => adapter.EnrichBodiesAsync(input, cts.Token));
+    }
+
     [Theory]
     [InlineData("https://www.jobindex.dk/vis-job/h1646496",
                 "Senior .Net udvikler til afdeling i vækst, Sopra Steria A/S",
@@ -178,5 +218,22 @@ public sealed class RssAdapterTests
             {
                 Content = new StringContent(body, Encoding.UTF8, contentType),
             });
+    }
+
+    // Echoes the request path (e.g. /job7 -> "marker-job7") and delays earlier listings longer,
+    // so completion order is the reverse of input order. Lets the order test prove that concurrent
+    // enrichment still reassembles results positionally.
+    private sealed class PathEchoStub : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var segment = request.RequestUri!.AbsolutePath.TrimStart('/');
+            var n = int.Parse(new string(segment.Where(char.IsDigit).ToArray()));
+            await Task.Delay((20 - n) * 5, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent($"<p>marker-{segment}</p>", Encoding.UTF8, "text/html"),
+            };
+        }
     }
 }
