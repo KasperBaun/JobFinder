@@ -76,6 +76,12 @@ public static class JobmatchApiExtensions
                     // Default SQLite poll is ~15s — far too slow for an interactive "Run a search".
                     new SQLiteStorageOptions { QueuePollInterval = TimeSpan.FromSeconds(1) }));
 
+            // Registered before the Hangfire server so it runs first at startup: any run left Running by
+            // a previous process's exit is persisted as Interrupted before the server can dequeue, so a
+            // dev-server restart / host kill clears the GUI's "running" indicator immediately instead of
+            // after JobSearchStore.StaleAfter (R-055).
+            services.AddHostedService<OrphanedRunReconciler>();
+
             // Single-user tool: one worker serialises runs so two searches don't contend for the LLM.
             services.AddHangfireServer(options => options.WorkerCount = 1);
         }
