@@ -34,13 +34,27 @@ public sealed partial class SearchService : ISearchService
     private readonly IFileSystem _fs;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IMarksService _marks;
+    private readonly TimeSpan _perSourceTimeout;
 
-    public SearchService(UserContext ctx, IFileSystem fs, ILoggerFactory? loggerFactory = null, IMarksService? marks = null)
+    // A single source may paginate and body-enrich hundreds of listings; without a ceiling one
+    // slow host holds up the whole run (every fetch is awaited under Task.WhenAll). This budget
+    // bounds a source end-to-end — a straggler is abandoned and surfaced as a failed provider so
+    // the run proceeds on the sources that returned. The parameter is a test seam; production
+    // always uses the default.
+    private static readonly TimeSpan DefaultPerSourceTimeout = TimeSpan.FromSeconds(120);
+
+    public SearchService(
+        UserContext ctx,
+        IFileSystem fs,
+        ILoggerFactory? loggerFactory = null,
+        IMarksService? marks = null,
+        TimeSpan? perSourceTimeout = null)
     {
         _ctx = ctx;
         _fs = fs;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _marks = marks ?? new MarksService(ctx);
+        _perSourceTimeout = perSourceTimeout ?? DefaultPerSourceTimeout;
     }
 
     public IAsyncEnumerable<SearchProgressEvent> RunAsync(
@@ -78,10 +92,14 @@ public sealed partial class SearchService : ISearchService
         yield return new StartedEvent(runId, prep.Enabled.Count);
 
         using var http = new HttpClient();
+        // Fetching gets its own client with a bounded per-request timeout so a single hanging
+        // employer/page fetch fails fast instead of stalling near the framework default (100s).
+        // The judge keeps the untimed `http` — its Ollama generations legitimately exceed 30s.
+        using var fetchHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         var statuses = new List<ProviderRunStatus>(prep.Enabled.Count);
         var rawByProvider = new Dictionary<string, IReadOnlyList<Listing>>(StringComparer.Ordinal);
         var fetched = new List<Listing>();
-        await foreach (var evt in FetchAll(prep.Enabled, http, statuses, rawByProvider, fetched, ct).ConfigureAwait(false))
+        await foreach (var evt in FetchAll(prep.Enabled, fetchHttp, statuses, rawByProvider, fetched, ct).ConfigureAwait(false))
             yield return evt;
 
         var dedupeResult = Deduper.Deduplicate(fetched);
@@ -238,6 +256,8 @@ public sealed partial class SearchService : ISearchService
         HttpClient http,
         CancellationToken ct)
     {
+        using var srcCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        srcCts.CancelAfter(_perSourceTimeout);
         try
         {
             var logger = _loggerFactory.CreateLogger($"Adapter.{portal.Name}");
@@ -247,12 +267,16 @@ public sealed partial class SearchService : ISearchService
                 return (Array.Empty<Listing>(), $"unsupported portal type '{portal.Type}'");
             }
 
-            var results = await adapter.FetchAsync(ct).ConfigureAwait(false);
+            var results = await adapter.FetchAsync(srcCts.Token).ConfigureAwait(false);
             return (results, null);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (OperationCanceledException)
         {
-            throw;
+            return (Array.Empty<Listing>(), $"timed out after {_perSourceTimeout.TotalSeconds:0}s");
         }
         catch (Exception ex)
         {
