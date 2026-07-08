@@ -1185,7 +1185,8 @@ a.btn--danger:hover {
 .run-indicator {
   position: fixed;
   right: var(--space-5);
-  bottom: var(--space-5);
+  /* sit below the sticky top nav (~70px tall) with a comfortable gap */
+  top: calc(var(--space-4) * 2 + 4rem);
   z-index: 60;
   display: flex;
   align-items: center;
