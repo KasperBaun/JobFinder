@@ -59,10 +59,15 @@ public sealed partial class ProvidersService
         var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
         var secrets = state.Secrets.Where(kvp => kvp.Key != id)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        var next = new ProviderState(
-            state.Disabled.Where(x => x != id).ToArray(),
-            state.Enabled.Where(x => x != id).ToArray(),
-            secrets);
+        var overrides = state.Overrides.Where(kvp => kvp.Key != id)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        var next = state with
+        {
+            Disabled = state.Disabled.Where(x => x != id).ToArray(),
+            Enabled = state.Enabled.Where(x => x != id).ToArray(),
+            Secrets = secrets,
+            Overrides = overrides,
+        };
         ProviderStateLoader.Save(ctx.ProviderStatePath, next);
     }
 

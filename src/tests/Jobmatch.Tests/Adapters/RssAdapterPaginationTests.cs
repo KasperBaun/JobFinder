@@ -56,6 +56,7 @@ public sealed class RssAdapterPaginationTests
         Assert.Equal(3, handler.RequestedPages.Count);
         Assert.Equal(new[] { 1, 2, 3 }, handler.RequestedPages);
         Assert.All(handler.RequestedUris, u => Assert.Contains("q=%2Bc%23", u));
+        Assert.False(adapter.HitPageCap); // stopped on an empty page => exhausted, not capped
     }
 
     [Fact]
@@ -73,6 +74,7 @@ public sealed class RssAdapterPaginationTests
 
         Assert.Equal(2, results.Count);
         Assert.Equal(2, handler.RequestedPages.Count); // page 1 (new), page 2 (all dupes => stop)
+        Assert.False(adapter.HitPageCap); // duplicate page => exhausted, not capped
     }
 
     [Fact]
@@ -88,6 +90,26 @@ public sealed class RssAdapterPaginationTests
 
         Assert.Equal(6, results.Count);            // 3 pages x 2 distinct items
         Assert.Equal(3, handler.RequestedPages.Count);
+        Assert.True(adapter.HitPageCap);           // ran the full page budget on full pages => truncated
+    }
+
+    [Fact]
+    public async Task FetchAsync_ShortLastPage_DoesNotFlagCap()
+    {
+        // Page 3 returns 1 item (< Size 2) => the short-page guard stops before MaxPages(4) is spent,
+        // so we've genuinely reached the end and must NOT report a cap.
+        var handler = new PagedFeedHandler(page => page < 3
+            ? Feed(($"Job {page}a", $"{page}a"), ($"Job {page}b", $"{page}b"))
+            : Feed(($"Job {page}a", $"{page}a")));
+        using var http = new HttpClient(handler);
+        var adapter = new RssAdapter(
+            Config(new PaginationConfig(Param: "page", Start: 1, Step: 1, Size: 2, MaxPages: 4)),
+            http, NullLogger.Instance);
+
+        var results = await adapter.FetchAsync();
+
+        Assert.Equal(5, results.Count);            // 2 + 2 + 1
+        Assert.False(adapter.HitPageCap);
     }
 
     [Fact]
@@ -101,6 +123,7 @@ public sealed class RssAdapterPaginationTests
 
         Assert.Equal(2, results.Count);
         Assert.Single(handler.RequestedPages);
+        Assert.False(adapter.HitPageCap);          // single fetch can't be page-capped
     }
 
     private sealed class PagedFeedHandler(Func<int, string> feedForPage) : HttpMessageHandler

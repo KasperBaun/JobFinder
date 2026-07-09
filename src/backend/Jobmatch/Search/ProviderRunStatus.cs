@@ -16,4 +16,7 @@ public sealed record ProviderRunStatus(
     string Name,
     ProviderRunState Status,
     int? FetchedCount,
-    string? Error);
+    string? Error,
+    long? DurationMs = null,
+    bool HitPageCap = false,
+    bool PossiblyCapped = false);

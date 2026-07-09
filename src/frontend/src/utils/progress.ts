@@ -5,6 +5,9 @@ export type ProviderRowState = {
   status: 'pending' | 'running' | 'ok' | 'failed'
   fetchedCount?: number
   error?: string
+  durationMs?: number
+  hitPageCap?: boolean
+  possiblyCapped?: boolean
 }
 
 const PHASE_ORDER: JobSearch['phase'][] = [
@@ -61,7 +64,7 @@ export function buildRows(job: JobSearch | null, initialNames: string[]): Provid
   const rows = new Map<string, ProviderRowState>()
   for (const name of initialNames) rows.set(name, { name, status: 'pending' })
   for (const p of job?.providers ?? []) {
-    rows.set(p.name, { name: p.name, status: p.status, fetchedCount: p.fetchedCount, error: p.error })
+    rows.set(p.name, { name: p.name, status: p.status, fetchedCount: p.fetchedCount, error: p.error, durationMs: p.durationMs, hitPageCap: p.hitPageCap, possiblyCapped: p.possiblyCapped })
   }
   return Array.from(rows.values())
 }

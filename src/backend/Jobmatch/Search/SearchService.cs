@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Jobmatch.Adapters;
@@ -190,12 +191,15 @@ public sealed partial class SearchService : ISearchService
             var portal = enabled[i];
             var index = i + 1;
             await channel.Writer.WriteAsync(new ProviderRunningEvent(portal.Name, index, total), ct).ConfigureAwait(false);
-            var (results, error) = await FetchSafe(portal, http, ct).ConfigureAwait(false);
-            slots[i] = new ProviderFetchResult(portal.Name, results, error);
+            var sw = Stopwatch.StartNew();
+            var (results, error, hitPageCap) = await FetchSafe(portal, http, ct).ConfigureAwait(false);
+            var durationMs = sw.ElapsedMilliseconds;
+            var possiblyCapped = error is null && ProviderCapHeuristic.LimitReached(portal, results.Count);
+            slots[i] = new ProviderFetchResult(portal.Name, results, error, durationMs, hitPageCap, possiblyCapped);
             await channel.Writer.WriteAsync(
                 error is null
-                    ? new ProviderDoneEvent(portal.Name, results.Count, index, total)
-                    : new ProviderFailedEvent(portal.Name, error, index, total),
+                    ? new ProviderDoneEvent(portal.Name, results.Count, index, total, durationMs, hitPageCap, possiblyCapped)
+                    : new ProviderFailedEvent(portal.Name, error, index, total, durationMs),
                 ct).ConfigureAwait(false);
         }
 
@@ -228,18 +232,18 @@ public sealed partial class SearchService : ISearchService
             {
                 fetched.AddRange(slot.Results);
                 rawByProvider[slot.Name] = slot.Results;
-                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Ok, slot.Results.Count, null));
+                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Ok, slot.Results.Count, null, slot.DurationMs, slot.HitPageCap, slot.PossiblyCapped));
             }
             else
             {
                 rawByProvider[slot.Name] = [];
-                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Failed, null, slot.Error));
+                statuses.Add(new ProviderRunStatus(slot.Name, ProviderRunState.Failed, null, slot.Error, slot.DurationMs));
             }
         }
     }
 
     /// <summary>One provider's fetch outcome, held in enabled-order so result assembly stays deterministic.</summary>
-    private readonly record struct ProviderFetchResult(string Name, IReadOnlyList<Listing> Results, string? Error);
+    private readonly record struct ProviderFetchResult(string Name, IReadOnlyList<Listing> Results, string? Error, long DurationMs, bool HitPageCap, bool PossiblyCapped);
 
     /// <summary>Resolved inputs for a single run — config + the filtered portal set + run-level knobs.</summary>
     private readonly record struct RunPrep(
@@ -251,7 +255,7 @@ public sealed partial class SearchService : ISearchService
         double MinScore,
         DateTimeOffset StartedAt);
 
-    private async Task<(IReadOnlyList<Listing> Results, string? Error)> FetchSafe(
+    private async Task<(IReadOnlyList<Listing> Results, string? Error, bool HitPageCap)> FetchSafe(
         PortalConfig portal,
         HttpClient http,
         CancellationToken ct)
@@ -264,11 +268,11 @@ public sealed partial class SearchService : ISearchService
             var adapter = AdapterFactory.Create(portal, http, logger, _ctx.ImportsDir, _fs);
             if (adapter is null)
             {
-                return (Array.Empty<Listing>(), $"unsupported portal type '{portal.Type}'");
+                return (Array.Empty<Listing>(), $"unsupported portal type '{portal.Type}'", false);
             }
 
             var results = await adapter.FetchAsync(srcCts.Token).ConfigureAwait(false);
-            return (results, null);
+            return (results, null, adapter.HitPageCap);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -276,11 +280,11 @@ public sealed partial class SearchService : ISearchService
         }
         catch (OperationCanceledException)
         {
-            return (Array.Empty<Listing>(), $"timed out after {_perSourceTimeout.TotalSeconds:0}s");
+            return (Array.Empty<Listing>(), $"timed out after {_perSourceTimeout.TotalSeconds:0}s", false);
         }
         catch (Exception ex)
         {
-            return (Array.Empty<Listing>(), ex.Message);
+            return (Array.Empty<Listing>(), ex.Message, false);
         }
     }
 

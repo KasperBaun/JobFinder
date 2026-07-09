@@ -9,16 +9,16 @@ namespace Jobmatch.Adapters;
 // so the base file stays within the file-size limit.
 public abstract partial class BaseAdapter
 {
-    // Per-fetch stagger inside the concurrency gate so a single host isn't hit too hard. Kept
-    // well below the framework request timeout; the portal's own RateLimitRps governs list/page
-    // fetches, this governs body fetches.
+    // Per-fetch stagger for adapters that crawl detail pages sequentially (TeamTailor's page-per-job
+    // sitemap walk). Body enrichment no longer uses it — its SemaphoreSlim gate alone bounds the peak
+    // rate to any single host, and the stagger on top was the dominant drag on large feeds.
     protected const int BodyFetchDelayMs = 200;
 
     // Bounded concurrency for body enrichment. Sequential fetching made wall-clock scale linearly
     // with listing count (a 160-item feed doing two fetches each ran minutes and, under the run's
-    // Task.WhenAll, held up every other source). A small degree keeps the peak rate to any single
-    // host gentle while cutting the total to roughly a quarter.
-    private const int EnrichConcurrency = 4;
+    // Task.WhenAll, held up every other source). The gate alone bounds the peak rate to any single
+    // host, so fetches now go as fast as the gate allows.
+    private const int EnrichConcurrency = 10;
 
     // Fetches each listing's URL and merges its visible text into Description. Runs with a small
     // bounded concurrency and a per-fetch stagger so we don't hammer the host. Failures are logged
@@ -49,7 +49,6 @@ public abstract partial class BaseAdapter
             var listing = listings[index];
             try
             {
-                await Task.Delay(BodyFetchDelayMs, ct);
                 var previewHtml = await FetchBodyHtmlAsync(listing.Url, ct);
                 // For Jobindex/it-jobbank preview pages, the area span ('jix_robotjob--area')
                 // carries the actual location; the original RSS feed item lacked one.
@@ -63,7 +62,6 @@ public abstract partial class BaseAdapter
                 var externalHref = ExtractJobindexExternalLink(listing.Url, previewHtml);
                 if (externalHref is not null && Uri.TryCreate(externalHref, UriKind.Absolute, out var external))
                 {
-                    await Task.Delay(BodyFetchDelayMs, ct);
                     var externalHtml = await FetchBodyHtmlAsync(external, ct);
                     if (!string.IsNullOrWhiteSpace(externalHtml))
                     {

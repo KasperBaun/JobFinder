@@ -12,6 +12,7 @@ import type {
   ProviderCreatedResponse,
   ProviderDetail,
   ProvidersResponse,
+  ProviderConfigUpdate,
   ProviderTestResult,
   RunDetail,
   SaveResponse,
@@ -114,6 +115,14 @@ export async function setProviderSecrets(id: number, values: Record<string, stri
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ values }),
+  })
+}
+
+export async function setProviderConfig(id: number, update: ProviderConfigUpdate): Promise<SaveResponse> {
+  return apiFetch<SaveResponse>(`/api/providers/${id}/config`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
   })
 }
 

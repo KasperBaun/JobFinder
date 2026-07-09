@@ -38,7 +38,8 @@ public sealed record JobSearchEvent(
     JobSearchPhase Phase,
     string Message,
     string? Provider = null,
-    int? Count = null);
+    int? Count = null,
+    long? DurationMs = null);
 
 /// <summary>
 /// Lifecycle aggregate for a single background search run. The state machine is the source of truth
@@ -105,10 +106,11 @@ public sealed record JobSearch(
         string message,
         DateTimeOffset now,
         string? provider = null,
-        int? count = null)
+        int? count = null,
+        long? durationMs = null)
     {
         RequireNonTerminal(nameof(Log));
-        return AppendLog(level, phase, message, now, provider, count);
+        return AppendLog(level, phase, message, now, provider, count, durationMs);
     }
 
     // Unguarded append — used by the terminal transitions to record their own final entry after the
@@ -119,11 +121,12 @@ public sealed record JobSearch(
         string message,
         DateTimeOffset now,
         string? provider = null,
-        int? count = null) => this with
+        int? count = null,
+        long? durationMs = null) => this with
         {
             Phase = phase,
             LastHeartbeat = now,
-            Timeline = [.. Timeline, new JobSearchEvent(now, level, phase, message, provider, count)],
+            Timeline = [.. Timeline, new JobSearchEvent(now, level, phase, message, provider, count, durationMs)],
         };
 
     public JobSearch Heartbeat(DateTimeOffset now) => this with { LastHeartbeat = now };
