@@ -167,6 +167,7 @@ public sealed class SearchServiceTests : IDisposable
         var done = Assert.IsType<ProviderDoneEvent>(events[2]);
         Assert.Equal("mine", done.Provider);
         Assert.Equal(1, done.FetchedCount);
+        Assert.True(done.DurationMs >= 0);
         Assert.IsType<DedupeEvent>(events[3]);
         var rank = Assert.IsType<RankEvent>(events[4]);
         Assert.Equal(1, rank.RankedCount);

@@ -281,7 +281,7 @@
         "q": "+softwareudvikler"
       },
       "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
-      "rateLimitRps": 0.5,
+      "rateLimitRps": 2.0,
       "notes": "Jobindex public RSS, AND-query for the Danish term 'softwareudvikler'. Returns ~20 most-recent DK Software Developer listings across every DK ATS that syndicates to Jobindex (Emply, HR-Manager.net, TeamTailor, SmartRecruiters, internal sites). Body enrichment on so the linked page's full text is used for ranking. Confirmed working — 5 of the user's 8 curated example employers appear here when run together with the .NET variant below."
     },
     {
@@ -296,7 +296,7 @@
         "q": "+.net +udvikler"
       },
       "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
-      "rateLimitRps": 0.5,
+      "rateLimitRps": 2.0,
       "notes": "Jobindex public RSS, AND-query requiring both '.net' and 'udvikler' (Danish for developer). Tighter than the broader 'softwareudvikler' query above — surfaces specifically .NET-tagged DK developer roles. Catches Sundhed.dk, Dansk Sundhedssikring, Sopra Steria, Netcompany Architect, etc. that the softwareudvikler query may not."
     },
     {
@@ -577,7 +577,7 @@
       "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
       "queryParams": { "q": "+backend +udvikler" },
       "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
-      "rateLimitRps": 0.5,
+      "rateLimitRps": 2.0,
       "notes": "Jobindex public RSS, AND-query requiring 'backend' and 'udvikler'. Catches Danish-titled backend roles (Nykredit, Norlys etc.) that the 'softwareudvikler' and '.net udvikler' queries miss. Verified 2026-06-12 (22 items). Body enrichment on."
     },
     {
@@ -590,7 +590,7 @@
       "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
       "queryParams": { "q": "+c#" },
       "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
-      "rateLimitRps": 0.5,
+      "rateLimitRps": 2.0,
       "notes": "Jobindex public RSS, single AND-term 'c#'. Surfaces C#-tagged roles regardless of title language ('Software Engineer', 'Systemudvikler' etc.) that title-word queries miss; the '#' is URL-encoded automatically. Verified 2026-06-12 (20 items, incl. PFA and Arla .NET roles). Body enrichment on."
     },
     {
@@ -603,7 +603,7 @@
       "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
       "queryParams": { "q": "+azure" },
       "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
-      "rateLimitRps": 0.5,
+      "rateLimitRps": 2.0,
       "notes": "Jobindex public RSS, single AND-term 'azure'. Catches cloud/platform/DevOps roles built on the Azure stack that developer-title queries miss. Expect some infrastructure-only noise — the ranker's title gate and stack weights handle it. Verified 2026-06-12 (20 items). Body enrichment on."
     },
     {
@@ -616,7 +616,7 @@
       "endpoint": "https://www.jobindex.dk/jobsoegning.rss",
       "queryParams": { "q": "+software +engineer" },
       "pagination": { "param": "page", "start": 1, "step": 1, "size": 20, "maxPages": 8 },
-      "rateLimitRps": 0.5,
+      "rateLimitRps": 2.0,
       "notes": "Jobindex public RSS, AND-query for the English title 'software engineer'. International companies hiring in Copenhagen post English titles the Danish queries never match. Verified 2026-06-12 (20 items). Body enrichment on."
     },
     {

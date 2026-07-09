@@ -11,7 +11,7 @@ import {
   encodeToHash,
   type LonglistFilters,
 } from '../components/longlist/filterState'
-import { formatAbsolute, formatRelative } from '../utils/time'
+import { formatAbsolute, formatRelative, formatStepDuration } from '../utils/time'
 import { STATE_LABEL } from '../utils/searchLabels'
 import { isTerminalState } from '../api/types'
 import type {
@@ -375,9 +375,11 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
   if (!data.raw) {
     return <div className="muted">No fetched jobs recorded for this search.</div>
   }
+  const durationByProvider = new Map(data.providers.map(p => [p.name, p.durationMs]))
   return (
     <section className="raw-fetch">
       {data.raw.map(group => {
+        const durationMs = durationByProvider.get(group.provider)
         const isOpen = open.has(group.provider)
         return (
           <div
@@ -401,6 +403,9 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
             >
               <span className="raw-group__caret" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
               <span className="raw-group__name">{group.provider}</span>
+              {durationMs != null && (
+                <span className="raw-group__dur mono">{formatStepDuration(durationMs)}</span>
+              )}
               <span className="raw-group__count">{group.listings.length}</span>
             </button>
             {isOpen && group.listings.length > 0 && (

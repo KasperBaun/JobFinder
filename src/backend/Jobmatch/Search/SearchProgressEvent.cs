@@ -22,9 +22,9 @@ public sealed record StartedEvent(string RunId, int Total) : SearchProgressEvent
 
 public sealed record ProviderRunningEvent(string Provider, int Index, int Total) : SearchProgressEvent;
 
-public sealed record ProviderDoneEvent(string Provider, int FetchedCount, int Index, int Total) : SearchProgressEvent;
+public sealed record ProviderDoneEvent(string Provider, int FetchedCount, int Index, int Total, long DurationMs, bool HitPageCap = false, bool PossiblyCapped = false) : SearchProgressEvent;
 
-public sealed record ProviderFailedEvent(string Provider, string Error, int Index, int Total) : SearchProgressEvent;
+public sealed record ProviderFailedEvent(string Provider, string Error, int Index, int Total, long DurationMs) : SearchProgressEvent;
 
 public sealed record DedupeEvent(int MergedCount) : SearchProgressEvent;
 

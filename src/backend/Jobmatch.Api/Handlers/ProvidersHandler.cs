@@ -14,6 +14,7 @@ public interface IProvidersHandler
     Task<IResult> GetById(int id);
     Task<IResult> Update(int id, ProviderUpsert? request);
     Task<IResult> SetSecrets(int id, SetSecretsRequest? request);
+    Task<IResult> SetConfig(int id, ProviderConfigUpdate? request);
     Task<IResult> Test(int id, CancellationToken ct);
     Task<IResult> Detect(DetectSourceRequest? request);
     Task<IResult> PreviewTest(PreviewSourceRequest? request, CancellationToken ct);
@@ -62,6 +63,20 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
                 throw new InvalidRequestException("request body is required");
 
             providers.SetSecrets(id, request.Values);
+            return Task.FromResult<IResult>(Results.Ok(new SaveResponse(true)));
+        },
+        logParams: [id]);
+
+    public Task<IResult> SetConfig(int id, ProviderConfigUpdate? request) => ExecuteAsync(
+        "set provider config: {ProviderId}",
+        () =>
+        {
+            var ov = new ProviderOverride(
+                request?.MaxPages,
+                request?.PageSize,
+                request?.RateLimitRps,
+                request?.EnrichBody);
+            providers.SetConfigOverride(id, ov);
             return Task.FromResult<IResult>(Results.Ok(new SaveResponse(true)));
         },
         logParams: [id]);
@@ -156,7 +171,49 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
             RequiresSecret: l.Portal.RequiresSecret,
             HasSecret: l.HasSecret,
             Removable: l.Portal.Id >= UserProviderStore.IdBase,
-            RecentRuns: recent);
+            RecentRuns: recent,
+            Config: ToConfigDto(l.Portal, d.Override));
+    }
+
+    private static readonly string[] QueryKeys = ["q", "query", "keywords", "search", "searchText"];
+
+    private static ProviderConfigDto ToConfigDto(PortalConfig portal, ProviderOverride? ov)
+    {
+        var pg = portal.Pagination;
+        var defaultMaxPages = pg?.MaxPages;
+        var defaultPageSize = pg?.Size;
+        var maxPages = ov?.MaxPages ?? defaultMaxPages;
+        var pageSize = ov?.PageSize ?? defaultPageSize;
+        var ceiling = maxPages is int mp && pageSize is int ps ? mp * ps : (int?)null;
+
+        return new ProviderConfigDto(
+            Method: portal.Method,
+            EnrichBody: ov?.EnrichBody ?? portal.EnrichBody,
+            Paginates: pg is not null,
+            MaxPages: maxPages,
+            PageSize: pageSize,
+            HardCeiling: ceiling,
+            SearchQuery: ExtractSearchQuery(portal.QueryParams),
+            RateLimitRps: ov?.RateLimitRps ?? portal.RateLimitRps,
+            Defaults: new ProviderConfigDefaults(defaultMaxPages, defaultPageSize, portal.RateLimitRps, portal.EnrichBody),
+            RateLimitOverridden: ov?.RateLimitRps is not null,
+            EnrichBodyOverridden: ov?.EnrichBody is not null,
+            MaxPagesOverridden: ov?.MaxPages is not null,
+            PageSizeOverridden: ov?.PageSize is not null);
+    }
+
+    private static string? ExtractSearchQuery(IReadOnlyDictionary<string, object?>? queryParams)
+    {
+        if (queryParams is null) return null;
+        foreach (var key in QueryKeys)
+        {
+            if (queryParams.TryGetValue(key, out var val) && val is not null)
+            {
+                var s = Convert.ToString(val, System.Globalization.CultureInfo.InvariantCulture);
+                if (!string.IsNullOrWhiteSpace(s)) return s;
+            }
+        }
+        return null;
     }
 
     private static ProviderTestResult ToTestResult(ProviderTestOutcome o) => new(
@@ -165,5 +222,8 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         DurationMs: o.DurationMs,
         SampleTitle: o.SampleTitle,
         Error: o.Error,
-        TestedAt: o.TestedAt);
+        TestedAt: o.TestedAt,
+        Samples: [.. o.Samples.Select(s => new ProviderTestSampleDto(s.Title, s.Company, s.Location, s.Url))],
+        HitPageCap: o.HitPageCap,
+        PossiblyCapped: o.PossiblyCapped);
 }

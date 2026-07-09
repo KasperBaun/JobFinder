@@ -50,7 +50,7 @@ public sealed class SearchJobTests : IDisposable
         {
             new StartedEvent(id, 1),
             new ProviderRunningEvent("p", 1, 1),
-            new ProviderDoneEvent("p", 5, 1, 1),
+            new ProviderDoneEvent("p", 5, 1, 1, 1234),
             new DedupeEvent(4),
             new RankEvent(2, 0.7),
             new CompleteEvent(id, [Match("a", 0.7), Match("b", 0.6)]),
@@ -68,6 +68,7 @@ public sealed class SearchJobTests : IDisposable
         var p = Assert.Single(result.Providers);
         Assert.Equal(ProviderRunState.Ok, p.Status);
         Assert.Equal(5, p.FetchedCount);
+        Assert.Equal(1234, p.DurationMs);
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public sealed class SearchJobTests : IDisposable
         {
             new StartedEvent(id, 1),
             new ProviderRunningEvent("p", 1, 1),
-            new ProviderFailedEvent("p", "timeout", 1, 1),
+            new ProviderFailedEvent("p", "timeout", 1, 1, 4567),
             new DedupeEvent(0),
             new RankEvent(0, 0.0),
             new CompleteEvent(id, []),
@@ -89,7 +90,9 @@ public sealed class SearchJobTests : IDisposable
 
         var result = _store.Get(id)!;
         Assert.Equal(JobSearchState.Succeeded, result.State);
-        Assert.Equal(ProviderRunState.Failed, Assert.Single(result.Providers).Status);
+        var failed = Assert.Single(result.Providers);
+        Assert.Equal(ProviderRunState.Failed, failed.Status);
+        Assert.Equal(4567, failed.DurationMs);
     }
 
     [Fact]

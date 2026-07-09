@@ -29,6 +29,7 @@ public static class Routes
         public const string Update = ById;
         public const string Test = $"{ById}/test";
         public const string SetSecrets = $"{ById}/secrets";
+        public const string SetConfig = $"{ById}/config";
         // Add-a-source flow: detect a pasted URL, preview-test the candidate, create, delete.
         public const string Create = Base;
         public const string Delete = ById;

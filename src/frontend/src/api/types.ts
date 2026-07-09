@@ -32,13 +32,53 @@ export type ProviderRecentRun = {
   error?: string
 }
 
+export type ProviderConfigDefaults = {
+  maxPages?: number
+  pageSize?: number
+  rateLimitRps: number
+  enrichBody: boolean
+}
+
+export type ProviderConfigView = {
+  method?: string
+  enrichBody: boolean
+  paginates: boolean
+  maxPages?: number
+  pageSize?: number
+  hardCeiling?: number
+  searchQuery?: string
+  rateLimitRps: number
+  defaults: ProviderConfigDefaults
+  rateLimitOverridden: boolean
+  enrichBodyOverridden: boolean
+  maxPagesOverridden: boolean
+  pageSizeOverridden: boolean
+}
+
 export type ProviderDetail = ProviderSummary & {
   recentRuns: ProviderRecentRun[]
+  config: ProviderConfigView
 }
 
 export type ProviderEnabledUpdate = { enabled: boolean }
 
+// Per-user override of a source's fetch knobs. Any field omitted/null = keep the catalog default;
+// all-empty = reset to defaults.
+export type ProviderConfigUpdate = {
+  maxPages?: number | null
+  pageSize?: number | null
+  rateLimitRps?: number | null
+  enrichBody?: boolean | null
+}
+
 export type SetSecretsRequest = { values: Record<string, string> }
+
+export type ProviderTestSample = {
+  title: string
+  company?: string
+  location?: string
+  url: string
+}
 
 export type ProviderTestResult = {
   ok: boolean
@@ -47,6 +87,9 @@ export type ProviderTestResult = {
   sampleTitle?: string
   error?: string
   testedAt: string
+  samples: ProviderTestSample[]
+  hitPageCap: boolean
+  possiblyCapped: boolean
 }
 
 export type CreateResponse = { success: boolean; id: number; error?: string }
@@ -158,6 +201,9 @@ export type ProviderRunStatus = {
   status: 'pending' | 'running' | 'ok' | 'failed'
   fetchedCount?: number
   error?: string
+  durationMs?: number
+  hitPageCap?: boolean
+  possiblyCapped?: boolean
 }
 
 // Background search lifecycle — mirrors the backend JobSearch aggregate. Enum values are camelCase
@@ -186,6 +232,7 @@ export type JobSearchEvent = {
   message: string
   provider?: string
   count?: number
+  durationMs?: number
 }
 
 export type JobSearch = {
