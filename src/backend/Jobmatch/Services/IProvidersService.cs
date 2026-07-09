@@ -26,7 +26,8 @@ public sealed record ProviderRunHistory(
 
 public sealed record ProviderListingDetail(
     ProviderListing Listing,
-    IReadOnlyList<ProviderRunHistory> RecentRuns);
+    IReadOnlyList<ProviderRunHistory> RecentRuns,
+    ProviderOverride? Override = null);
 
 public sealed record ProviderTestOutcome(
     bool Ok,
@@ -34,7 +35,18 @@ public sealed record ProviderTestOutcome(
     long DurationMs,
     string? SampleTitle,
     string? Error,
-    DateTimeOffset TestedAt);
+    DateTimeOffset TestedAt,
+    IReadOnlyList<ProviderTestSample> Samples,
+    bool HitPageCap = false,
+    bool PossiblyCapped = false);
+
+/// <summary>A lightweight preview row from a provider test — enough to eyeball what a source returns,
+/// without the full description payload. Capped to the first N listings of the fetch.</summary>
+public sealed record ProviderTestSample(
+    string Title,
+    string? Company,
+    string? Location,
+    string Url);
 
 public sealed record DetectedSource(
     string Kind,
@@ -48,6 +60,7 @@ public interface IProvidersService
     ProviderListingDetail GetById(int id);
     void SetEnabled(int id, bool enabled);
     void SetSecrets(int id, IReadOnlyDictionary<string, string> values);
+    void SetConfigOverride(int id, ProviderOverride ov);
     Task<ProviderTestOutcome> TestAsync(int id, CancellationToken ct);
     IReadOnlyList<DetectedSource> Detect(string? url);
     Task<ProviderTestOutcome> PreviewTestAsync(string? url, string kind, string? displayName, CancellationToken ct);
@@ -77,7 +90,8 @@ public sealed partial class ProvidersService(
         var lastByProvider = LoadLastFetchByProvider();
         var listing = MakeListing(portal, state, lastByProvider);
         var recent = LoadRecentRuns(portal.Name, take: 5);
-        return new ProviderListingDetail(listing, recent);
+        state.Overrides.TryGetValue(id, out var ov);
+        return new ProviderListingDetail(listing, recent, ov);
     }
 
     public void SetEnabled(int id, bool enabled)
@@ -106,10 +120,11 @@ public sealed partial class ProvidersService(
             else explicitEnabled.Remove(id);
         }
 
-        var nextState = new ProviderState(
-            disabled.OrderBy(i => i).ToArray(),
-            explicitEnabled.OrderBy(i => i).ToArray(),
-            state.Secrets);
+        var nextState = state with
+        {
+            Disabled = disabled.OrderBy(i => i).ToArray(),
+            Enabled = explicitEnabled.OrderBy(i => i).ToArray(),
+        };
         ProviderStateLoader.Save(ctx.ProviderStatePath, nextState);
     }
 
@@ -150,6 +165,12 @@ public sealed partial class ProvidersService(
         return await TestConfigAsync(portal, ct).ConfigureAwait(false);
     }
 
+    // Safety ceiling on how many listings a test echoes back as a preview. The test still reports the
+    // full FetchedCount; this only bounds the sample rows (title/company/location/url — no descriptions).
+    // Set high enough to show every listing of any real board (the biggest observed is ~700) while still
+    // capping a pathological source. The UI shows "first N of M" only when M exceeds this.
+    private const int TestSampleCap = 500;
+
     private async Task<ProviderTestOutcome> TestConfigAsync(PortalConfig portal, CancellationToken ct)
     {
         if (portal.Type == PortalType.Manual)
@@ -157,7 +178,7 @@ public sealed partial class ProvidersService(
             return new ProviderTestOutcome(
                 Ok: false, FetchedCount: 0, DurationMs: 0,
                 SampleTitle: null, Error: "manual provider — no live endpoint to test",
-                TestedAt: DateTimeOffset.UtcNow);
+                TestedAt: DateTimeOffset.UtcNow, Samples: []);
         }
 
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
@@ -167,7 +188,7 @@ public sealed partial class ProvidersService(
             return new ProviderTestOutcome(
                 Ok: false, FetchedCount: 0, DurationMs: 0,
                 SampleTitle: null, Error: $"unsupported portal type '{portal.Type}'",
-                TestedAt: DateTimeOffset.UtcNow);
+                TestedAt: DateTimeOffset.UtcNow, Samples: []);
         }
 
         var sw = Stopwatch.StartNew();
@@ -175,14 +196,19 @@ public sealed partial class ProvidersService(
         {
             var results = await adapter.FetchAsync(ct).ConfigureAwait(false);
             sw.Stop();
-            var sample = results.Count > 0 ? results[0].Title : null;
+            var samples = results
+                .Take(TestSampleCap)
+                .Select(r => new ProviderTestSample(r.Title, r.Company, r.Location, r.Url.ToString()))
+                .ToList();
             return new ProviderTestOutcome(
                 Ok: results.Count > 0,
                 FetchedCount: results.Count,
                 DurationMs: sw.ElapsedMilliseconds,
-                SampleTitle: sample,
+                SampleTitle: samples.Count > 0 ? samples[0].Title : null,
                 Error: results.Count == 0 ? "This source is reachable but returned no jobs right now." : null,
-                TestedAt: DateTimeOffset.UtcNow);
+                TestedAt: DateTimeOffset.UtcNow, Samples: samples,
+                HitPageCap: adapter.HitPageCap,
+                PossiblyCapped: Search.ProviderCapHeuristic.LimitReached(portal, results.Count));
         }
         catch (Exception ex)
         {
@@ -194,7 +220,7 @@ public sealed partial class ProvidersService(
                 DurationMs: sw.ElapsedMilliseconds,
                 SampleTitle: null,
                 Error: FriendlyError(ex),
-                TestedAt: DateTimeOffset.UtcNow);
+                TestedAt: DateTimeOffset.UtcNow, Samples: []);
         }
     }
 

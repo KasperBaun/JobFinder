@@ -18,6 +18,7 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
         MapUpdate(group);
         MapTest(group);
         MapSetSecrets(group);
+        MapSetConfig(group);
         MapDetect(group);
         MapPreviewTest(group);
         MapCreate(group);
@@ -99,6 +100,24 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
             .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.SetSecrets)}")
             .WithSummary("Set provider secrets")
             .WithDescription("Persists provider-specific secret values (e.g. API keys) for the active user.")
+            .Produces<SaveResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError);
+    }
+
+    private static void MapSetConfig(RouteGroupBuilder group)
+    {
+        group.MapPut(
+                Routes.Providers.SetConfig,
+                (
+                    [FromServices] IProvidersHandler handler,
+                    [FromRoute] int id,
+                    [FromBody] ProviderConfigUpdate? request)
+                    => handler.SetConfig(id, request))
+            .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.SetConfig)}")
+            .WithSummary("Set provider config override")
+            .WithDescription("Persists a per-user override of a source's fetch knobs (max pages, page size, rate limit, body enrichment). An all-null body resets the source to its catalog defaults.")
             .Produces<SaveResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)

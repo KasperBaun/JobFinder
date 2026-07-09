@@ -51,6 +51,7 @@ public sealed class ApiAdapter(PortalConfig config, HttpClient http, ILogger log
                 // past the real end — stop rather than fetch (and body-enrich) the same jobs again.
                 if (added == 0) break;
                 if (p.Size is int sz && pageResults.Count < sz) break;
+                if (pageIdx == p.MaxPages - 1) HitPageCap = true;   // spent the page budget on a full page => truncated
             }
             result = all;
         }

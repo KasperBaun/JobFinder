@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getProviders, setProviderEnabled, testProvider } from '../api/client'
 import type { ProviderSummary, ProviderTestResult } from '../api/types'
@@ -58,6 +58,7 @@ function countTone(key: FilterKey, counts: Record<FilterKey, number>): 'good' | 
 }
 
 export function ProvidersPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
@@ -238,7 +239,14 @@ export function ProvidersPage() {
             return (
               <article
                 key={p.id}
-                className={`provider-tile${p.enabled ? '' : ' provider-tile--disabled'}`}
+                className={`provider-tile provider-tile--clickable${p.enabled ? '' : ' provider-tile--disabled'}`}
+                data-tooltip="Open this source to view its details and change how much it fetches"
+                onClick={(e) => {
+                  // The whole card is a shortcut to the detail page — but not when the click lands on
+                  // an interactive control (Test button, the on/off toggle, or a link that navigates itself).
+                  if ((e.target as HTMLElement).closest('button, label, a')) return
+                  navigate(`/providers/${p.id}`)
+                }}
               >
                 <div className="provider-tile__eyebrow">
                   <span className="provider-tile__type">{friendlyType(p.type)}</span>

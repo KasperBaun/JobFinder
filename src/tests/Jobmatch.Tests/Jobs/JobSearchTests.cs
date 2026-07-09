@@ -41,6 +41,18 @@ public sealed class JobSearchTests
     }
 
     [Fact]
+    public void MarkRunning_Resets_CurrentAttemptStartedAt_On_Each_Resume()
+    {
+        var first = NewJob().MarkRunning(T0.AddSeconds(1));
+        Assert.Equal(T0.AddSeconds(1), first.CurrentAttemptStartedAt);
+
+        // A resume pins CurrentAttemptStartedAt to the new attempt while StartedAt stays on the first.
+        var resumed = first.MarkRunning(T0.AddHours(4));
+        Assert.Equal(T0.AddHours(4), resumed.CurrentAttemptStartedAt);
+        Assert.Equal(T0.AddSeconds(1), resumed.StartedAt);
+    }
+
+    [Fact]
     public void Log_Appends_Timeline_Entry_And_Advances_Phase()
     {
         var job = NewJob().MarkRunning(T0).Log(JobSearchEventLevel.Info, JobSearchPhase.Ranking, "rating", T0.AddSeconds(5));

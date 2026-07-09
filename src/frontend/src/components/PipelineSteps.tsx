@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { isTerminalState } from '../api/types'
 import type { JobSearch, JobSearchEvent } from '../api/types'
 import { useElapsed } from '../hooks/useElapsed'
-import { phaseDurations } from '../utils/progress'
+import { attemptEvents, phaseDurations } from '../utils/progress'
 import { formatStepDuration } from '../utils/time'
 
 type Step = { phase: JobSearch['phase']; label: string }
@@ -22,6 +22,7 @@ type Props = {
   timeline: JobSearchEvent[]
   startedAt?: string
   finishedAt?: string
+  currentAttemptStartedAt?: string
 }
 
 // Index of the step that is currently active. 'pending' = before the pipeline; 'writing' maps to the
@@ -37,15 +38,19 @@ function currentIndex(phase: JobSearch['phase'], steps: Step[]): number {
 // → … so the user always sees the steps and where the run is. AI review only appears when the local
 // model is enabled; a failed/cancelled run marks the step it stopped on. Each completed step shows a
 // discrete time spent below it; the active step ticks live; "Done" shows the total run time.
-export function PipelineSteps({ phase, state, aiEnabled, timeline, startedAt, finishedAt }: Props) {
+export function PipelineSteps({ phase, state, aiEnabled, timeline, startedAt, finishedAt, currentAttemptStartedAt }: Props) {
   const steps = aiEnabled ? STEPS : STEPS.filter(s => s.phase !== 'llmJudging')
   const failed = state === 'failed' || state === 'cancelled' || state === 'interrupted'
   const current = currentIndex(phase, steps)
 
-  const durations = useMemo(() => phaseDurations(timeline, finishedAt), [timeline, finishedAt])
-  const currentStartIso = timeline.find(ev => ev.phase === phase)?.timestamp
+  // A resumed run's timeline spans every attempt; time only the current one so a restart's dead time
+  // isn't counted. Falls back to the whole timeline / startedAt for legacy runs without the anchor.
+  const events = useMemo(() => attemptEvents(timeline, currentAttemptStartedAt), [timeline, currentAttemptStartedAt])
+  const attemptStartIso = currentAttemptStartedAt ?? startedAt
+  const durations = useMemo(() => phaseDurations(events, finishedAt), [events, finishedAt])
+  const currentStartIso = events.find(ev => ev.phase === phase)?.timestamp
   const live = useElapsed(currentStartIso, undefined, !isTerminalState(state))
-  const totalMs = startedAt && finishedAt ? Date.parse(finishedAt) - Date.parse(startedAt) : undefined
+  const totalMs = attemptStartIso && finishedAt ? Date.parse(finishedAt) - Date.parse(attemptStartIso) : undefined
 
   return (
     <div className="pipeline" role="list" aria-label="Search steps">

@@ -38,7 +38,8 @@ public sealed record JobSearchEvent(
     JobSearchPhase Phase,
     string Message,
     string? Provider = null,
-    int? Count = null);
+    int? Count = null,
+    long? DurationMs = null);
 
 /// <summary>
 /// Lifecycle aggregate for a single background search run. The state machine is the source of truth
@@ -54,6 +55,10 @@ public sealed record JobSearch(
     DateTimeOffset CreatedAt,
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
+    // Start of the current run attempt. Unlike StartedAt (pinned to the first attempt), this resets on
+    // every resume, so a run resumed after a host restart reports elapsed time for the active attempt
+    // rather than the wall-clock that includes the dead time the process was down.
+    DateTimeOffset? CurrentAttemptStartedAt,
     IReadOnlyList<ProviderRunStatus> Providers,
     int FetchedCount,
     int DedupedCount,
@@ -79,6 +84,7 @@ public sealed record JobSearch(
         CreatedAt: now,
         StartedAt: null,
         FinishedAt: null,
+        CurrentAttemptStartedAt: null,
         Providers: [],
         FetchedCount: 0,
         DedupedCount: 0,
@@ -100,10 +106,11 @@ public sealed record JobSearch(
         string message,
         DateTimeOffset now,
         string? provider = null,
-        int? count = null)
+        int? count = null,
+        long? durationMs = null)
     {
         RequireNonTerminal(nameof(Log));
-        return AppendLog(level, phase, message, now, provider, count);
+        return AppendLog(level, phase, message, now, provider, count, durationMs);
     }
 
     // Unguarded append — used by the terminal transitions to record their own final entry after the
@@ -114,11 +121,12 @@ public sealed record JobSearch(
         string message,
         DateTimeOffset now,
         string? provider = null,
-        int? count = null) => this with
+        int? count = null,
+        long? durationMs = null) => this with
         {
             Phase = phase,
             LastHeartbeat = now,
-            Timeline = [.. Timeline, new JobSearchEvent(now, level, phase, message, provider, count)],
+            Timeline = [.. Timeline, new JobSearchEvent(now, level, phase, message, provider, count, durationMs)],
         };
 
     public JobSearch Heartbeat(DateTimeOffset now) => this with { LastHeartbeat = now };
@@ -145,6 +153,7 @@ public sealed record JobSearch(
             State = JobSearchState.Running,
             Phase = JobSearchPhase.Fetching,
             StartedAt = StartedAt ?? now,
+            CurrentAttemptStartedAt = now,
             Attempt = Attempt + 1,
             LastHeartbeat = now,
         }).AppendLog(JobSearchEventLevel.Info, JobSearchPhase.Fetching, Attempt > 0 ? $"Search resumed (attempt {Attempt + 1})" : "Search started", now);

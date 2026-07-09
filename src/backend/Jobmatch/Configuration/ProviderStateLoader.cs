@@ -42,7 +42,17 @@ public static class ProviderStateLoader
             }
         }
 
-        return new ProviderState(disabled, enabled, secrets);
+        var overrides = new Dictionary<int, ProviderOverride>();
+        if (raw.Overrides is not null)
+        {
+            foreach (var (key, value) in raw.Overrides)
+            {
+                if (int.TryParse(key, out var id) && value is not null && !value.IsEmpty)
+                    overrides[id] = value;
+            }
+        }
+
+        return new ProviderState(disabled, enabled, secrets, overrides);
     }
 
     public static void Save(string path, ProviderState state)
@@ -56,7 +66,10 @@ public static class ProviderStateLoader
             state.Enabled.ToArray(),
             state.Secrets.ToDictionary(
                 kvp => kvp.Key.ToString(),
-                kvp => kvp.Value.ToDictionary(s => s.Key, s => s.Value)));
+                kvp => kvp.Value.ToDictionary(s => s.Key, s => s.Value)),
+            state.Overrides
+                .Where(kvp => !kvp.Value.IsEmpty)
+                .ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value));
 
         var json = JsonSerializer.Serialize(raw, SerializeOptions);
         var tmp = path + ".tmp";
@@ -69,11 +82,13 @@ public static class ProviderStateLoader
         public RawProviderState(
             int[]? disabled,
             int[]? enabled,
-            Dictionary<string, Dictionary<string, string>>? secrets)
+            Dictionary<string, Dictionary<string, string>>? secrets,
+            Dictionary<string, ProviderOverride>? overrides)
         {
             Disabled = disabled;
             Enabled = enabled;
             Secrets = secrets;
+            Overrides = overrides;
         }
 
         [JsonPropertyName("disabled")]
@@ -84,5 +99,8 @@ public static class ProviderStateLoader
 
         [JsonPropertyName("secrets")]
         public Dictionary<string, Dictionary<string, string>>? Secrets { get; }
+
+        [JsonPropertyName("overrides")]
+        public Dictionary<string, ProviderOverride>? Overrides { get; }
     }
 }

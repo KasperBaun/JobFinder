@@ -118,17 +118,19 @@ public sealed class SearchJob(
 
             case ProviderDoneEvent p:
             {
-                var providers = Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Ok, p.FetchedCount, null));
-                return job
-                    .WithProviders(providers)
-                    .WithCounts(fetched: SumOk(providers))
-                    .Log(JobSearchEventLevel.Info, JobSearchPhase.Fetching, $"{p.Provider}: {p.FetchedCount} jobs", now, p.Provider, p.FetchedCount);
+                var providers = Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Ok, p.FetchedCount, null, p.DurationMs, p.HitPageCap, p.PossiblyCapped));
+                var withCounts = job.WithProviders(providers).WithCounts(fetched: SumOk(providers));
+                var capNote = p.HitPageCap ? " · hit page cap, may be more"
+                    : p.PossiblyCapped ? " · at configured limit, may be more"
+                    : "";
+                var level = p.HitPageCap || p.PossiblyCapped ? JobSearchEventLevel.Warn : JobSearchEventLevel.Info;
+                return withCounts.Log(level, JobSearchPhase.Fetching, $"{p.Provider}: {p.FetchedCount} jobs · {p.DurationMs / 1000.0:0}s{capNote}", now, p.Provider, p.FetchedCount, p.DurationMs);
             }
 
             case ProviderFailedEvent p:
                 return job
-                    .WithProviders(Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Failed, null, p.Error)))
-                    .Log(JobSearchEventLevel.Warn, JobSearchPhase.Fetching, $"{p.Provider} failed: {p.Error}", now, p.Provider);
+                    .WithProviders(Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Failed, null, p.Error, p.DurationMs)))
+                    .Log(JobSearchEventLevel.Warn, JobSearchPhase.Fetching, $"{p.Provider} failed: {p.Error} · {p.DurationMs / 1000.0:0}s", now, p.Provider, durationMs: p.DurationMs);
 
             default:
                 return job;

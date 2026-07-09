@@ -25,6 +25,10 @@ public sealed class ProviderStateTests
             Secrets: new Dictionary<int, IReadOnlyDictionary<string, string>>
             {
                 [5] = new Dictionary<string, string> { ["api_key"] = "abc123" },
+            },
+            Overrides: new Dictionary<int, ProviderOverride>
+            {
+                [14] = new ProviderOverride(MaxPages: 20, RateLimitRps: 2.0, EnrichBody: true),
             });
 
         ProviderStateLoader.Save(path, input);
@@ -33,6 +37,22 @@ public sealed class ProviderStateTests
         Assert.Equal(new[] { 3, 7 }, loaded.Disabled);
         Assert.Equal(new[] { 15, 16 }, loaded.Enabled);
         Assert.Equal("abc123", loaded.Secrets[5]["api_key"]);
+        Assert.Equal(20, loaded.Overrides[14].MaxPages);
+        Assert.Equal(2.0, loaded.Overrides[14].RateLimitRps);
+        Assert.True(loaded.Overrides[14].EnrichBody);
+        Assert.Null(loaded.Overrides[14].PageSize);
+    }
+
+    [Fact]
+    public void LoadOrEmpty_LegacyFileWithoutOverridesField_LoadsAsEmpty()
+    {
+        var dir = Directory.CreateTempSubdirectory("provider-state-legacy-ov");
+        var path = Path.Combine(dir.FullName, "provider-state.json");
+        File.WriteAllText(path, """{"disabled":[10],"enabled":[],"secrets":{}}""");
+
+        var loaded = ProviderStateLoader.LoadOrEmpty(path);
+
+        Assert.Empty(loaded.Overrides);
     }
 
     [Fact]
