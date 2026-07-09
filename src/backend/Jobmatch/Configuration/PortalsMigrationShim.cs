@@ -26,10 +26,7 @@ public static class PortalsMigrationShim
         {
             if (!p.Enabled && p.Id > 0) disabledIds.Add(p.Id);
         }
-        var newState = new ProviderState(
-            Disabled: disabledIds.OrderBy(i => i).ToArray(),
-            Enabled: existing.Enabled,
-            Secrets: existing.Secrets);
+        var newState = existing with { Disabled = disabledIds.OrderBy(i => i).ToArray() };
         ProviderStateLoader.Save(statePath, newState);
 
         var backupPath = Path.Combine(userDataDir, "portals.yml.bak");

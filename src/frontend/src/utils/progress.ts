@@ -5,6 +5,9 @@ export type ProviderRowState = {
   status: 'pending' | 'running' | 'ok' | 'failed'
   fetchedCount?: number
   error?: string
+  durationMs?: number
+  hitPageCap?: boolean
+  possiblyCapped?: boolean
 }
 
 const PHASE_ORDER: JobSearch['phase'][] = [
@@ -15,10 +18,23 @@ export function reached(phase: JobSearch['phase'], target: JobSearch['phase']): 
   return PHASE_ORDER.indexOf(phase) >= PHASE_ORDER.indexOf(target)
 }
 
+// Events belonging to the current run attempt. A run interrupted by a host restart resumes by re-driving
+// the whole pipeline, so its timeline concatenates every attempt separated by the (possibly hours-long)
+// dead time between them. The backend stamps each attempt's start on currentAttemptStartedAt; slicing the
+// timeline at it keeps timings from folding in the time the process was down. Returns the whole timeline
+// when the anchor is absent (legacy runs) or unparseable.
+export function attemptEvents(timeline: JobSearchEvent[], attemptStartIso?: string): JobSearchEvent[] {
+  if (!attemptStartIso) return timeline
+  const start = Date.parse(attemptStartIso)
+  if (Number.isNaN(start)) return timeline
+  return timeline.filter(ev => Date.parse(ev.timestamp) >= start)
+}
+
 // Per-phase durations (ms), derived from the timeline: every phase transition writes a timestamped
 // event, so a phase's span is (start of the next phase that occurred − its own first timestamp). The
 // last occurring phase is closed by finishedAt. Keyed by phase; 'pending' is ignored, and the display
-// 'done' value (total run time) is computed in the component, not here.
+// 'done' value (total run time) is computed in the component, not here. Pass a single attempt's events
+// (see attemptEvents) so a resumed run doesn't fold the dead time between attempts into the spans.
 export function phaseDurations(
   timeline: JobSearchEvent[],
   finishedAt?: string,
@@ -48,7 +64,7 @@ export function buildRows(job: JobSearch | null, initialNames: string[]): Provid
   const rows = new Map<string, ProviderRowState>()
   for (const name of initialNames) rows.set(name, { name, status: 'pending' })
   for (const p of job?.providers ?? []) {
-    rows.set(p.name, { name: p.name, status: p.status, fetchedCount: p.fetchedCount, error: p.error })
+    rows.set(p.name, { name: p.name, status: p.status, fetchedCount: p.fetchedCount, error: p.error, durationMs: p.durationMs, hitPageCap: p.hitPageCap, possiblyCapped: p.possiblyCapped })
   }
   return Array.from(rows.values())
 }

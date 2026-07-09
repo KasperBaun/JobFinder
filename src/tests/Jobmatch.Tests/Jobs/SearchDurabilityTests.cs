@@ -53,9 +53,9 @@ public sealed class SearchDurabilityTests : IDisposable
     [
         new StartedEvent(id, 2),
         new ProviderRunningEvent("greenhouse", 1, 2),
-        new ProviderDoneEvent("greenhouse", 7, 1, 2),
+        new ProviderDoneEvent("greenhouse", 7, 1, 2, 900),
         new ProviderRunningEvent("thehub", 2, 2),
-        new ProviderFailedEvent("thehub", "connection timed out", 2, 2),
+        new ProviderFailedEvent("thehub", "connection timed out", 2, 2, 1500),
         new DedupeEvent(5),
         new RankEvent(3, 0.82),
         new CompleteEvent(id, [Match("a", 0.82), Match("b", 0.71), Match("c", 0.55)]),

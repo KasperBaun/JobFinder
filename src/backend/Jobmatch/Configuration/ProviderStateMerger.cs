@@ -35,15 +35,32 @@ public static class ProviderStateMerger
 
             var resolvedQuery = SubstituteSecrets(p.QueryParams, secrets);
             var resolvedBody = SubstituteSecrets(p.BodyTemplate, secrets);
+            state.Overrides.TryGetValue(p.Id, out var ov);
 
             result.Add(p with
             {
                 Enabled = effectiveEnabled,
                 QueryParams = resolvedQuery,
                 BodyTemplate = resolvedBody,
+                RateLimitRps = ov?.RateLimitRps ?? p.RateLimitRps,
+                EnrichBody = ov?.EnrichBody ?? p.EnrichBody,
+                Pagination = ApplyPaginationOverride(p.Pagination, ov),
             });
         }
         return result;
+    }
+
+    // MaxPages/PageSize overrides only apply to sources that actually paginate — for a single-fetch
+    // source (Pagination is null) they are a no-op, so the null pagination is returned unchanged.
+    private static PaginationConfig? ApplyPaginationOverride(PaginationConfig? pagination, ProviderOverride? ov)
+    {
+        if (pagination is null || ov is null) return pagination;
+        if (ov.MaxPages is null && ov.PageSize is null) return pagination;
+        return pagination with
+        {
+            MaxPages = ov.MaxPages ?? pagination.MaxPages,
+            Size = ov.PageSize ?? pagination.Size,
+        };
     }
 
     private static IReadOnlyDictionary<string, object?>? SubstituteSecrets(

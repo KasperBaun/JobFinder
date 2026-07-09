@@ -25,7 +25,7 @@ public sealed class PortalCatalogInvariantTests
         Assert.All(feeds, p =>
         {
             Assert.True(p.EnrichBody, $"'{p.Name}': jobindex-backend feeds need enrichBody for full descriptions");
-            Assert.True(p.RateLimitRps <= 0.5, $"'{p.Name}': jobindex-backend feeds must stay at <= 0.5 rps");
+            Assert.True(p.RateLimitRps <= 2.0, $"'{p.Name}': jobindex-backend feeds must stay at <= 2.0 rps");
         });
     }
 

@@ -15,6 +15,8 @@ public abstract partial class BaseAdapter(PortalConfig config, HttpClient http, 
 
     public string PortalName => Config.Name;
 
+    public bool HitPageCap { get; protected set; }
+
     public abstract Task<IReadOnlyList<Listing>> FetchAsync(CancellationToken ct = default);
 
     private DateTimeOffset _lastCallAt = DateTimeOffset.MinValue;
@@ -100,6 +102,7 @@ public abstract partial class BaseAdapter(PortalConfig config, HttpClient http, 
             }
             if (added == 0) break;                                       // page param ignored => duplicate page
             if (p.Size is int size && pageResults.Count < size) break;   // short page => last page
+            if (page == p.MaxPages - 1) HitPageCap = true;               // spent the page budget on a full page => truncated
         }
         return all;
     }

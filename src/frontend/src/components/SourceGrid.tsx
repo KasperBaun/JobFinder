@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { ProviderRowState } from '../utils/progress'
+import { formatStepDuration } from '../utils/time'
 
 type Props = {
   rows: ProviderRowState[]
@@ -29,7 +30,18 @@ export function SourceGrid({ rows, runId, linkable }: Props) {
           <>
             <span className={`dot dot--${row.status}`} />
             <span className="source-cell__name">{row.name}</span>
+            {(row.hitPageCap || row.possiblyCapped) && row.status === 'ok' && (
+              <span
+                className="source-cell__cap"
+                title={row.hitPageCap ? 'Hit its page cap — there may be more' : 'Returned exactly its configured limit — may be more'}
+              >
+                ⚠ capped
+              </span>
+            )}
             <span className="source-cell__count tabular mono">{statusText(row)}</span>
+            {row.durationMs != null && (
+              <span className="source-cell__dur mono">{formatStepDuration(row.durationMs)}</span>
+            )}
           </>
         )
         return isLink ? (

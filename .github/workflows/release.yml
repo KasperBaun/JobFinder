@@ -1,4 +1,4 @@
-name: Build Windows installer
+name: Build installers
 
 on:
   push:
@@ -9,11 +9,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: windows-installer
+  group: installers
   cancel-in-progress: true
 
+env:
+  VERSION: 0.2.${{ github.run_number }}
+
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,29 +40,68 @@ jobs:
 
       - name: Publish backend (self-contained win-x64, GUI bundled)
         run: node src/scripts/publish-backend.mjs
-        env:
-          VERSION: 0.1.${{ github.run_number }}
 
       - name: Install desktop dependencies
         run: npm --prefix src/desktop ci
 
       - name: Set desktop version
-        run: npm --prefix src/desktop version 0.1.${{ github.run_number }} --no-git-tag-version --allow-same-version
+        run: npm --prefix src/desktop version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
 
       - name: Build desktop installer (Electron / NSIS)
         run: npm --prefix src/desktop run dist
 
-      - name: Publish rolling "latest" prerelease
+      - name: Publish to rolling "latest" prerelease
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Jobfinder (latest)
           prerelease: true
-          files: src/desktop/release/jobfinder-setup-0.1.${{ github.run_number }}.exe
+          files: src/desktop/release/jobfinder-setup-${{ env.VERSION }}.exe
           body: |
-            Automated Windows build from the latest commit on `main`
-            (version `0.1.${{ github.run_number }}`, commit ${{ github.sha }}).
+            Automated build from the latest commit on `main`
+            (version `${{ env.VERSION }}`, commit ${{ github.sha }}).
 
-            Download `jobfinder-setup-0.1.${{ github.run_number }}.exe` below and run it.
-            Windows SmartScreen may warn that the publisher is unknown (the installer is
-            unsigned) — choose **More info → Run anyway**.
+            - **Windows** — download `jobfinder-setup-${{ env.VERSION }}.exe` and run it.
+              SmartScreen may warn that the publisher is unknown (the installer is
+              unsigned) — choose **More info → Run anyway**.
+            - **Linux (Debian/Ubuntu)** — download `jobfinder-desktop_${{ env.VERSION }}_amd64.deb`
+              and install with `sudo apt install ./jobfinder-desktop_${{ env.VERSION }}_amd64.deb`.
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test
+        run: dotnet test src/Jobmatch.slnx -c Release
+        env:
+          JOBFINDER_USER: ci@jobfinder.local
+
+      - name: Publish backend (self-contained linux-x64, GUI bundled)
+        run: node src/scripts/publish-backend.mjs linux-x64
+
+      - name: Install desktop dependencies
+        run: npm --prefix src/desktop ci
+
+      - name: Set desktop version
+        run: npm --prefix src/desktop version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+
+      - name: Build desktop installer (Electron / deb)
+        run: npm --prefix src/desktop run dist
+
+      - name: Append .deb to "latest" prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          prerelease: true
+          files: src/desktop/release/jobfinder-desktop_${{ env.VERSION }}_amd64.deb
