@@ -6,7 +6,7 @@ namespace Jobmatch.Adapters;
 
 public static class AdapterFactory
 {
-    private delegate IJobPortalAdapter Factory(
+    private delegate BaseAdapter Factory(
         PortalConfig portal, HttpClient http, ILogger logger,
         string importsDirectory, IFileSystem fs);
 
@@ -23,8 +23,11 @@ public static class AdapterFactory
 
     public static IJobPortalAdapter? Create(
         PortalConfig portal, HttpClient http, ILogger logger,
-        string importsDirectory, IFileSystem fs) =>
-        Factories.TryGetValue(portal.Type, out var factory)
-            ? factory(portal, http, logger, importsDirectory, fs)
-            : null;
+        string importsDirectory, IFileSystem fs, BodyFetchSession? fetchSession = null)
+    {
+        if (!Factories.TryGetValue(portal.Type, out var factory)) return null;
+        var adapter = factory(portal, http, logger, importsDirectory, fs);
+        adapter.FetchSession = fetchSession;
+        return adapter;
+    }
 }

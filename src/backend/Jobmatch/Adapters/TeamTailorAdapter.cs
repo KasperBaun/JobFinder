@@ -52,9 +52,13 @@ public sealed class TeamTailorAdapter(PortalConfig config, HttpClient http, ILog
                 var listing = await FetchJobAsync(jobUrls[i], ct);
                 if (listing is not null) listings.Add(listing);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "portal={Portal} skipped {Url}: {Message}", PortalName, jobUrls[i], ex.Message);
+                Logger.LogWarning("portal={Portal} skipped {Url}: {Message}", PortalName, jobUrls[i], ex.Message);
             }
         }
         return listings;
