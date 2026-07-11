@@ -171,6 +171,92 @@ public sealed class RssAdapterTests
             () => adapter.EnrichBodiesAsync(input, cts.Token));
     }
 
+    [Fact]
+    public async Task EnrichBodiesAsync_HostKeepsFailing_StopsFetchingFromIt()
+    {
+        // A tarpitting host must not get one full fetch (and one timeout wait) per listing —
+        // after a few consecutive failures the remaining fetches to that host are skipped and
+        // the catalog-only versions kept.
+        var handler = new FailingCountingStub();
+        using var http = new HttpClient(handler);
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = Enumerable.Range(0, 40)
+            .Select(i => MakeListing($"https://example.com/job{i}", $"summary{i}"))
+            .ToArray();
+
+        var enriched = await adapter.EnrichBodiesAsync(input, CancellationToken.None);
+
+        Assert.Equal(input.Length, enriched.Count);
+        for (var i = 0; i < input.Length; i++)
+        {
+            Assert.Equal($"summary{i}", enriched[i].Description);
+        }
+        Assert.True(handler.Calls < input.Length,
+            $"expected the host breaker to skip fetches, but all {handler.Calls} went out");
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_TimeoutWithoutCallerCancellation_KeepsListing()
+    {
+        // HttpClient surfaces its own timeout as a TaskCanceledException even though the caller's
+        // token isn't cancelled; that must count as a per-item failure, not abort the run.
+        using var http = new HttpClient(new ThrowingStub(() => new TaskCanceledException("timed out")));
+        var adapter = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance);
+
+        var input = new[] { MakeListing("https://example.com/job1", "rss summary") };
+
+        var enriched = await adapter.EnrichBodiesAsync(input, CancellationToken.None);
+
+        Assert.Single(enriched);
+        Assert.Equal("rss summary", enriched[0].Description);
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_SharedSession_FetchesEachUrlOnceAcrossAdapters()
+    {
+        // Feeds overlap heavily (the same posting matches several jobindex queries); with a
+        // shared session the second adapter is served from the run cache instead of re-fetching.
+        var handler = new CountingHtmlStub("<p>full body text</p>");
+        using var http = new HttpClient(handler);
+        var session = new BodyFetchSession();
+        var a = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance) { FetchSession = session };
+        var b = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance) { FetchSession = session };
+
+        var urls = Enumerable.Range(0, 5).Select(i => $"https://example.com/job{i}").ToArray();
+
+        var enrichedA = await a.EnrichBodiesAsync(urls.Select(u => MakeListing(u, "a")).ToArray(), CancellationToken.None);
+        var enrichedB = await b.EnrichBodiesAsync(urls.Select(u => MakeListing(u, "b")).ToArray(), CancellationToken.None);
+
+        Assert.Equal(urls.Length, handler.Calls);
+        Assert.All(enrichedA, l => Assert.Contains("full body text", l.Description));
+        Assert.All(enrichedB, l => Assert.Contains("full body text", l.Description));
+    }
+
+    [Fact]
+    public async Task EnrichBodiesAsync_SharedSession_HostGiveUpIsRunWide()
+    {
+        // Once one adapter has discovered a dead host, adapters sharing the session must not
+        // pay the same discovery cost again — their fetches to that host are skipped outright.
+        var handler = new FailingCountingStub();
+        using var http = new HttpClient(handler);
+        var session = new BodyFetchSession();
+        var a = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance) { FetchSession = session };
+        var b = new RssAdapter(RssConfig(enrich: true), http, NullLogger.Instance) { FetchSession = session };
+
+        await a.EnrichBodiesAsync(
+            Enumerable.Range(0, 20).Select(i => MakeListing($"https://example.com/a{i}", "s")).ToArray(),
+            CancellationToken.None);
+        var callsAfterA = handler.Calls;
+
+        var enrichedB = await b.EnrichBodiesAsync(
+            Enumerable.Range(0, 5).Select(i => MakeListing($"https://example.com/b{i}", "s")).ToArray(),
+            CancellationToken.None);
+
+        Assert.Equal(callsAfterA, handler.Calls);
+        Assert.All(enrichedB, l => Assert.Equal("s", l.Description));
+    }
+
     [Theory]
     [InlineData("https://www.jobindex.dk/vis-job/h1646496",
                 "Senior .Net udvikler til afdeling i vækst, Sopra Steria A/S",
@@ -218,6 +304,39 @@ public sealed class RssAdapterTests
             {
                 Content = new StringContent(body, Encoding.UTF8, contentType),
             });
+    }
+
+    private sealed class CountingHtmlStub(string body) : HttpMessageHandler
+    {
+        private int _calls;
+        public int Calls => _calls;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _calls);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/html"),
+            });
+        }
+    }
+
+    private sealed class FailingCountingStub : HttpMessageHandler
+    {
+        private int _calls;
+        public int Calls => _calls;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _calls);
+            throw new HttpRequestException("connection refused");
+        }
+    }
+
+    private sealed class ThrowingStub(Func<Exception> exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw exception();
     }
 
     // Echoes the request path (e.g. /job7 -> "marker-job7") and delays earlier listings longer,
