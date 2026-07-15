@@ -16,7 +16,25 @@ env:
   VERSION: 0.2.${{ github.run_number }}
 
 jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove stale assets from "latest" prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view latest >/dev/null 2>&1; then
+            gh release view latest --json assets --jq '.assets[].name' | while read -r name; do
+              echo "Deleting asset: $name"
+              gh release delete-asset latest "$name" -y
+            done
+          else
+            echo "No existing 'latest' release; nothing to clean."
+          fi
+
   build-windows:
+    needs: cleanup
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,6 +86,7 @@ jobs:
               and install with `sudo apt install ./jobfinder-desktop_${{ env.VERSION }}_amd64.deb`.
 
   build-linux:
+    needs: cleanup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
