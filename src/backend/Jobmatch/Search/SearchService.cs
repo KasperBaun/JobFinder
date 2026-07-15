@@ -96,7 +96,13 @@ public sealed partial class SearchService : ISearchService
         // Fetching gets its own client with a bounded per-request timeout so a single hanging
         // employer/page fetch fails fast instead of stalling near the framework default (100s).
         // The judge keeps the untimed `http` — its Ollama generations legitimately exceed 30s.
-        using var fetchHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        // Connections are capped per host: several portals enrich against the same site (e.g.
+        // three jobindex feeds × 10 concurrent enrichment fetches each), and unbounded parallel
+        // connection attempts made hosts throttle setup until queued requests timed out.
+        using var fetchHttp = new HttpClient(new SocketsHttpHandler { MaxConnectionsPerServer = 8 })
+        {
+            Timeout = TimeSpan.FromSeconds(30),
+        };
         var statuses = new List<ProviderRunStatus>(prep.Enabled.Count);
         var rawByProvider = new Dictionary<string, IReadOnlyList<Listing>>(StringComparer.Ordinal);
         var fetched = new List<Listing>();
@@ -185,6 +191,10 @@ public sealed partial class SearchService : ISearchService
         // keeping first-wins dedupe deterministic regardless of which provider returns first.
         var slots = new ProviderFetchResult[total];
         var channel = Channel.CreateUnbounded<SearchProgressEvent>();
+        // One enrichment session for the whole run: overlapping feeds (six jobindex queries)
+        // share fetched pages and the has-this-host-gone-dark verdict instead of each paying
+        // for the same page or the same discovery.
+        var bodySession = new BodyFetchSession();
 
         async Task FetchOne(int i)
         {
@@ -192,7 +202,7 @@ public sealed partial class SearchService : ISearchService
             var index = i + 1;
             await channel.Writer.WriteAsync(new ProviderRunningEvent(portal.Name, index, total), ct).ConfigureAwait(false);
             var sw = Stopwatch.StartNew();
-            var (results, error, hitPageCap) = await FetchSafe(portal, http, ct).ConfigureAwait(false);
+            var (results, error, hitPageCap) = await FetchSafe(portal, http, bodySession, ct).ConfigureAwait(false);
             var durationMs = sw.ElapsedMilliseconds;
             var possiblyCapped = error is null && ProviderCapHeuristic.LimitReached(portal, results.Count);
             slots[i] = new ProviderFetchResult(portal.Name, results, error, durationMs, hitPageCap, possiblyCapped);
@@ -258,6 +268,7 @@ public sealed partial class SearchService : ISearchService
     private async Task<(IReadOnlyList<Listing> Results, string? Error, bool HitPageCap)> FetchSafe(
         PortalConfig portal,
         HttpClient http,
+        BodyFetchSession bodySession,
         CancellationToken ct)
     {
         using var srcCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -265,7 +276,7 @@ public sealed partial class SearchService : ISearchService
         try
         {
             var logger = _loggerFactory.CreateLogger($"Adapter.{portal.Name}");
-            var adapter = AdapterFactory.Create(portal, http, logger, _ctx.ImportsDir, _fs);
+            var adapter = AdapterFactory.Create(portal, http, logger, _ctx.ImportsDir, _fs, bodySession);
             if (adapter is null)
             {
                 return (Array.Empty<Listing>(), $"unsupported portal type '{portal.Type}'", false);

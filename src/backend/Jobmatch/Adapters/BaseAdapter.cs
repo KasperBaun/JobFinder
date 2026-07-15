@@ -13,6 +13,10 @@ public abstract partial class BaseAdapter(PortalConfig config, HttpClient http, 
     protected HttpClient Http { get; } = http;
     protected ILogger Logger { get; } = logger;
 
+    // Run-scoped enrichment state (page cache + host breaker) shared across every adapter in a
+    // search run; assigned by AdapterFactory. Null (tests / standalone use) => a private session.
+    internal BodyFetchSession? FetchSession { get; set; }
+
     public string PortalName => Config.Name;
 
     public bool HitPageCap { get; protected set; }
