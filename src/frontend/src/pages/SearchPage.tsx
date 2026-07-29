@@ -7,6 +7,7 @@ import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
 import { SearchProgress } from '../components/SearchProgress'
 import { formatRelative } from '../utils/time'
+import { dec, useT } from '../i18n'
 import { lastCompletedRun } from '../utils/runs'
 import type { ProviderSummary, SearchRequest } from '../api/types'
 
@@ -16,6 +17,8 @@ import type { ProviderSummary, SearchRequest } from '../api/types'
 const isRunnableSource = (p: ProviderSummary) => p.enabled && (!p.requiresSecret || p.hasSecret)
 
 export function SearchPage() {
+  const t = useT('search')
+  const common = useT('common')
   const providersQuery = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const historyQuery = useQuery({ queryKey: ['history'], queryFn: getHistory })
   const setupQuery = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
@@ -73,12 +76,12 @@ export function SearchPage() {
     return (
       <div className="page page--wide">
         <header className="page__header">
-          <div className="page__eyebrow">03 / search</div>
-          <h1 className="page__heading">Run a <em>search</em></h1>
+          <div className="page__eyebrow">{t.eyebrow}</div>
+          <h1 className="page__heading">{t.heading()}</h1>
         </header>
         <div className="hint-card">
-          <p>Set up your profile first — jobfinder rates every listing against it.</p>
-          <Link to="/skillset" className="btn btn--primary">Set up your profile</Link>
+          <p>{t.profileFirst}</p>
+          <Link to="/skillset" className="btn btn--primary">{t.setUpProfile}</Link>
         </div>
       </div>
     )
@@ -87,12 +90,9 @@ export function SearchPage() {
   return (
     <div className="page page--wide">
       <header className="page__header">
-        <div className="page__eyebrow">03 / search</div>
-        <h1 className="page__heading">Run a <em>search</em></h1>
-        <p className="page__lede">
-          Pulls the latest listings from your active sources, removes duplicates, rates them against your profile,
-          and shows you the top picks. The search keeps running even if you move to another page or reload.
-        </p>
+        <div className="page__eyebrow">{t.eyebrow}</div>
+        <h1 className="page__heading">{t.heading()}</h1>
+        <p className="page__lede">{t.lede}</p>
       </header>
 
       <LlmModelBanner />
@@ -104,20 +104,20 @@ export function SearchPage() {
           onClick={handleRun}
           disabled={isActive}
         >
-          {isActive ? 'Running…' : 'Run a search'}
+          {isActive ? t.running : t.runSearch}
         </button>
         {isActive && (
           <button type="button" className="btn btn--secondary" onClick={() => void cancel()}>
-            Cancel
+            {common.cancel}
           </button>
         )}
         {job != null && !isActive && (
           <button type="button" className="btn btn--secondary" onClick={reset}>
-            Reset
+            {t.reset}
           </button>
         )}
         <button type="button" className="link-button" onClick={() => setAdvancedOpen(o => !o)}>
-          {advancedOpen ? 'Hide options' : 'More options…'}
+          {advancedOpen ? t.hideOptions : t.moreOptions}
         </button>
       </div>
 
@@ -125,24 +125,24 @@ export function SearchPage() {
         <section className="card advanced-panel">
           <div className="field-grid">
             <div className="field">
-              <label className="field__label" htmlFor="topN">Number of top jobs</label>
+              <label className="field__label" htmlFor="topN">{t.topNLabel}</label>
               <input
                 id="topN"
                 type="number"
                 className="input input--narrow input--mono tabular"
-                placeholder="default"
+                placeholder={t.defaultPlaceholder}
                 value={topN}
                 onChange={e => setTopN(e.target.value)}
                 min={1}
               />
             </div>
             <div className="field">
-              <label className="field__label" htmlFor="minScore">Minimum rating</label>
+              <label className="field__label" htmlFor="minScore">{t.minScoreLabel}</label>
               <input
                 id="minScore"
                 type="number"
                 className="input input--narrow input--mono tabular"
-                placeholder="default"
+                placeholder={t.defaultPlaceholder}
                 value={minScore}
                 onChange={e => setMinScore(e.target.value)}
                 min={0}
@@ -151,7 +151,7 @@ export function SearchPage() {
               />
             </div>
             <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label className="field__label">Sources</label>
+              <label className="field__label">{t.sourcesLabel}</label>
               <div className="chip-group">
                 {providersQuery.data?.providers.map(p => {
                   const active = effectiveProviders.includes(p.name)
@@ -165,9 +165,9 @@ export function SearchPage() {
                       disabled={(!p.enabled || needsSecret) && !active}
                       title={
                         !p.enabled
-                          ? 'Turned off on the Sources page'
+                          ? t.sourceTurnedOff
                           : needsSecret
-                            ? 'Needs an API key — set it on the Sources page'
+                            ? t.sourceNeedsKey
                             : ''
                       }
                     >
@@ -185,15 +185,18 @@ export function SearchPage() {
         <div className="hint-card">
           {lastRun ? (
             <>
-              Last search was <strong>{formatRelative(lastRun.startedAt)}</strong> —{' '}
-              <span className="tabular">{lastRun.shortlistCount}</span> top jobs, best rating{' '}
-              <span className="tabular mono">{lastRun.topScore.toFixed(2)}</span>.
+              {t.lastSearchSummary(
+                formatRelative(lastRun.startedAt),
+                lastRun.shortlistCount,
+                dec(lastRun.topScore, 2),
+              )}
               <br />
-              Click <strong>Run a search</strong> to refresh, or{' '}
-              <Link to={`/history/${lastRun.runId}`}>view that search</Link>.
+              {t.runToRefresh(
+                <Link to={`/history/${lastRun.runId}`}>{t.viewThatSearch}</Link>,
+              )}
             </>
           ) : (
-            <>Ready when you are. Click <strong>Run a search</strong> to pull the latest listings.</>
+            t.readyWhenYouAre()
           )}
         </div>
       )}
@@ -211,14 +214,14 @@ export function SearchPage() {
       {succeeded && job && (
         <section className="results">
           <h2 className="results__heading">
-            Top jobs{' '}
+            {t.topJobs}{' '}
             <span className="muted serif" style={{ fontStyle: 'italic' }}>
               ({runDetailQuery.data?.shortlist.length ?? job.shortlistCount})
             </span>
           </h2>
-          {runDetailQuery.isLoading && <div className="muted">Loading results…</div>}
+          {runDetailQuery.isLoading && <div className="muted">{t.loadingResults}</div>}
           {runDetailQuery.data?.shortlist.length === 0 && (
-            <div className="muted">No jobs met the minimum rating.</div>
+            <div className="muted">{t.noJobsMetMinimum}</div>
           )}
           <div className="listing-list">
             {runDetailQuery.data?.shortlist.map(m => (
