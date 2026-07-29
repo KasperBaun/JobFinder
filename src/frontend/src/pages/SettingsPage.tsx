@@ -1,17 +1,20 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { exportConfig, importConfig } from '../api/client'
+import { exportConfig, importConfig, setLanguage } from '../api/client'
 import { Toast } from '../components/Toast'
 import { ActiveProfileSection } from '../components/ActiveProfileSection'
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useT } from '../i18n'
 
 export function SettingsPage() {
+  const t = useT('settings')
   const queryClient = useQueryClient()
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const exporting = useMutation({
     mutationFn: exportConfig,
-    onSuccess: () => setToast({ kind: 'ok', message: 'Backup downloaded.' }),
+    onSuccess: () => setToast({ kind: 'ok', message: t.backupDownloaded }),
     onError: (err) => setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) }),
   })
 
@@ -20,8 +23,16 @@ export function SettingsPage() {
     onSuccess: (res) => {
       // Everything on disk changed — drop all cached data so pages refetch.
       void queryClient.invalidateQueries()
-      const warned = res.warnings.length > 0 ? ` (${res.warnings.length} item(s) skipped)` : ''
-      setToast({ kind: 'ok', message: `Restored ${res.restored} file(s).${warned}` })
+      setToast({ kind: 'ok', message: t.restored(res.restored, res.warnings.length) })
+    },
+    onError: (err) => setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) }),
+  })
+
+  const savingLanguage = useMutation({
+    mutationFn: setLanguage,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['setup'] })
+      setToast({ kind: 'ok', message: t.languageSaved })
     },
     onError: (err) => setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) }),
   })
@@ -34,14 +45,7 @@ export function SettingsPage() {
     const file = e.target.files?.[0]
     e.target.value = '' // allow re-picking the same file later
     if (!file) return
-    if (
-      !confirm(
-        'Importing replaces everything currently in this profile — your job sites, profile, marks, '
-        + 'and search history. A backup of the current data is saved automatically first. Continue?',
-      )
-    ) {
-      return
-    }
+    if (!confirm(t.importConfirm)) return
     importing.mutate(file)
   }
 
@@ -52,42 +56,40 @@ export function SettingsPage() {
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
       <header className="page__header">
-        <div className="page__eyebrow">settings</div>
-        <h1 className="page__heading">Settings</h1>
-        <p className="page__lede">
-          Your profile&apos;s data location, and backup or restore everything to a file.
-        </p>
+        <div className="page__eyebrow">{t.eyebrow}</div>
+        <h1 className="page__heading">{t.title}</h1>
+        <p className="page__lede">{t.lede}</p>
       </header>
+
+      <section className="settings-section">
+        <h2 className="settings-section__title">{t.languageTitle}</h2>
+        <p className="settings-section__body">{t.languageBody}</p>
+        <LanguageSelect
+          className="input input--narrow"
+          ariaLabel={t.languageLabel}
+          onPick={(next) => savingLanguage.mutate(next)}
+        />
+      </section>
 
       <ActiveProfileSection notify={(kind, message) => setToast({ kind, message })} />
 
       <section className="settings-section">
-        <h2 className="settings-section__title">Export a backup</h2>
-        <p className="settings-section__body">
-          Downloads a single <code>.zip</code> with everything in this profile: your job sites and their
-          settings, your profile, your saved marks, and your full search history. The large AI model
-          isn&apos;t included — it re-downloads automatically when needed.
-        </p>
-        <p className="settings-section__warning">
-          ⚠ The file includes any saved site passwords / API keys. Keep it somewhere private.
-        </p>
+        <h2 className="settings-section__title">{t.exportTitle}</h2>
+        <p className="settings-section__body">{t.exportBody()}</p>
+        <p className="settings-section__warning">{t.exportWarning}</p>
         <button
           type="button"
           className="btn btn--primary"
           onClick={() => exporting.mutate()}
           disabled={busy}
         >
-          {exporting.isPending ? <span className="spinner" /> : 'Download backup'}
+          {exporting.isPending ? <span className="spinner" /> : t.downloadBackup}
         </button>
       </section>
 
       <section className="settings-section">
-        <h2 className="settings-section__title">Import a backup</h2>
-        <p className="settings-section__body">
-          Restores a backup file you exported earlier. This <strong>replaces</strong> the data in this
-          profile. Don&apos;t worry — the current data is backed up automatically before anything is
-          overwritten.
-        </p>
+        <h2 className="settings-section__title">{t.importTitle}</h2>
+        <p className="settings-section__body">{t.importBody()}</p>
         <input
           ref={fileInput}
           type="file"
@@ -101,7 +103,7 @@ export function SettingsPage() {
           onClick={handlePickFile}
           disabled={busy}
         >
-          {importing.isPending ? <span className="spinner" /> : 'Choose backup file…'}
+          {importing.isPending ? <span className="spinner" /> : t.chooseBackupFile}
         </button>
       </section>
     </div>
