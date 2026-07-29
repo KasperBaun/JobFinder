@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getLlmStatus, startLlmDownload } from '../api/client'
-import { useT } from '../i18n'
+import { dec, useT } from '../i18n'
 
 function formatBytes(n: number | null): string {
   if (n === null || n === undefined) return '?'
   const gb = n / (1024 * 1024 * 1024)
-  if (gb >= 1) return gb.toFixed(2) + ' GB'
+  if (gb >= 1) return `${dec(gb, 2)} GB`
   const mb = n / (1024 * 1024)
-  return mb.toFixed(1) + ' MB'
+  return `${dec(mb, 1)} MB`
 }
 
 // Surfaced on the Search page when the LLM is enabled but the model file isn't on disk yet.

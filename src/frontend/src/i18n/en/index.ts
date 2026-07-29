@@ -1,3 +1,4 @@
+import { applications } from './applications'
 import { common } from './common'
 import { cv } from './cv'
 import { history } from './history'
@@ -12,6 +13,7 @@ import { sources } from './sources'
 import { skillset } from './skillset'
 
 export const en = {
+  applications,
   common,
   cv,
   history,
