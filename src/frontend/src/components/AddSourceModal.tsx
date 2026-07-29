@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { createSource, detectSource, previewSource } from '../api/client'
 import type { DetectedSource, ProviderTestResult } from '../api/types'
+import { useT } from '../i18n'
 
 type Step = 'paste' | 'confirm' | 'notfound' | 'manual'
 
@@ -11,6 +12,8 @@ export function AddSourceModal({
   onClose: () => void
   onCreated: (id: number, name: string) => void
 }) {
+  const t = useT('sources')
+  const common = useT('common')
   const titleId = useId()
   const [step, setStep] = useState<Step>('paste')
   const [url, setUrl] = useState('')
@@ -63,7 +66,7 @@ export function AddSourceModal({
     const res = await run(() =>
       createSource({ url: kind === 'manual' ? undefined : url, kind, displayName: displayName.trim() || undefined }),
     )
-    if (res) onCreated(res.id, displayName.trim() || 'source')
+    if (res) onCreated(res.id, displayName.trim() || t.fallbackName)
   }
 
   function goManual() {
@@ -83,31 +86,28 @@ export function AddSourceModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-card__head">
-          <h2 id={titleId} className="modal-card__title">Add a source</h2>
-          <button type="button" className="modal-card__close" aria-label="Close" onClick={onClose}>×</button>
+          <h2 id={titleId} className="modal-card__title">{t.title}</h2>
+          <button type="button" className="modal-card__close" aria-label={t.close} onClick={onClose}>×</button>
         </div>
 
         {step === 'paste' && (
           <div className="add-source__body">
-            <p className="field__hint">
-              Paste the web address of a company's jobs page or a job feed. We'll recognise the common
-              ones and set them up for you.
-            </p>
+            <p className="field__hint">{t.pasteHint}</p>
             <input
               className="input"
               type="url"
               autoFocus
-              placeholder="https://boards.greenhouse.io/company"
+              placeholder={t.urlPlaceholder}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && url.trim()) void find() }}
             />
             <div className="add-source__actions">
               <button type="button" className="btn btn--primary" disabled={busy || !url.trim()} onClick={() => void find()}>
-                {busy ? <span className="spinner" /> : 'Find it'}
+                {busy ? <span className="spinner" /> : t.findIt}
               </button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={goManual}>
-                Import a spreadsheet instead
+                {t.importSpreadsheet}
               </button>
             </div>
           </div>
@@ -119,7 +119,7 @@ export function AddSourceModal({
             {candidate.duplicateWarning && (
               <p className="add-source__warn">{candidate.duplicateWarning}</p>
             )}
-            <label className="field__label" htmlFor={`${titleId}-name`}>Name</label>
+            <label className="field__label" htmlFor={`${titleId}-name`}>{t.nameLabel}</label>
             <input
               id={`${titleId}-name`}
               className="input"
@@ -129,49 +129,43 @@ export function AddSourceModal({
             {testResult && <TestResultLine result={testResult} />}
             <div className="add-source__actions">
               <button type="button" className="btn btn--primary" disabled={busy || !displayName.trim()} onClick={() => void add(candidate.kind)}>
-                {busy ? <span className="spinner" /> : 'Add source'}
+                {busy ? <span className="spinner" /> : t.addSource}
               </button>
               <button type="button" className="btn btn--secondary" disabled={busy} onClick={() => void test()}>
-                Test first
+                {t.testFirst}
               </button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>Back</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>{common.back}</button>
             </div>
           </div>
         )}
 
         {step === 'notfound' && (
           <div className="add-source__body">
-            <p className="field__hint">
-              We couldn't recognise that address automatically. You can still add it as a manual import —
-              you export the roles yourself and drop them in, and they'll be included in your next search.
-            </p>
+            <p className="field__hint">{t.notFoundHint}</p>
             <div className="add-source__actions">
-              <button type="button" className="btn btn--primary" onClick={goManual}>Set up manual import</button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>Try another address</button>
+              <button type="button" className="btn btn--primary" onClick={goManual}>{t.setUpManual}</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>{t.tryAnother}</button>
             </div>
           </div>
         )}
 
         {step === 'manual' && (
           <div className="add-source__body">
-            <label className="field__label" htmlFor={`${titleId}-manual`}>Name this source</label>
+            <label className="field__label" htmlFor={`${titleId}-manual`}>{t.manualNameLabel}</label>
             <input
               id={`${titleId}-manual`}
               className="input"
               autoFocus
-              placeholder="e.g. LinkedIn saved roles"
+              placeholder={t.manualNamePlaceholder}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
-            <p className="field__hint">
-              After adding, export your roles to a CSV and save it in your imports folder. Open the source
-              afterwards for the exact file name and columns.
-            </p>
+            <p className="field__hint">{t.manualHint}</p>
             <div className="add-source__actions">
               <button type="button" className="btn btn--primary" disabled={busy || !displayName.trim()} onClick={() => void add('manual')}>
-                {busy ? <span className="spinner" /> : 'Add source'}
+                {busy ? <span className="spinner" /> : t.addSource}
               </button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>Back</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>{common.back}</button>
             </div>
           </div>
         )}
@@ -183,14 +177,15 @@ export function AddSourceModal({
 }
 
 function TestResultLine({ result }: { result: ProviderTestResult }) {
+  const t = useT('sources')
   return (
     <div className={`provider-test-result provider-test-result--${result.ok ? 'ok' : 'fail'}`}>
       <div className="provider-test-result__head">
         <span className="provider-test-result__dot" aria-hidden />
-        <span>{result.ok ? `Found ${result.fetchedCount} jobs` : 'Nothing came back'}</span>
+        <span>{result.ok ? t.foundJobs(result.fetchedCount) : t.nothingCameBack}</span>
         <span className="provider-test-result__meta">{result.durationMs}ms</span>
       </div>
-      {result.sampleTitle && <div className="add-source__sample">e.g. “{result.sampleTitle}”</div>}
+      {result.sampleTitle && <div className="add-source__sample">{t.sample(result.sampleTitle)}</div>}
       {result.error && !result.ok && <div className="add-source__sample">{result.error}</div>}
     </div>
   )

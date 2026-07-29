@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { testProvider } from '../../api/client'
 import type { ProviderTestResult } from '../../api/types'
 import { formatRelative } from '../../utils/time'
+import { useT } from '../../i18n'
 
 // Runs a one-off fetch and shows the outcome: count, timing, every returned listing (scrollable),
 // and — when the fetch stopped at a configured ceiling — a warning that there may be more.
@@ -15,6 +16,7 @@ export function TestPanel({
   providerType: string
   onError: (message: string) => void
 }) {
+  const t = useT('providers')
   const [result, setResult] = useState<ProviderTestResult | null>(null)
 
   const test = useMutation({
@@ -29,27 +31,25 @@ export function TestPanel({
   return (
     <section className="card">
       <div className="row-spread">
-        <h2 className="card__title" style={{ marginBottom: 0 }}>Test the source</h2>
+        <h2 className="card__title" style={{ marginBottom: 0 }}>{t.testTitle}</h2>
         <button
           type="button"
           className="btn btn--secondary"
           onClick={() => test.mutate()}
           disabled={test.isPending || isManual}
         >
-          {test.isPending ? <span className="spinner" /> : 'Test now'}
+          {test.isPending ? <span className="spinner" /> : t.testNow}
         </button>
       </div>
       <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>
-        {isManual
-          ? "This source doesn't fetch automatically — there's nothing to test."
-          : 'Pulls listings once and shows how many came back, how long it took, and every listing returned.'}
+        {isManual ? t.testManualHint : t.testHint}
       </p>
 
       {result && (
         <div className={`provider-test-result provider-test-result--${result.ok ? 'ok' : 'fail'}`}>
           <div className="provider-test-result__head">
             <span className="provider-test-result__dot" aria-hidden />
-            <span>{result.ok ? 'Working' : 'Connection failed'}</span>
+            <span>{result.ok ? t.testWorking : t.testConnectionFailed}</span>
             <span className="provider-test-result__meta">
               {result.durationMs}ms · {formatRelative(result.testedAt)}
             </span>
@@ -57,12 +57,12 @@ export function TestPanel({
 
           <dl className="provider-test-result__grid">
             <div>
-              <dt>jobs found</dt>
+              <dt>{t.jobsFoundLabel}</dt>
               <dd className="tabular">{result.fetchedCount}</dd>
             </div>
             {result.error && (
               <div className="provider-test-result__error">
-                <dt>error</dt>
+                <dt>{t.errorLabel}</dt>
                 <dd>{result.error}</dd>
               </div>
             )}
@@ -70,15 +70,12 @@ export function TestPanel({
 
           {result.hitPageCap && (
             <div className="provider-cap-warn">
-              <strong>Hit the page cap.</strong> This source stopped at its max-pages limit while more
-              listings were still coming — there are almost certainly more. Raise <em>Max pages</em> below and
-              re-test to pull more.
+              {t.hitPageCap()}
             </div>
           )}
           {!result.hitPageCap && result.possiblyCapped && (
             <div className="provider-cap-warn provider-cap-warn--soft">
-              <strong>Possibly capped.</strong> This source returned exactly its configured limit, so it may
-              be holding back more results.
+              {t.possiblyCapped()}
             </div>
           )}
 
@@ -87,10 +84,10 @@ export function TestPanel({
               <div className="provider-test-preview__head">
                 {result.fetchedCount > result.samples.length ? (
                   <span className="provider-test-preview__more">
-                    showing first {result.samples.length} of {result.fetchedCount}
+                    {t.showingFirst(result.samples.length, result.fetchedCount)}
                   </span>
                 ) : (
-                  <>all {result.fetchedCount} listings</>
+                  <>{t.allListings(result.fetchedCount)}</>
                 )}
               </div>
               <ul className="provider-test-preview__list">
