@@ -2,7 +2,7 @@ import type { Messages } from '../en'
 
 export const listing: Messages['listing'] = {
   favoriteBadge: '★ Favorit',
-  favoriteTitle: 'En af dine favoritvirksomheder — vurderingen er løftet',
+  favoriteTitle: 'En af dine favoritvirksomheder — scoren er løftet',
   openPosting: 'Åbn jobopslaget →',
 
   markGood: 'Godt match',
@@ -32,17 +32,18 @@ export const listing: Messages['listing'] = {
     'no-response': 'Intet svar',
   },
 
-  breakdownAria: 'fordeling af vurderingen',
+  breakdownAria: 'sådan er scoren sammensat',
   component: {
     primaryStack: 'skal-have-kompetencer',
     secondaryStack: 'gode-at-have-kompetencer',
     seniority: 'erfaringsniveau',
     locationRemote: 'sted',
     domain: 'branche',
-    freshness: 'friskhed',
+    // "friskhed" is for food; a job posting has aktualitet.
+    freshness: 'aktualitet',
   },
   disqualifierPenalty: 'dealbreaker-fradrag',
-  totalRating: 'samlet vurdering',
+  totalRating: 'samlet score',
 
   runTitle: 'Søgning',
   runSources: 'Jobkilder',
@@ -51,6 +52,6 @@ export const listing: Messages['listing'] = {
   runJobsFound: 'Job fundet',
   runUniqueJobs: 'Unikke job',
   runTopJobs: 'Topjob',
-  runBestRating: 'Bedste vurdering',
+  runBestRating: 'Højeste score',
   runGoodMatches: 'Gode match',
 }

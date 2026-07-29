@@ -53,7 +53,7 @@ describe('catalog parity', () => {
 describe('danish interpolation', () => {
   it('renders counts and singular/plural forms', () => {
     expect(da.settings.restored(1, 0)).toBe('Gendannede 1 fil.')
-    expect(da.settings.restored(3, 2)).toBe('Gendannede 3 filer. (2 elementer sprunget over)')
+    expect(da.settings.restored(3, 2)).toBe('Gendannede 3 filer. (2 sprunget over)')
     expect(da.history.deleted(1, 0)).toBe('Slettede 1 søgning')
     expect(da.history.deleted(4, 1)).toBe('Slettede 4 søgninger (1 sprunget over)')
     expect(da.cv.applyFields(1)).toBe('Anvend 1 felt')

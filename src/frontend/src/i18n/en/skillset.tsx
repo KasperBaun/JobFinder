@@ -22,7 +22,8 @@ export const skillset = {
   ledeCreate:
     'You skipped this during setup. Fill it in so jobfinder can rate listings for you — at least '
     + 'a name and location to start.',
-  ledeEdit: 'Edit what jobfinder uses to rate every listing. Saved automatically.',
+  // Was "Saved automatically." — untrue, the page has a save bar.
+  ledeEdit: 'This is what jobfinder rates every listing against.',
   fillFromCv: 'Fill from CV',
   loading: 'Loading profile…',
   loadFailed: 'Failed to load profile.',

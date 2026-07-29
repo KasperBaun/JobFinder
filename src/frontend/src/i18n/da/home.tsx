@@ -2,39 +2,39 @@ import type { Messages } from '../en'
 
 export const home: Messages['home'] = {
   eyebrow: '00 / overblik',
-  headline: () => <>Find arbejde, der <em>passer.</em></>,
+  headline: () => <>Find jobbet, der <em>passer.</em></>,
   lede:
-    'Jobfinder gør jobsøgningen nem. Den henter jobopslag fra de jobkilder, du vælger, vurderer '
-    + 'dem op mod din profil og dine præferencer og foreslår de bedste match. Alt kører lokalt, '
-    + 'så intet forlader din computer.',
+    'Jobfinder henter opslag fra de jobkilder, du vælger, vurderer dem op mod din profil og '
+    + 'finder de bedste match. Alt kører lokalt — intet forlader din computer.',
   loading: 'indlæser…',
   runSearch: 'Kør en ny søgning',
   editProfile: 'Redigér profil',
-  atAGlance: 'Overblik',
+  // Nav and eyebrow already say "Overblik"; a third one would just echo.
+  atAGlance: 'Kort fortalt',
   errorShort: 'fejl',
 
   sources: 'Jobkilder',
-  sourcesOn: 'til',
-  sourcesSetUp: total => `${total} sat op`,
+  sourcesOn: 'aktive',
+  sourcesSetUp: total => `${total} i alt`,
 
   lastSearch: 'Seneste søgning',
   noSearchesYet: 'Ingen søgninger endnu',
   topJobs: 'topjob',
-  best: 'bedste',
+  best: 'højeste',
 
   goodMatches: 'Gode match',
-  acrossAllSearches: 'på tværs af alle søgninger',
+  acrossAllSearches: 'i alle søgninger',
 
   profile: 'Profil',
   profileReady: 'klar',
-  profileNotSetUp: 'ikke sat op',
+  profileNotSetUp: 'mangler',
   profileReadyHint: 'kompetencer, brancher, dealbreakers',
-  profileFinishHint: 'gør opsætningen færdig →',
+  profileFinishHint: 'færdiggør opsætningen →',
 
   recentSearches: 'Seneste søgninger',
   viewAll: 'Se alle →',
   colWhen: 'Hvornår',
   colTopJobs: 'Topjob',
-  colBestRating: 'Bedste vurdering',
+  colBestRating: 'Højeste score',
   colGoodMatches: 'Gode match',
 }

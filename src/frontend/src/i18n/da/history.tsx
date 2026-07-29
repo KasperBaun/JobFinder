@@ -3,7 +3,7 @@ import type { Messages } from '../en'
 export const history: Messages['history'] = {
   eyebrow: '04 / historik',
   heading: () => <>Tidligere <em>søgninger</em></>,
-  lede: 'Alle de søgninger, du har kørt, med topjob og dine vurderinger gemt.',
+  lede: 'Alle dine søgninger — med topjob og dine vurderinger.',
   loading: 'Indlæser historik…',
   loadFailed: 'Historikken kunne ikke indlæses.',
   noneYet: 'Ingen søgninger endnu. Start en fra siden',
@@ -17,8 +17,8 @@ export const history: Messages['history'] = {
   deleteSelected: 'Slet markerede',
   deleteConfirm: count =>
     count === 1
-      ? 'Vil du slette denne søgning? Dine vurderinger bliver også fjernet. Det kan ikke fortrydes.'
-      : `Vil du slette ${count} søgninger? Dine vurderinger bliver også fjernet. Det kan ikke fortrydes.`,
+      ? 'Slet denne søgning? Dine vurderinger forsvinder også, og det kan ikke fortrydes.'
+      : `Slet ${count} søgninger? Dine vurderinger forsvinder også, og det kan ikke fortrydes.`,
   deleted: (count, skipped) =>
     `Slettede ${count} søgning${count === 1 ? '' : 'er'}${skipped > 0 ? ` (${skipped} sprunget over)` : ''}`,
   selectAll: 'Markér alle søgninger',
@@ -30,12 +30,12 @@ export const history: Messages['history'] = {
   colSources: 'Jobkilder',
   colFetched: 'Hentet',
   colTopJobs: 'Topjob',
-  colBestRating: 'Bedste vurdering',
+  colBestRating: 'Højeste score',
   colGoodMatches: 'Gode match',
 
   backToHistory: '← tilbage til historik',
   detailEyebrow: '04 / historik / detaljer',
-  detailHeading: () => <>Søgnings<em>detaljer</em></>,
+  detailHeading: () => <>Detaljer om <em>søgningen</em></>,
   detailLoading: 'Indlæser søgning…',
   detailLoadFailed: 'Søgningen kunne ikke indlæses.',
 
@@ -50,7 +50,7 @@ export const history: Messages['history'] = {
   tabDedupe: 'dubletter',
   tabDropped: 'fjernede',
 
-  noRatingsRecorded: 'Der er ikke gemt vurderinger for denne søgning.',
+  noRatingsRecorded: 'Der er ikke gemt scorer for denne søgning.',
 
   noTopJobs: 'Ingen topjob i denne søgning.',
 
@@ -66,19 +66,19 @@ export const history: Messages['history'] = {
   noDedupeRecorded: 'Der er ikke gemt dubletdata for denne søgning.',
   noDuplicatesMerged: 'Der blev ikke slået dubletter sammen i denne søgning.',
   dedupeKept: 'beholdt',
-  dedupeAlsoSeen: count => `også set på ${count}`,
+  dedupeAlsoSeen: count => `også set ${count} andre steder`,
 
   noDroppedRecorded: 'Der er ikke gemt data om fjernede job for denne søgning.',
   nothingRemoved: 'Intet blev fjernet i denne søgning.',
   dropFilterAll: 'alle',
   dropReason: {
     disqualifier: 'dealbreaker',
-    below_min_score: 'for lav vurdering',
+    below_min_score: 'for lav score',
     beyond_top_n: 'uden for toplisten',
     above_max_age: 'for gammelt',
     missing_required_primary: 'ingen skal-have-kompetence',
   },
-  colRating: 'Vurdering',
+  colRating: 'Score',
   colReason: 'Årsag',
   colWhy: 'Hvorfor',
 
@@ -90,7 +90,7 @@ export const history: Messages['history'] = {
     portal: 'jobkilde',
     location: 'sted',
     posted: 'opslagsdato',
-    score: 'vurdering',
+    score: 'score',
   },
   colSource: 'Jobkilde',
   colYourRating: 'Din vurdering',
@@ -109,6 +109,6 @@ export const history: Messages['history'] = {
   markGood: 'god',
   markBad: 'dårlig',
   markUnmarked: 'ikke vurderet',
-  ratingRange: (min, max) => `vurdering ${min}–${max}`,
+  ratingRange: (min, max) => `score ${min}–${max}`,
   topJobsOnly: 'kun topjob',
 }
