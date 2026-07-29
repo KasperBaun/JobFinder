@@ -12,6 +12,7 @@ import { StatusSelect } from './StatusSelect'
 import { formatRelative } from '../utils/time'
 import { activeLocale } from '../i18n/active'
 import { collator, dec } from '../i18n/format'
+import { useT } from '../i18n'
 
 interface Props {
   data: RunDetail
@@ -21,7 +22,8 @@ interface Props {
 }
 
 export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) {
-  if (!data.scored) return <div className="muted">No ratings recorded for this search.</div>
+  const t = useT('history')
+  if (!data.scored) return <div className="muted">{t.noRatingsRecorded}</div>
 
   const portalCounts = useMemo(() => countBy(data.scored ?? [], (e) => e.portal), [data.scored])
   const portalDisplayNames = useMemo(() => {
@@ -56,21 +58,25 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
         stackCounts={stackCounts}
       />
       <div className="longlist__strip muted">
-        {filtered.length} of {data.scored.length}
-        {' · sorted by '}{sortKeyLabel(filters.sort.key)}{' '}{filters.sort.dir === 'desc' ? '↓' : '↑'}
+        {t.longlistStrip(
+          filtered.length,
+          data.scored.length,
+          t.sortKey[filters.sort.key],
+          filters.sort.dir === 'desc' ? '↓' : '↑',
+        )}
       </div>
       <div className="table-wrap">
         <table className="table longlist__table">
           <thead>
             <tr>
-              <SortableHeader sortKey="title" filters={filters} onClick={setSort}>Title</SortableHeader>
-              <SortableHeader sortKey="company" filters={filters} onClick={setSort}>Company</SortableHeader>
-              <SortableHeader sortKey="portal" filters={filters} onClick={setSort}>Source</SortableHeader>
-              <SortableHeader sortKey="location" filters={filters} onClick={setSort}>Location</SortableHeader>
-              <SortableHeader sortKey="posted" filters={filters} onClick={setSort}>Posted</SortableHeader>
-              <SortableHeader sortKey="score" filters={filters} onClick={setSort}>Rating</SortableHeader>
-              <th>Your rating</th>
-              <th aria-label="expand"></th>
+              <SortableHeader sortKey="title" filters={filters} onClick={setSort}>{t.colTitle}</SortableHeader>
+              <SortableHeader sortKey="company" filters={filters} onClick={setSort}>{t.colCompany}</SortableHeader>
+              <SortableHeader sortKey="portal" filters={filters} onClick={setSort}>{t.colSource}</SortableHeader>
+              <SortableHeader sortKey="location" filters={filters} onClick={setSort}>{t.colLocation}</SortableHeader>
+              <SortableHeader sortKey="posted" filters={filters} onClick={setSort}>{t.colPosted}</SortableHeader>
+              <SortableHeader sortKey="score" filters={filters} onClick={setSort}>{t.colRating}</SortableHeader>
+              <th>{t.colYourRating}</th>
+              <th aria-label={t.expand}></th>
             </tr>
           </thead>
           <tbody>
@@ -88,9 +94,9 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
         </table>
         {filtered.length === 0 && (
           <div className="muted longlist__empty">
-            No jobs match these filters.{' '}
+            {t.noJobsMatchFilters}{' '}
             <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
-              Reset
+              {t.reset}
             </button>
           </div>
         )}
@@ -132,6 +138,7 @@ function FilterBar({
   portalDisplayNames: Map<string, string>
   stackCounts: Map<string, number>
 }) {
+  const t = useT('history')
   const togglePortal = (p: string) =>
     onChange({
       ...filters,
@@ -154,14 +161,14 @@ function FilterBar({
       <input
         className="input longlist__search"
         type="search"
-        placeholder="Search title or company…"
+        placeholder={t.searchTitleOrCompany}
         value={filters.q}
         onChange={(e) => onChange({ ...filters, q: e.target.value })}
         onKeyDown={(e) => { if (e.key === 'Escape') onChange({ ...filters, q: '' }) }}
       />
 
       {portalCounts.size > 0 && (
-        <ChipGroup label="source">
+        <ChipGroup label={t.filterSource}>
           {[...portalCounts]
             .map(([p, n]) => ({ slug: p, label: portalDisplayNames.get(p) ?? p, count: n }))
             .sort((a, b) => collator(activeLocale()).compare(a.label, b.label))
@@ -173,16 +180,16 @@ function FilterBar({
         </ChipGroup>
       )}
 
-      <PillGroup label="posted">
+      <PillGroup label={t.filterPosted}>
         {(['any', '24h', '7d', '14d', '30d'] as const).map((k) => (
           <Pill key={k} active={filters.posted === k} onClick={() => onChange({ ...filters, posted: k })}>
-            {k}
+            {k === 'any' ? t.filterPostedAny : k}
           </Pill>
         ))}
       </PillGroup>
 
       <div className="longlist__score">
-        <label className="muted small">rating {filters.scoreMin.toFixed(2)}–{filters.scoreMax.toFixed(2)}</label>
+        <label className="muted small">{t.ratingRange(dec(filters.scoreMin, 2), dec(filters.scoreMax, 2))}</label>
         <input
           type="range" min={0} max={1} step={0.01}
           value={filters.scoreMin}
@@ -196,7 +203,7 @@ function FilterBar({
       </div>
 
       {stackCounts.size > 0 && (
-        <ChipGroup label="skill match">
+        <ChipGroup label={t.filterSkillMatch}>
           {[...stackCounts].sort(([, a], [, b]) => b - a).map(([s, n]) => (
             <Chip key={s} active={filters.stackHits.includes(s)} onClick={() => toggleStack(s)}>
               {s} <span className="chip__count">{n}</span>
@@ -205,10 +212,10 @@ function FilterBar({
         </ChipGroup>
       )}
 
-      <PillGroup label="your rating">
+      <PillGroup label={t.filterYourRating}>
         {(['all', 'good', 'bad', 'unmarked'] as const).map((k) => (
           <Pill key={k} active={filters.mark === k} onClick={() => onChange({ ...filters, mark: k })}>
-            {k === 'unmarked' ? 'not rated' : k}
+            {k === 'all' ? t.markAll : k === 'good' ? t.markGood : k === 'bad' ? t.markBad : t.markUnmarked}
           </Pill>
         ))}
       </PillGroup>
@@ -219,12 +226,12 @@ function FilterBar({
           checked={filters.shortlistOnly}
           onChange={(e) => onChange({ ...filters, shortlistOnly: e.target.checked })}
         />
-        <span>top jobs only</span>
+        <span>{t.topJobsOnly}</span>
       </label>
 
       {!isDefault && (
         <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
-          Reset filters
+          {t.resetFilters}
         </button>
       )}
     </div>
@@ -280,6 +287,7 @@ function Row({ entry, runId, mark, markReason, markStatus }: {
   markReason?: string
   markStatus?: ApplicationStatus
 }) {
+  const t = useT('history')
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -304,7 +312,7 @@ function Row({ entry, runId, mark, markReason, markStatus }: {
           </div>
         </td>
         <td>
-          <button type="button" className="link-button" onClick={() => setOpen(!open)} aria-label={open ? 'collapse' : 'expand'}>
+          <button type="button" className="link-button" onClick={() => setOpen(!open)} aria-label={open ? t.collapse : t.expand}>
             {open ? '▾' : '▸'}
           </button>
         </td>
@@ -318,14 +326,6 @@ function Row({ entry, runId, mark, markReason, markStatus }: {
       )}
     </>
   )
-}
-
-function sortKeyLabel(key: SortKey): string {
-  switch (key) {
-    case 'portal': return 'source'
-    case 'score':  return 'rating'
-    default:       return key
-  }
 }
 
 function clamp01(v: number) { return Math.max(0, Math.min(1, v)) }

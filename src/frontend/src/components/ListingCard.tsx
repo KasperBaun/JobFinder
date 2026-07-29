@@ -1,6 +1,7 @@
 import type { ApplicationStatus, ListingMatch } from '../api/types'
 import { MarkButton } from './MarkButton'
 import { StatusSelect } from './StatusSelect'
+import { dec, useT } from '../i18n'
 
 interface Props {
   match: ListingMatch
@@ -16,6 +17,7 @@ interface Props {
 const LEGACY_FAVORITE_NOTE = /One of your favorite companies \([^)]*\) — rating boosted\.\s*/
 
 export function ListingCard({ match, runId, mark, markReason, markStatus }: Props) {
+  const t = useT('listing')
   const subline = [match.company, match.location].filter(Boolean).join(' · ')
   const favorite = match.favoriteCompany || LEGACY_FAVORITE_NOTE.test(match.reasoning)
   const reasoning = match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
@@ -27,8 +29,8 @@ export function ListingCard({ match, runId, mark, markReason, markStatus }: Prop
           {subline && <div className="listing-card__subline">{subline}</div>}
         </div>
         <div className="listing-card__badges">
-          {favorite && <span className="badge badge--fav" title="One of your favorite companies — rating boosted">★ Favorite</span>}
-          <span className="badge badge--score">{match.score.toFixed(2)}</span>
+          {favorite && <span className="badge badge--fav" title={t.favoriteTitle}>{t.favoriteBadge}</span>}
+          <span className="badge badge--score">{dec(match.score, 2)}</span>
           {match.remoteMode && match.remoteMode !== 'unknown' && <span className="badge">{match.remoteMode}</span>}
           <span className="badge badge--muted">{match.portalDisplayName ?? match.portal}</span>
         </div>
@@ -51,7 +53,7 @@ export function ListingCard({ match, runId, mark, markReason, markStatus }: Prop
         <MarkButton runId={runId} listingId={match.id} current={mark} reason={markReason} />
         <StatusSelect runId={runId} listingId={match.id} current={markStatus} />
         <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--primary">
-          Open job posting →
+          {t.openPosting}
         </a>
       </footer>
     </article>
