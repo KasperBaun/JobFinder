@@ -1,7 +1,7 @@
 import type { JobSearch } from '../api/types'
 import type { SourceCounts } from '../utils/progress'
 import { useElapsed } from '../hooks/useElapsed'
-import { dec, n } from '../i18n'
+import { dec, n, useT } from '../i18n'
 
 type Props = {
   job: JobSearch
@@ -15,6 +15,7 @@ type Props = {
 // timer, and a one-line aggregate — all from fields already on the snapshot. Replaces the old
 // page-long per-source list as the at-a-glance view.
 export function ProgressSummary({ job, counts, active, showDedupe, showRank }: Props) {
+  const t = useT('search')
   // Time from the current attempt's start so a run resumed after a host restart reflects the active run,
   // not the (possibly hours-long) gap the process was down (matches the stepper). Legacy runs without the
   // anchor fall back to startedAt.
@@ -31,15 +32,15 @@ export function ProgressSummary({ job, counts, active, showDedupe, showRank }: P
         <span className="progress-hero__timer tabular mono">{elapsed}</span>
       </div>
       <div className="progress-hero__aggregate tabular">
-        {n(job.fetchedCount)} jobs found
+        {t.jobsFound(n(job.fetchedCount))}
         {active && counts.running > 0 && (
-          <> · <span className="progress-hero__running">{counts.running} running</span></>
+          <> · <span className="progress-hero__running">{t.sourcesRunning(counts.running)}</span></>
         )}
         {counts.failed > 0 && (
-          <> · <span className="progress-hero__failed">{counts.failed} failed</span></>
+          <> · <span className="progress-hero__failed">{t.sourcesFailed(counts.failed)}</span></>
         )}
-        {showDedupe && <> · {n(job.dedupedCount)} unique</>}
-        {showRank && <> · top {dec(job.topScore, 2)}</>}
+        {showDedupe && <> · {t.unique(n(job.dedupedCount))}</>}
+        {showRank && <> · {t.topScore(dec(job.topScore, 2))}</>}
       </div>
     </div>
   )

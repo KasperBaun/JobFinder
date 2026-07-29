@@ -40,10 +40,10 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
       <div className="progress-panel__head">
         <h2 className="progress-panel__heading">
           {phaseLabel}
-          {job.attempt > 1 && !statusBadge && <span className="muted"> · attempt {job.attempt}</span>}
+          {job.attempt > 1 && !statusBadge && <span className="muted">{t.attempt(job.attempt)}</span>}
         </h2>
         <button type="button" className="link-button" onClick={onToggleSteps}>
-          {stepsOpen ? 'hide steps ▴' : 'show steps ▾'}
+          {stepsOpen ? t.hideSteps : t.showSteps}
         </button>
       </div>
 
@@ -73,7 +73,7 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
       )}
 
       {job.state === 'failed' && job.error && (
-        <div className="error-banner">Search failed: {job.error}</div>
+        <div className="error-banner">{t.searchFailed(job.error)}</div>
       )}
     </section>
   )

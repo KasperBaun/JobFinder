@@ -22,9 +22,9 @@ export function SearchRunIndicator() {
     <div className="run-indicator" role="status" aria-live="polite">
       <span className="run-indicator__spinner" aria-hidden="true" />
       <Link to="/search" className="run-indicator__text">
-        Search running · {t.phase[job.phase]}
+        {t.searchRunning} · {t.phase[job.phase]}
         {job.phase === 'fetching' && total > 0 && (
-          <> · {done}/{total} sources</>
+          <> · {done}/{total} {t.sourcesLabel.toLowerCase()}</>
         )}
       </Link>
       <button
