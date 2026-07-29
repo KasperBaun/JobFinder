@@ -85,4 +85,70 @@ public sealed class UserContextProviderTests : IDisposable
         Assert.Throws<InvalidRequestException>(() => provider.Complete("", Path.Combine(_tempRoot, "d")));
         Assert.Throws<InvalidRequestException>(() => provider.Complete("me@example.com", "  "));
     }
+
+    [Fact]
+    public void Complete_PersistsNormalisedLanguage()
+    {
+        var provider = NewProvider();
+        provider.Complete("me@example.com", Path.Combine(_tempRoot, "chosen"), " DA ");
+
+        Assert.Equal("da", provider.State().Language);
+        Assert.Equal("da", NewProvider().State().Language);
+    }
+
+    [Fact]
+    public void Complete_WithUnsupportedOrMissingLanguage_LeavesItUnset()
+    {
+        var provider = NewProvider();
+        provider.Complete("me@example.com", Path.Combine(_tempRoot, "chosen"), "klingon");
+
+        // Setup must not fail over a language the GUI doesn't ship — it just falls back to English.
+        Assert.Null(provider.State().Language);
+    }
+
+    [Fact]
+    public void BootstrapWrittenBeforeLanguageExisted_StillLoads()
+    {
+        var dataDir = Path.Combine(_tempRoot, "chosen");
+        Directory.CreateDirectory(dataDir);
+        File.WriteAllText(
+            _bootstrapPath,
+            $$"""{"email":"me@example.com","dataDir":{{System.Text.Json.JsonSerializer.Serialize(dataDir)}},"acknowledgedAt":"2026-01-01T00:00:00+00:00"}""");
+
+        var provider = NewProvider();
+
+        Assert.True(provider.IsConfigured);
+        Assert.Null(provider.State().Language);
+    }
+
+    [Fact]
+    public void SetLanguage_PersistsAndPreservesTheRestOfTheRecord()
+    {
+        var dataDir = Path.Combine(_tempRoot, "chosen");
+        var provider = NewProvider();
+        provider.Complete("me@example.com", dataDir);
+
+        Assert.Equal("da", provider.SetLanguage("da"));
+
+        var reloaded = NewProvider();
+        Assert.Equal("da", reloaded.State().Language);
+        Assert.Equal("me@example.com", reloaded.Current.Email);
+        Assert.Equal(Path.GetFullPath(dataDir), reloaded.Current.RootDir);
+    }
+
+    [Fact]
+    public void SetLanguage_RejectsUnsupportedValues()
+    {
+        var provider = NewProvider();
+        provider.Complete("me@example.com", Path.Combine(_tempRoot, "chosen"));
+
+        Assert.Throws<InvalidRequestException>(() => provider.SetLanguage("klingon"));
+        Assert.Throws<InvalidRequestException>(() => provider.SetLanguage(null));
+    }
+
+    [Fact]
+    public void SetLanguage_BeforeSetup_RequiresSetup()
+    {
+        Assert.Throws<SetupRequiredException>(() => NewProvider().SetLanguage("da"));
+    }
 }

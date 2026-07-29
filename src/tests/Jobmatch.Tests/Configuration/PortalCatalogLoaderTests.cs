@@ -30,6 +30,31 @@ public sealed class PortalCatalogLoaderTests
     }
 
     [Fact]
+    public void Parse_ReadsDanishNotes_AndLeavesThemNullWhenAbsent()
+    {
+        var json = """
+            { "version": 1, "providers": [
+              {
+                "id": 1, "name": "with-da", "type": "rss", "enabled": true,
+                "endpoint": "https://example.com/feed.xml",
+                "notes": "Fetched automatically.",
+                "notesDa": "Hentes automatisk."
+              },
+              {
+                "id": 2, "name": "without-da", "type": "rss", "enabled": true,
+                "endpoint": "https://example.com/other.xml",
+                "notes": "Fetched automatically."
+              }
+            ] }
+            """;
+
+        var portals = PortalCatalogLoader.Parse(json);
+
+        Assert.Equal("Hentes automatisk.", portals[0].NotesDa);
+        Assert.Null(portals[1].NotesDa);
+    }
+
+    [Fact]
     public void Parse_MinimalProvider()
     {
         var json = """

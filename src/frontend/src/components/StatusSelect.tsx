@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { setMarkStatus } from '../api/client'
 import type { ApplicationStatus, RunDetail } from '../api/types'
+import { useT } from '../i18n'
 
 interface Props {
   runId: string
@@ -10,21 +11,12 @@ interface Props {
   compact?: boolean
 }
 
-export const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  applied: 'Applied',
-  interview: 'Interview',
-  offer: 'Offer',
-  rejected: 'Rejected',
-  'no-response': 'No response',
-}
-
 const STATUS_ORDER: ApplicationStatus[] = ['applied', 'interview', 'offer', 'rejected', 'no-response']
-
-const TOOLTIP = 'Track what happened after applying. Interviews and offers teach the AI what a strong fit looks like.'
 
 // The application-status control next to a MarkButton. Independent of the
 // good/bad mark — either can be set or cleared without affecting the other.
 export function StatusSelect({ runId, listingId, current, compact }: Props) {
+  const t = useT('listing')
   const [optimistic, setOptimistic] = useState<ApplicationStatus | undefined>(current)
   const [error, setError] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -36,7 +28,7 @@ export function StatusSelect({ runId, listingId, current, compact }: Props) {
   const mutation = useMutation({
     mutationFn: async (status: ApplicationStatus | null) => {
       const res = await setMarkStatus({ runId, listingId, status })
-      if (!res.success) throw new Error(res.error ?? 'Status update failed')
+      if (!res.success) throw new Error(res.error ?? t.statusFailed)
       return status
     },
     onSuccess: (status) => {
@@ -80,12 +72,12 @@ export function StatusSelect({ runId, listingId, current, compact }: Props) {
         value={optimistic ?? ''}
         onChange={(e) => handleChange(e.target.value)}
         disabled={mutation.isPending}
-        aria-label={TOOLTIP}
-        data-tooltip={TOOLTIP}
+        aria-label={t.statusTooltip}
+        data-tooltip={t.statusTooltip}
       >
-        <option value="">{optimistic ? 'Clear status' : 'Status…'}</option>
+        <option value="">{optimistic ? t.statusClear : t.statusPlaceholder}</option>
         {STATUS_ORDER.map((s) => (
-          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+          <option key={s} value={s}>{t.status[s]}</option>
         ))}
       </select>
       {error && <span className="mark-button__error">{error}</span>}

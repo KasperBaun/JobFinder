@@ -4,11 +4,17 @@ import { completeSetup, getSetupStatus, updateSkillset } from '../api/client'
 import type { SkillsetUpdateRequest } from '../api/types'
 import { TagInput } from '../components/TagInput'
 import { CvImportModal } from '../components/CvImportModal'
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useLocale, useT } from '../i18n'
 
 const SENIORITY_OPTIONS = ['junior', 'mid', 'senior', 'lead', 'any'] as const
 const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote', 'any'] as const
 
 export function SetupPage() {
+  const t = useT('setup')
+  const common = useT('common')
+  const options = useT('skillset')
+  const { locale } = useLocale()
   const queryClient = useQueryClient()
   const { data } = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
 
@@ -30,7 +36,7 @@ export function SetupPage() {
   }, [data, seeded])
 
   const location = useMutation({
-    mutationFn: () => completeSetup({ email: email.trim(), dataDir: dataDir.trim() }),
+    mutationFn: () => completeSetup({ email: email.trim(), dataDir: dataDir.trim(), language: locale }),
     // Do NOT invalidate here — that would flip `configured` true and unmount the wizard.
     // Advance to the profile step instead; we invalidate once, at the very end.
     onSuccess: () => setStep(2),
@@ -98,7 +104,7 @@ export function SetupPage() {
     },
     onSuccess: (res) => {
       if (!res.success) {
-        setError(res.error ?? 'Could not save your profile.')
+        setError(res.error ?? t.saveFailed)
         return
       }
       finishToApp()
@@ -115,18 +121,20 @@ export function SetupPage() {
         {step === 1 ? (
           <>
             <div className="setup__eyebrow">
-              <span className="setup__eyebrow-title">first-time setup</span>
-              <span className="setup__step">step 1 of 2</span>
+              <span className="setup__eyebrow-title">{t.eyebrow}</span>
+              <span className="setup__step">{t.step(1, 2)}</span>
             </div>
-            <h1 className="setup__heading">Welcome to <em>jobfinder</em></h1>
-            <p className="setup__lede">
-              First, choose where jobfinder should keep your data on this computer — your profile, job
-              sites, marks, and search history all live in one folder that stays on your machine.
-              Nothing is created until you confirm.
-            </p>
+            <h1 className="setup__heading">{t.welcomeHeading()}</h1>
+            <p className="setup__lede">{t.welcomeLede}</p>
 
             <label className="setup__field">
-              <span className="setup__label">Your email</span>
+              <span className="setup__label">{t.languageLabel}</span>
+              <LanguageSelect className="setup__input" ariaLabel={t.languageLabel} />
+              <span className="setup__note">{t.languageNote}</span>
+            </label>
+
+            <label className="setup__field">
+              <span className="setup__label">{t.emailLabel}</span>
               <input
                 className="setup__input"
                 type="email"
@@ -134,11 +142,11 @@ export function SetupPage() {
                 placeholder="you@example.com"
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <span className="setup__note">Just a label for your data folder — never sent anywhere.</span>
+              <span className="setup__note">{t.emailNote}</span>
             </label>
 
             <label className="setup__field">
-              <span className="setup__label">Data folder</span>
+              <span className="setup__label">{t.dataDirLabel}</span>
               <input
                 className="setup__input"
                 type="text"
@@ -146,7 +154,7 @@ export function SetupPage() {
                 spellCheck={false}
                 onChange={(e) => setDataDir(e.target.value)}
               />
-              <span className="setup__note">Change it to any folder you like.</span>
+              <span className="setup__note">{t.dataDirNote}</span>
             </label>
 
             <label className="setup__ack">
@@ -155,7 +163,7 @@ export function SetupPage() {
                 checked={acknowledged}
                 onChange={(e) => setAcknowledged(e.target.checked)}
               />
-              <span>I understand my data will be stored in this folder on my computer.</span>
+              <span>{t.acknowledge}</span>
             </label>
 
             {error && <div className="setup__error">{error}</div>}
@@ -166,25 +174,24 @@ export function SetupPage() {
               onClick={() => { setError(null); location.mutate() }}
               disabled={!canContinue}
             >
-              {location.isPending ? <span className="spinner" /> : 'Continue'}
+              {location.isPending ? <span className="spinner" /> : common.continue}
             </button>
 
             {data?.bootstrapPath && (
-              <p className="setup__hint">Your choice is remembered in <code>{data.bootstrapPath}</code></p>
+              <p className="setup__hint">{t.rememberedIn} <code>{data.bootstrapPath}</code></p>
             )}
           </>
         ) : (
           <>
             <div className="setup__eyebrow">
-              <span className="setup__eyebrow-title">first-time setup</span>
-              <span className="setup__step">step 2 of 2</span>
+              <span className="setup__eyebrow-title">{t.eyebrow}</span>
+              <span className="setup__step">{t.step(2, 2)}</span>
             </div>
-            <h1 className="setup__heading">Set up your <em>profile</em></h1>
+            <h1 className="setup__heading">{t.profileHeading()}</h1>
             <p className="setup__lede">
-              This is what jobfinder rates every listing against. Just the essentials for now — you can
-              fine-tune everything later on the Profile page.{' '}
+              {t.profileLede}{' '}
               <button type="button" className="setup__cv-link" onClick={() => setCvOpen(true)}>
-                Have a CV? Let AI fill this in.
+                {t.cvLink}
               </button>
             </p>
 
@@ -198,47 +205,47 @@ export function SetupPage() {
             )}
 
             <label className="setup__field">
-              <span className="setup__label">Your name</span>
+              <span className="setup__label">{t.nameLabel}</span>
               <input className="setup__input" type="text" value={name}
-                placeholder="Jane Doe" onChange={(e) => setName(e.target.value)} />
+                placeholder={t.namePlaceholder} onChange={(e) => setName(e.target.value)} />
             </label>
 
             <label className="setup__field">
-              <span className="setup__label">Where you're based</span>
+              <span className="setup__label">{t.locationLabel}</span>
               <input className="setup__input" type="text" value={profileLocation}
-                placeholder="e.g. Copenhagen, Denmark" onChange={(e) => setProfileLocation(e.target.value)} />
+                placeholder={t.locationPlaceholder} onChange={(e) => setProfileLocation(e.target.value)} />
             </label>
 
             <div className="setup__row">
               <label className="setup__field">
-                <span className="setup__label">Years of experience</span>
+                <span className="setup__label">{t.yearsLabel}</span>
                 <input className="setup__input" type="number" min={0} value={years}
                   onChange={(e) => setYears(Number(e.target.value) || 0)} />
               </label>
               <label className="setup__field">
-                <span className="setup__label">Experience level</span>
+                <span className="setup__label">{t.seniorityLabel}</span>
                 <select className="setup__input" value={seniority} onChange={(e) => setSeniority(e.target.value)}>
-                  {SENIORITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  {SENIORITY_OPTIONS.map(o => <option key={o} value={o}>{options.seniority[o]}</option>)}
                 </select>
               </label>
               <label className="setup__field">
-                <span className="setup__label">Where you want to work</span>
+                <span className="setup__label">{t.remoteLabel}</span>
                 <select className="setup__input" value={remote} onChange={(e) => setRemote(e.target.value)}>
-                  {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{options.remote[o]}</option>)}
                 </select>
               </label>
             </div>
 
             <div className="setup__field">
-              <span className="setup__label">Roles you want</span>
+              <span className="setup__label">{t.rolesLabel}</span>
               <TagInput values={targetRoles} onChange={setTargetRoles}
-                placeholder="e.g. Senior Backend Engineer" ariaLabel="Roles you want" />
+                placeholder={t.rolesPlaceholder} ariaLabel={t.rolesLabel} />
             </div>
 
             <div className="setup__field">
-              <span className="setup__label">Must-have skills <span className="subtle">— the ones a job should mention</span></span>
+              <span className="setup__label">{t.primaryStackLabel} <span className="subtle">{t.primaryStackHint}</span></span>
               <TagInput variant="primary" values={primaryStack} onChange={setPrimaryStack}
-                placeholder="e.g. C#, .NET, Postgres" ariaLabel="Must-have skills" />
+                placeholder={t.primaryStackPlaceholder} ariaLabel={t.primaryStackLabel} />
             </div>
 
             {error && <div className="setup__error">{error}</div>}
@@ -249,11 +256,11 @@ export function SetupPage() {
               onClick={() => { setError(null); saveProfile.mutate() }}
               disabled={!canFinish}
             >
-              {saveProfile.isPending ? <span className="spinner" /> : 'Finish setup'}
+              {saveProfile.isPending ? <span className="spinner" /> : t.finish}
             </button>
 
             <button type="button" className="setup__skip" onClick={finishToApp} disabled={saveProfile.isPending}>
-              Skip for now — I'll fill this in later
+              {t.skip}
             </button>
           </>
         )}

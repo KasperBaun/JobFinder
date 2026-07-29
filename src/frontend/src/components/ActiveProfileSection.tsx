@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { completeSetup, getSetupStatus } from '../api/client'
+import { useT } from '../i18n'
 
 interface Props {
   notify: (kind: 'ok' | 'err', message: string) => void
@@ -11,6 +12,8 @@ interface Props {
 // uses; the server live-swaps the active context, so invalidating every query is enough to make
 // all pages refetch from the new folder.
 export function ActiveProfileSection({ notify }: Props) {
+  const t = useT('settings')
+  const common = useT('common')
   const domId = useId()
   const queryClient = useQueryClient()
   const setup = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
@@ -24,7 +27,7 @@ export function ActiveProfileSection({ notify }: Props) {
     onSuccess: async () => {
       await queryClient.invalidateQueries()
       setEditing(false)
-      notify('ok', 'Switched profile — every page now reads from the new folder.')
+      notify('ok', t.switched)
     },
     onError: (err) => notify('err', err instanceof Error ? err.message : String(err)),
   })
@@ -39,49 +42,38 @@ export function ActiveProfileSection({ notify }: Props) {
     const e = email.trim()
     const d = dataDir.trim()
     if (!e || !d) {
-      notify('err', 'Both an email and a data folder are required.')
+      notify('err', t.bothRequired)
       return
     }
-    if (
-      !confirm(
-        `Point jobfinder at:\n\n${d}\n\nIt will read your profile, job sites, marks and history from `
-        + 'there. Your current data stays where it is — switch back any time by entering the old '
-        + 'folder again.',
-      )
-    ) {
-      return
-    }
+    if (!confirm(t.switchConfirm(d))) return
     switching.mutate()
   }
 
   return (
     <section className="settings-section" data-testid={domId}>
-      <h2 className="settings-section__title">Active profile</h2>
-      <p className="settings-section__body">
-        Everything jobfinder knows lives in one folder on this computer. Switch to a different email
-        or folder to keep separate setups.
-      </p>
+      <h2 className="settings-section__title">{t.activeProfileTitle}</h2>
+      <p className="settings-section__body">{t.activeProfileBody}</p>
 
       <dl className="settings-facts">
         <div className="settings-facts__row">
-          <dt>Email</dt>
+          <dt>{t.email}</dt>
           <dd>{setup.isLoading ? <span className="muted">…</span> : setup.data?.email ?? '—'}</dd>
         </div>
         <div className="settings-facts__row">
-          <dt>Data folder</dt>
+          <dt>{t.dataFolder}</dt>
           <dd className="mono">{setup.isLoading ? <span className="muted">…</span> : setup.data?.dataDir ?? '—'}</dd>
         </div>
       </dl>
 
       {!editing ? (
         <button type="button" className="btn" onClick={beginEdit} disabled={setup.isLoading}>
-          Switch profile…
+          {t.switchProfileCta}
         </button>
       ) : (
         <>
           <div className="field-grid">
             <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label className="field__label" htmlFor={`${domId}-email`}>Email</label>
+              <label className="field__label" htmlFor={`${domId}-email`}>{t.email}</label>
               <input
                 id={`${domId}-email`}
                 type="email"
@@ -92,7 +84,7 @@ export function ActiveProfileSection({ notify }: Props) {
               />
             </div>
             <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label className="field__label" htmlFor={`${domId}-dir`}>Data folder</label>
+              <label className="field__label" htmlFor={`${domId}-dir`}>{t.dataFolder}</label>
               <input
                 id={`${domId}-dir`}
                 type="text"
@@ -105,10 +97,10 @@ export function ActiveProfileSection({ notify }: Props) {
           </div>
           <div className="settings-facts__actions">
             <button type="button" className="btn btn--primary" onClick={handleSwitch} disabled={switching.isPending}>
-              {switching.isPending ? <span className="spinner" /> : 'Switch profile'}
+              {switching.isPending ? <span className="spinner" /> : t.switchProfile}
             </button>
             <button type="button" className="btn" onClick={() => setEditing(false)} disabled={switching.isPending}>
-              Cancel
+              {common.cancel}
             </button>
           </div>
         </>

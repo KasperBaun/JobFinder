@@ -5,9 +5,15 @@ namespace Jobmatch.Configuration;
 
 /// <summary>
 /// The one setting the app persists <em>outside</em> the user's data directory: which directory that
-/// is, and who the active user is. Recorded on first-run setup after the user confirms the location.
+/// is, who the active user is, and the interface language. Recorded on first-run setup after the user
+/// confirms the location. <see cref="Language"/> lives here rather than under
+/// <c>data/&lt;email&gt;/</c> because the setup wizard needs it before a data directory exists.
 /// </summary>
-public sealed record BootstrapConfig(string Email, string DataDir, DateTimeOffset AcknowledgedAt);
+public sealed record BootstrapConfig(
+    string Email,
+    string DataDir,
+    DateTimeOffset AcknowledgedAt,
+    string? Language = null);
 
 /// <summary>
 /// Reads and writes <see cref="BootstrapConfig"/> at a fixed per-user location that does not depend on

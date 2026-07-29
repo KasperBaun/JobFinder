@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '../i18n'
 
 interface Props {
   reason?: string
@@ -6,11 +7,10 @@ interface Props {
   onSave: (reason: string | null) => void
 }
 
-const ADD_TOOLTIP = 'Add a short why — it teaches the AI what to look for next time.'
-
 // The "why" annotation next to a set mark: an add-link when empty, a quoted chip
 // when present, and an inline input while editing. Saving is owned by MarkButton.
 export function MarkWhy({ reason, saving, onSave }: Props) {
+  const t = useT('listing')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(reason ?? '')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,7 +38,7 @@ export function MarkWhy({ reason, saving, onSave }: Props) {
         type="text"
         value={draft}
         maxLength={500}
-        placeholder="Why? e.g. “I'm not a student”"
+        placeholder={t.whyPlaceholder}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
@@ -56,7 +56,7 @@ export function MarkWhy({ reason, saving, onSave }: Props) {
         className="mark-why mark-why--set"
         onClick={() => setEditing(true)}
         disabled={saving}
-        title={`${reason} — click to edit`}
+        title={t.whyEdit(reason)}
       >
         “{reason}”
       </button>
@@ -69,10 +69,10 @@ export function MarkWhy({ reason, saving, onSave }: Props) {
       className="mark-why"
       onClick={() => setEditing(true)}
       disabled={saving}
-      aria-label={ADD_TOOLTIP}
-      data-tooltip={ADD_TOOLTIP}
+      aria-label={t.whyTooltip}
+      data-tooltip={t.whyTooltip}
     >
-      + why?
+      {t.whyAdd}
     </button>
   )
 }

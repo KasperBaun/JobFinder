@@ -75,6 +75,7 @@ Data stays yours. No sign-up, no cloud account, no telemetry. Your skillset, you
 - **A ranked shortlist on demand.** One click checks every enabled provider, removes duplicates, scores everything against your skillset, and surfaces the top matches — each with the must-have skills it hit, the nice-to-haves, and why it landed where it did.
 - **A memory of every run.** Searches are kept. Look back at last Sunday's run, see which listings came up, and how many you marked as a real fit.
 - **A feedback loop that learns.** Mark listings as good matches. Those signals feed back into the ranking so the next run puts more of what you liked up top.
+- **English or Danish.** Pick your language on first run or in Settings — the whole interface, including dates, numbers and sorting, follows it.
 - **An optional on-device AI judge.** Drop in a local LLM (Gemma 3 4B via LlamaSharp) to sharpen the keyword scoring with a second opinion — entirely offline. Without it, jobfinder falls back to transparent keyword ranking.
 
 ---

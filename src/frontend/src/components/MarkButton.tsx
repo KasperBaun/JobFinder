@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { setMark } from '../api/client'
 import type { MarkRequest, RunDetail } from '../api/types'
 import { MarkWhy } from './MarkWhy'
+import { useT } from '../i18n'
 
 type MarkValue = 'good' | 'bad' | undefined
 
@@ -25,13 +26,8 @@ function nextState(value: MarkValue): MarkValue {
   return undefined
 }
 
-const TOOLTIPS: Record<'unset' | 'good' | 'bad', string> = {
-  unset: 'Rate this job. Your ratings help jobfinder find better jobs next time. Click for a good match.',
-  good:  'Marked as a Good match. Click to flip to Not a match.',
-  bad:   'Marked as Not a match. Click to clear the rating.',
-}
-
 export function MarkButton({ runId, listingId, current, reason, compact }: Props) {
+  const t = useT('listing')
   const [optimistic, setOptimistic] = useState<MarkValue>(current)
   const [error, setError] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -44,7 +40,7 @@ export function MarkButton({ runId, listingId, current, reason, compact }: Props
     mutationFn: async (payload: MarkPayload) => {
       const req: MarkRequest = { runId, listingId, mark: payload.mark ?? null, reason: payload.reason }
       const res = await setMark(req)
-      if (!res.success) throw new Error(res.error ?? 'Mark failed')
+      if (!res.success) throw new Error(res.error ?? t.markFailed)
       return payload
     },
     onSuccess: (payload) => {
@@ -89,9 +85,9 @@ export function MarkButton({ runId, listingId, current, reason, compact }: Props
   }
 
   const label =
-    optimistic === 'good' ? 'Good match' :
-    optimistic === 'bad' ? 'Not a match' :
-    'Rate this job'
+    optimistic === 'good' ? t.markGood :
+    optimistic === 'bad' ? t.markBad :
+    t.markUnset
 
   const cls =
     optimistic === 'good' ? `mark-button mark-button--good${compact ? ' mark-button--compact' : ''}` :
@@ -99,9 +95,9 @@ export function MarkButton({ runId, listingId, current, reason, compact }: Props
     `mark-button${compact ? ' mark-button--compact' : ''}`
 
   const tooltip =
-    optimistic === 'good' ? TOOLTIPS.good :
-    optimistic === 'bad' ? TOOLTIPS.bad :
-    TOOLTIPS.unset
+    optimistic === 'good' ? t.markTooltip.good :
+    optimistic === 'bad' ? t.markTooltip.bad :
+    t.markTooltip.unset
 
   return (
     <div className="mark-button-wrap">
