@@ -1,9 +1,17 @@
 import { common } from './common'
+import { home } from './home'
 import { nav } from './nav'
+import { search } from './search'
+import { setup } from './setup'
+import { skillset } from './skillset'
 
 export const en = {
   common,
+  home,
   nav,
+  search,
+  setup,
+  skillset,
 }
 
 /**
