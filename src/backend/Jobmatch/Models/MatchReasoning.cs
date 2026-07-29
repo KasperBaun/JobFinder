@@ -8,4 +8,6 @@ public sealed record MatchReasoning(
     bool? LocationMatch,
     bool? RemoteMatch,
     IReadOnlyList<string> DisqualifierHits,
-    string Notes);
+    string Notes,
+    // Structured form of Notes. Optional and trailing so runs recorded before it deserialize.
+    IReadOnlyList<ReasoningNote>? NoteKeys = null);

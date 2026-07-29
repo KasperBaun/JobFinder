@@ -1,3 +1,5 @@
+using Jobmatch.Models;
+
 namespace Jobmatch.Search;
 
 /// <summary>
@@ -17,4 +19,6 @@ public sealed record ListingMatch(
     IReadOnlyList<string> PrimaryStackHits,
     IReadOnlyList<string> SecondaryStackHits,
     string? PortalDisplayName = null,
-    bool FavoriteCompany = false);
+    bool FavoriteCompany = false,
+    // Structured rationale; Reasoning stays populated as the English fallback for older runs.
+    IReadOnlyList<ReasoningNote>? ReasoningNotes = null);

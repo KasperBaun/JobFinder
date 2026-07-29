@@ -12,7 +12,7 @@ import {
   type LonglistFilters,
 } from '../components/longlist/filterState'
 import { formatAbsolute, formatRelative, formatStepDuration } from '../utils/time'
-import { dec, useT } from '../i18n'
+import { dec, serverText, useT } from '../i18n'
 import { isTerminalState } from '../api/types'
 import type {
   DropReason,
@@ -541,13 +541,14 @@ function DroppedTab({ data }: { data: RunDetail }) {
 
 function DroppedRow({ entry }: { entry: DroppedEntry }) {
   const t = useT('history')
+  const s = useT('server')
   return (
     <tr>
       <td>{entry.title}</td>
       <td>{entry.company ?? <span className="muted">—</span>}</td>
       <td className="tabular mono">{dec(entry.score, 2)}</td>
       <td><span className={`reason-badge reason-badge--${entry.reason}`}>{t.dropReason[entry.reason]}</span></td>
-      <td className="muted">{entry.context}</td>
+      <td className="muted">{serverText(s.dropContext, entry.reason, entry.contextArgs, entry.context ?? '')}</td>
     </tr>
   )
 }
@@ -579,6 +580,7 @@ function LonglistView({ data }: { data: RunDetail }) {
 }
 
 function TimelineList({ data }: { data: RunDetail }) {
+  const s = useT('server')
   if (!data.timeline || data.timeline.length === 0) return null
   return (
     <ol className="timeline">
@@ -587,7 +589,7 @@ function TimelineList({ data }: { data: RunDetail }) {
           <span className="timeline__time tabular mono" title={formatAbsolute(ev.timestamp)}>
             {formatRelative(ev.timestamp)}
           </span>
-          <span className="timeline__msg">{ev.message}</span>
+          <span className="timeline__msg">{serverText(s.timeline, ev.messageKey, ev.args, ev.message)}</span>
         </li>
       ))}
     </ol>

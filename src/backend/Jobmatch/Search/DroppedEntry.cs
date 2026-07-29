@@ -12,4 +12,7 @@ public sealed record DroppedEntry(
     string? Company,
     double Score,
     string Reason,
-    string? Context);
+    string? Context,
+    // Values Context interpolates, so the GUI can render the explanation in the user's language.
+    // Reason is already the message key. Optional and trailing for runs recorded before this.
+    IReadOnlyDictionary<string, object>? ContextArgs = null);

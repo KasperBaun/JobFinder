@@ -6,6 +6,9 @@ export type WhoamiResponse = {
 
 export type ProviderType = 'api' | 'rss' | 'html' | 'manual' | 'teamtailor' | 'hrmanager'
 
+/** A backend message as a stable key plus the values it interpolates — rendered by the i18n catalog. */
+export type ReasoningNote = { key: string; args?: Record<string, unknown> }
+
 export type ProviderSummary = {
   id: number
   name: string
@@ -192,7 +195,9 @@ export type ListingMatch = {
   url: string
   postedAt?: string
   score: number
+  /** English prose. Kept as the fallback for runs recorded before `reasoningNotes` existed. */
   reasoning: string
+  reasoningNotes?: ReasoningNote[]
   primaryStackHits: string[]
   secondaryStackHits: string[]
   favoriteCompany?: boolean
@@ -231,7 +236,10 @@ export type JobSearchEvent = {
   timestamp: string
   level: 'info' | 'warn' | 'error'
   phase: JobSearchPhase
+  /** English prose. Kept as the fallback for runs recorded before `messageKey` existed. */
   message: string
+  messageKey?: string
+  args?: Record<string, unknown>
   provider?: string
   count?: number
   durationMs?: number
@@ -346,7 +354,9 @@ export type DroppedEntry = {
   company?: string
   score: number
   reason: DropReason
+  /** English prose. Kept as the fallback for runs recorded before `contextArgs` existed. */
   context?: string
+  contextArgs?: Record<string, unknown>
 }
 
 export type ApplicationStatus = 'applied' | 'interview' | 'offer' | 'rejected' | 'no-response'

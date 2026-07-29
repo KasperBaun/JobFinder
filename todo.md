@@ -4,17 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Localize backend-generated prose (follow-up to R-103).** The GUI is fully
-  Danish, but free-form strings the backend composes still render English:
-  `JobSearchEvent.Message` (`Jobs/JobSearch.cs`, `Jobmatch.Api/Jobs/SearchJob.cs`),
-  `Ranker.BuildNotes` → `MatchReasoning.Notes`, `ClassifyDrop`'s `Context`
-  (`Search/SearchService.Ranking.cs`), `FriendlyError`, `SourceDetectionService`
-  summaries, and exception messages via `HandlerBase.MapException`. The fix is to emit
-  a stable message key plus structured args alongside the existing English text and let
-  the frontend format it — which also makes *existing* history retranslate when the user
-  switches language, since the timeline is persisted per run. Keep `Message` populated
-  for logs and for runs recorded before the change. Note `Ranker.cs` is already over the
-  300-line limit, so the notes refactor should split it into a partial.
 - **Localize `top-jobs.md` and the verification report.** Both are written server-side,
   so they need a C#-side message table rather than the frontend catalog. Only worth doing
   if users actually open the generated markdown.
