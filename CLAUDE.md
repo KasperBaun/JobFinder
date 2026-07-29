@@ -131,6 +131,11 @@ returns the namespace object, so call sites are property accesses, not string ke
   what logs, `top-jobs.md` and runs recorded before the keys show. **Keys are persisted in
   run history, so they are additive only: never rename or repurpose one.** Add a key to
   both `en/server.ts` and `da/server.ts` in the same change.
+- **The English wording exists twice on purpose** — `Ranker.Notes.cs` renders `top-jobs.md`
+  and the persisted prose, `i18n/en/server.ts` renders the UI. They cannot both be dropped,
+  so `src/tests/fixtures/reasoning-en.json` pins them: a C# test and a Vitest test assert
+  the *same* entries, and changing one implementation alone fails a test. Edit the fixture
+  and both sides together.
 - **Still English:** API error messages, `top-jobs.md`, the verification report, and
   LLM-generated text.
 - Brand names (`utils/platform.ts` ATS labels) and wire formats (the longlist URL hash)
