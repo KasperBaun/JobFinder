@@ -9,6 +9,7 @@ type Locale = 'en' | 'da'
 // the startup-error window the one screen that switches language.
 const STRINGS = {
   en: {
+    htmlLang: 'en',
     errorWindowTitle: 'Jobfinder — startup error',
     errorHeading: 'Jobfinder couldn’t start',
     errorLede: 'The background service failed to launch. Details:',
@@ -25,6 +26,7 @@ const STRINGS = {
     backendNotFound: (exe: string, hint: string) => `Backend not found at:\n${exe}\n\n${hint}`,
   },
   da: {
+    htmlLang: 'da',
     errorWindowTitle: 'Jobfinder — fejl ved opstart',
     errorHeading: 'Jobfinder kunne ikke starte',
     errorLede: 'Baggrundstjenesten kunne ikke startes. Detaljer:',
