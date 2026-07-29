@@ -248,7 +248,9 @@ export function ProvidersPage() {
                 <div className={`provider-tile__health provider-tile__health--${health}`}>
                   <span className="provider-tile__dot" aria-hidden />
                   <span className="provider-tile__health-label">{t.health[health]}</span>
-                  <span className="provider-tile__health-meta">
+                  {/* Ellipsized by design (see .provider-tile__health-meta) — the title keeps the
+                      full text reachable, which matters more in Danish where the labels run longer. */}
+                  <span className="provider-tile__health-meta" title={healthMeta(p, session, t)}>
                     {session?.kind === 'done' ? (
                       session.result.ok
                         ? t.testedOk(session.result.fetchedCount, session.result.durationMs)
@@ -299,6 +301,21 @@ export function ProvidersPage() {
       )}
     </div>
   )
+}
+
+function healthMeta(
+  p: ProviderSummary,
+  session: SessionTest | undefined,
+  t: Messages['providers'],
+): string {
+  if (session?.kind === 'done') {
+    return session.result.ok
+      ? t.testedOk(session.result.fetchedCount, session.result.durationMs)
+      : t.testedFail(session.result.error ?? t.failedShort)
+  }
+  if (isBlocked(p)) return t.blockedMeta
+  if (p.lastFetchedAt) return t.fetchedMeta(formatRelative(p.lastFetchedAt), p.lastFetchCount)
+  return t.neverUsed
 }
 
 function nameById(list: ProviderSummary[] | undefined, id: number): string {
