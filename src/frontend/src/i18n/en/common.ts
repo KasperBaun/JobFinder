@@ -19,4 +19,15 @@ export const common = {
   unknown: 'Unknown',
   enabled: 'Enabled',
   disabled: 'Disabled',
+
+  unsavedChanges: 'Unsaved changes',
+  revert: 'Revert',
+  saveChanges: 'Save changes',
+  typeAndPressEnter: 'Type and press Enter',
+  removeValue: (value: string) => `Remove ${value}`,
+
+  serverDisconnectedTitle: 'Server disconnected',
+  serverDisconnectedBody: 'The jobfinder app is no longer running. You can close this tab.',
+  goodbyeTitle: 'Goodbye',
+  goodbyeBody: 'The jobfinder app has stopped. You can close this tab.',
 }

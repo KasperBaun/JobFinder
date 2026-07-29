@@ -19,4 +19,15 @@ export const common: Messages['common'] = {
   unknown: 'Ukendt',
   enabled: 'Slået til',
   disabled: 'Slået fra',
+
+  unsavedChanges: 'Ugemte ændringer',
+  revert: 'Fortryd',
+  saveChanges: 'Gem ændringer',
+  typeAndPressEnter: 'Skriv og tryk Enter',
+  removeValue: value => `Fjern ${value}`,
+
+  serverDisconnectedTitle: 'Forbindelsen er afbrudt',
+  serverDisconnectedBody: 'Jobfinder kører ikke længere. Du kan lukke denne fane.',
+  goodbyeTitle: 'Farvel',
+  goodbyeBody: 'Jobfinder er stoppet. Du kan lukke denne fane.',
 }
