@@ -109,4 +109,12 @@ public static class Routes
         public const string Status = $"{Base}/status";
         public const string Complete = Base;
     }
+
+    public static class Settings
+    {
+        public const string Tag = "Settings";
+        public const string Base = $"{ApiConstants.RouteBase}/settings";
+        // Reads ride along on Setup.Status, which the GUI already fetches at boot.
+        public const string SetLanguage = $"{Base}/language";
+    }
 }

@@ -20,7 +20,10 @@ public sealed record PortalConfig(
     int Id = 0,
     string? RequiresSecret = null,
     string? DisplayName = null,
-    bool EnrichBody = false);
+    bool EnrichBody = false,
+    // Danish rendering of Notes, shipped alongside it in the catalog. Null for user-added sources,
+    // where the GUI falls back to the English text.
+    string? NotesDa = null);
 
 public sealed record PaginationConfig(
     string Param,

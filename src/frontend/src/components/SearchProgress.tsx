@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getLlmStatus } from '../api/client'
 import { isTerminalState } from '../api/types'
 import type { JobSearch } from '../api/types'
-import { PHASE_LABEL, STATE_LABEL } from '../utils/searchLabels'
+import { useT } from '../i18n'
 import { buildRows, countSources, reached } from '../utils/progress'
 import { PipelineSteps } from './PipelineSteps'
 import { ProgressSummary } from './ProgressSummary'
@@ -22,6 +22,7 @@ type Props = {
 // (always visible), then the dense source grid and the collapsed activity log (behind the steps
 // toggle). Owns the row/count derivation so the children stay presentational.
 export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onToggleSteps }: Props) {
+  const t = useT('search')
   const llmQuery = useQuery({ queryKey: ['llm-status'], queryFn: getLlmStatus, refetchOnWindowFocus: false })
   const aiEnabled = !!llmQuery.data?.enabled && !!llmQuery.data?.modelPresent
 
@@ -29,8 +30,8 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
   const counts = useMemo(() => countSources(rows), [rows])
 
   const active = !isTerminalState(job.state)
-  const statusBadge = isTerminalState(job.state) ? STATE_LABEL[job.state] : null
-  const phaseLabel = statusBadge ?? PHASE_LABEL[job.phase]
+  const statusBadge = isTerminalState(job.state) ? t.state[job.state] : null
+  const phaseLabel = statusBadge ?? t.phase[job.phase]
   const showDedupe = job.dedupedCount > 0 || reached(job.phase, 'deduping')
   const showRank = job.rankedCount > 0 || reached(job.phase, 'ranking')
 
@@ -39,10 +40,10 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
       <div className="progress-panel__head">
         <h2 className="progress-panel__heading">
           {phaseLabel}
-          {job.attempt > 1 && !statusBadge && <span className="muted"> · attempt {job.attempt}</span>}
+          {job.attempt > 1 && !statusBadge && <span className="muted">{t.attempt(job.attempt)}</span>}
         </h2>
         <button type="button" className="link-button" onClick={onToggleSteps}>
-          {stepsOpen ? 'hide steps ▴' : 'show steps ▾'}
+          {stepsOpen ? t.hideSteps : t.showSteps}
         </button>
       </div>
 
@@ -72,7 +73,7 @@ export function SearchProgress({ job, providerNames, succeeded, stepsOpen, onTog
       )}
 
       {job.state === 'failed' && job.error && (
-        <div className="error-banner">Search failed: {job.error}</div>
+        <div className="error-banner">{t.searchFailed(job.error)}</div>
       )}
     </section>
   )

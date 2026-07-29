@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { t } from './strings'
 
 const BACKEND_EXE = process.platform === 'win32' ? 'Jobmatch.Host.exe' : 'Jobmatch.Host'
 
@@ -16,10 +17,9 @@ export function backendDir(): string {
 export function backendExePath(): string {
   const exe = path.join(backendDir(), BACKEND_EXE)
   if (!fs.existsSync(exe)) {
-    const hint = app.isPackaged
-      ? 'The install looks incomplete — reinstall Jobfinder.'
-      : 'Run "npm run publish:backend" from the repo root first.'
-    throw new Error(`Backend not found at:\n${exe}\n\n${hint}`)
+    const s = t()
+    const hint = app.isPackaged ? s.installIncomplete : s.publishBackendFirst
+    throw new Error(s.backendNotFound(exe, hint))
   }
   return exe
 }

@@ -1,6 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getSetupStatus } from './api/client'
+import { useT } from './i18n'
 import { useServerConnection } from './hooks/useServerConnection'
 import { ServerDisconnectedOverlay } from './components/ServerDisconnectedOverlay'
 import { TopNav } from './components/TopNav'
@@ -17,12 +18,13 @@ import { SetupPage } from './pages/SetupPage'
 import { ClosedPage } from './pages/ClosedPage'
 
 function NotFoundPage() {
+  const t = useT('nav')
   return (
     <div className="page-error">
       <h1 className="page-error__heading">404</h1>
-      <p>Page not found.</p>
+      <p>{t.notFoundBody}</p>
       <Link to="/" className="btn btn--primary page-error__home-link">
-        Go home
+        {t.goHome}
       </Link>
     </div>
   )

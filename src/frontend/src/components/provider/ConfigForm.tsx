@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { setProviderConfig } from '../../api/client'
 import type { ProviderConfigUpdate, ProviderConfigView } from '../../api/types'
 import { Toggle } from '../Toggle'
+import { useT } from '../../i18n'
 
 // Editable per-user override of a source's fetch knobs. Inputs start from the effective values; Save
 // persists any that differ from the catalog default, Reset clears every override. Pagination knobs are
@@ -18,6 +19,8 @@ export function ConfigForm({
   onSaved: () => void
   onError: (message: string) => void
 }) {
+  const t = useT('providers')
+  const common = useT('common')
   const [maxPages, setMaxPages] = useState(config.maxPages != null ? String(config.maxPages) : '')
   const [pageSize, setPageSize] = useState(config.pageSize != null ? String(config.pageSize) : '')
   const [rate, setRate] = useState(String(config.rateLimitRps))
@@ -26,7 +29,7 @@ export function ConfigForm({
   const save = useMutation({
     mutationFn: (update: ProviderConfigUpdate) => setProviderConfig(providerId, update),
     onSuccess: (res) => {
-      if (!res.success) onError(res.error ?? 'Save failed')
+      if (!res.success) onError(res.error ?? t.saveFailed)
       else onSaved()
     },
     onError: (e) => onError(e instanceof Error ? e.message : String(e)),
@@ -61,17 +64,14 @@ export function ConfigForm({
 
   return (
     <section className="card">
-      <h2 className="card__title">Configuration</h2>
-      <p className="field__hint">
-        Overrides are saved on this computer and apply to searches and tests. Raise the ceiling to pull more;
-        Reset restores the shipped defaults.
-      </p>
+      <h2 className="card__title">{t.configurationTitle}</h2>
+      <p className="field__hint">{t.configurationHint}</p>
 
       <div className="provider-detail__form">
         {config.paginates && (
           <>
             <NumberField
-              label="Max pages"
+              label={t.maxPages}
               value={maxPages}
               onChange={setMaxPages}
               defaultValue={config.defaults.maxPages}
@@ -79,7 +79,7 @@ export function ConfigForm({
               min={1}
             />
             <NumberField
-              label="Page size"
+              label={t.pageSize}
               value={pageSize}
               onChange={setPageSize}
               defaultValue={config.defaults.pageSize}
@@ -89,7 +89,7 @@ export function ConfigForm({
           </>
         )}
         <NumberField
-          label="Rate limit (req/sec)"
+          label={t.rateLimitField}
           value={rate}
           onChange={setRate}
           defaultValue={config.defaults.rateLimitRps}
@@ -99,22 +99,22 @@ export function ConfigForm({
         />
         <div className="field">
           <label className="field__label">
-            Full descriptions
-            {config.enrichBodyOverridden && <span className="provider-config-overridden"> · custom</span>}
+            {t.fullDescriptions}
+            {config.enrichBodyOverridden && <span className="provider-config-overridden">{t.custom}</span>}
           </label>
           <Toggle
             checked={enrich}
             onChange={setEnrich}
-            label={enrich ? 'On' : 'Off'}
-            ariaLabel="body enrichment"
+            label={enrich ? t.on : t.off}
+            ariaLabel={t.bodyEnrichmentAria}
           />
-          <span className="field__hint">Default: {config.defaults.enrichBody ? 'On' : 'Off'}. On is slower but gives the ranker each listing’s full text.</span>
+          <span className="field__hint">{t.enrichHint(config.defaults.enrichBody ? t.on : t.off)}</span>
         </div>
       </div>
 
       <div className="add-source__actions" style={{ marginTop: 'var(--space-4)' }}>
         <button type="button" className="btn btn--primary btn--sm" disabled={save.isPending} onClick={onSave}>
-          {save.isPending ? <span className="spinner" /> : 'Save'}
+          {save.isPending ? <span className="spinner" /> : common.save}
         </button>
         <button
           type="button"
@@ -122,7 +122,7 @@ export function ConfigForm({
           disabled={save.isPending || !anyOverridden}
           onClick={onReset}
         >
-          Reset to defaults
+          {t.resetToDefaults}
         </button>
       </div>
     </section>
@@ -146,11 +146,12 @@ function NumberField({
   min: number
   step?: number
 }) {
+  const { custom, defaultIs } = useT('providers')
   return (
     <div className="field">
       <label className="field__label">
         {label}
-        {overridden && <span className="provider-config-overridden"> · custom</span>}
+        {overridden && <span className="provider-config-overridden">{custom}</span>}
       </label>
       <input
         className="input input--narrow"
@@ -160,7 +161,7 @@ function NumberField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-      {defaultValue != null && <span className="field__hint">Default: {defaultValue}</span>}
+      {defaultValue != null && <span className="field__hint">{defaultIs(defaultValue)}</span>}
     </div>
   )
 }

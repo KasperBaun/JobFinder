@@ -7,6 +7,7 @@ public sealed record SetupStatusResponse(
     string? DataDir,
     string SuggestedEmail,
     string SuggestedDataDir,
-    string BootstrapPath);
+    string BootstrapPath,
+    string? Language);
 
-public sealed record SetupRequest(string? Email, string? DataDir);
+public sealed record SetupRequest(string? Email, string? DataDir, string? Language = null);

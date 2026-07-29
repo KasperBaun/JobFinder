@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { ProviderRowState } from '../utils/progress'
 import { formatStepDuration } from '../utils/time'
+import { useT } from '../i18n'
+import type { Messages } from '../i18n'
 
 type Props = {
   rows: ProviderRowState[]
@@ -8,12 +10,12 @@ type Props = {
   linkable: boolean
 }
 
-function statusText(row: ProviderRowState): string {
+function statusText(row: ProviderRowState, t: Messages['providers']): string {
   switch (row.status) {
     case 'ok': return String(row.fetchedCount ?? 0)
-    case 'running': return 'running'
-    case 'failed': return 'failed'
-    default: return 'pending'
+    case 'running': return t.gridRunning
+    case 'failed': return t.gridFailed
+    default: return t.gridPending
   }
 }
 
@@ -21,6 +23,7 @@ function statusText(row: ProviderRowState): string {
 // ~one screen instead of five. Completed sources link through to their raw listings once the run
 // succeeds; failed cells are tinted and show the error on hover.
 export function SourceGrid({ rows, runId, linkable }: Props) {
+  const t = useT('providers')
   return (
     <div className="source-grid">
       {rows.map(row => {
@@ -33,12 +36,12 @@ export function SourceGrid({ rows, runId, linkable }: Props) {
             {(row.hitPageCap || row.possiblyCapped) && row.status === 'ok' && (
               <span
                 className="source-cell__cap"
-                title={row.hitPageCap ? 'Hit its page cap — there may be more' : 'Returned exactly its configured limit — may be more'}
+                title={row.hitPageCap ? t.gridCappedHard : t.gridCappedSoft}
               >
-                ⚠ capped
+                {t.gridCapped}
               </span>
             )}
-            <span className="source-cell__count tabular mono">{statusText(row)}</span>
+            <span className="source-cell__count tabular mono">{statusText(row, t)}</span>
             {row.durationMs != null && (
               <span className="source-cell__dur mono">{formatStepDuration(row.durationMs)}</span>
             )}
@@ -54,7 +57,7 @@ export function SourceGrid({ rows, runId, linkable }: Props) {
             {body}
           </Link>
         ) : (
-          <div key={row.name} className={cls} title={row.status === 'failed' ? (row.error ?? 'failed') : row.name}>
+          <div key={row.name} className={cls} title={row.status === 'failed' ? (row.error ?? t.gridFailed) : row.name}>
             {body}
           </div>
         )
