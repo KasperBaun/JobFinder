@@ -1,7 +1,7 @@
 import type { ApplicationStatus, ListingMatch } from '../api/types'
 import { MarkButton } from './MarkButton'
 import { StatusSelect } from './StatusSelect'
-import { dec, useT } from '../i18n'
+import { dec, serverText, useT } from '../i18n'
 
 interface Props {
   match: ListingMatch
@@ -18,9 +18,14 @@ const LEGACY_FAVORITE_NOTE = /One of your favorite companies \([^)]*\) — ratin
 
 export function ListingCard({ match, runId, mark, markReason, markStatus }: Props) {
   const t = useT('listing')
+  const s = useT('server')
   const subline = [match.company, match.location].filter(Boolean).join(' · ')
   const favorite = match.favoriteCompany || LEGACY_FAVORITE_NOTE.test(match.reasoning)
-  const reasoning = match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
+  // Runs ranked before the notes were structured carry only prose, so fall back to it (and to the
+  // legacy-badge strip). Newer runs re-render in whatever language is active, including old history.
+  const reasoning = match.reasoningNotes
+    ? match.reasoningNotes.map(note => serverText(s.reasoning, note.key, note.args, '')).filter(Boolean).join(' ')
+    : match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
   return (
     <article className="listing-card">
       <header className="listing-card__header">

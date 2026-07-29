@@ -123,11 +123,16 @@ returns the namespace object, so call sites are property accesses, not string ke
 - **The language lives in `bootstrap.json`** (`BootstrapConfig.Language`, set via the
   setup request or `PUT /api/settings/language`), with a `localStorage` copy used only as
   a boot hint so reloads don't flash English.
-- **Backend prose is deliberately not localized yet** — run timeline entries, ranking
-  rationale, dropped-listing context, API error messages, `top-jobs.md` and LLM output
-  stay English and render as-is. Converting them to `key + args` so the frontend formats
-  them (which would also retranslate existing history) is in `todo.md`; don't
-  half-migrate it.
+- **Backend prose travels as `key + args`, never as finished sentences.** Timeline entries
+  (`Jobs/JobSearch.cs`, `Jobmatch.Api/Jobs/SearchJob.Events.cs`), match rationale
+  (`Ranking/Ranker.Notes.cs`) and drop reasons (`Search/SearchService.Ranking.cs`) emit a
+  stable key plus the values it interpolates; the frontend's `server` namespace owns the
+  wording. Each also keeps its English string (`Message`, `Notes`, `Context`) — that is
+  what logs, `top-jobs.md` and runs recorded before the keys show. **Keys are persisted in
+  run history, so they are additive only: never rename or repurpose one.** Add a key to
+  both `en/server.ts` and `da/server.ts` in the same change.
+- **Still English:** API error messages, `top-jobs.md`, the verification report, and
+  LLM-generated text.
 - Brand names (`utils/platform.ts` ATS labels) and wire formats (the longlist URL hash)
   are intentionally untranslated.
 
