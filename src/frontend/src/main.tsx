@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
 import { SearchRunProvider } from './context/SearchRunContext'
 import { I18nProvider } from './i18n'
+import { LanguageSync } from './i18n/LanguageSync'
 import './css/base.css'
 import './css/components.css'
 
@@ -24,6 +25,7 @@ createRoot(rootEl).render(
   <StrictMode>
     <I18nProvider>
       <QueryClientProvider client={queryClient}>
+        <LanguageSync />
         <SearchRunProvider>
           <BrowserRouter>
             <App />

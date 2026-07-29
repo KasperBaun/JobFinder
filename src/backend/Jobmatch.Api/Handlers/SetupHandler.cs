@@ -26,7 +26,7 @@ public sealed class SetupHandler(IUserContextProvider provider, ILogger<SetupHan
             if (request is null)
                 throw new InvalidRequestException("A setup request body is required.");
 
-            provider.Complete(request.Email, request.DataDir);
+            provider.Complete(request.Email, request.DataDir, request.Language);
             return Task.FromResult<IResult>(Results.Ok(ToResponse(provider.State())));
         });
 
@@ -37,5 +37,6 @@ public sealed class SetupHandler(IUserContextProvider provider, ILogger<SetupHan
         DataDir: state.DataDir,
         SuggestedEmail: state.SuggestedEmail,
         SuggestedDataDir: state.SuggestedDataDir,
-        BootstrapPath: state.BootstrapPath);
+        BootstrapPath: state.BootstrapPath,
+        Language: state.Language);
 }

@@ -15,6 +15,8 @@ export type ProviderSummary = {
   endpoint?: string
   rateLimitRps: number
   notes?: string
+  /** Danish rendering of `notes`, shipped in the catalog. Absent for user-added sources. */
+  notesDa?: string
   lastFetchedAt?: string
   lastFetchCount?: number
   requiresSecret?: string
@@ -408,6 +410,12 @@ export type SetupStatusResponse = {
   suggestedEmail: string
   suggestedDataDir: string
   bootstrapPath: string
+  /** Persisted interface language; null until the user has made a choice. */
+  language: string | null
 }
 
-export type SetupRequest = { email: string; dataDir: string }
+export type SetupRequest = { email: string; dataDir: string; language?: string }
+
+export type SetLanguageRequest = { language: string }
+
+export type LanguageResponse = { language: string }
