@@ -12,7 +12,7 @@ import {
   type LonglistFilters,
 } from '../components/longlist/filterState'
 import { formatAbsolute, formatRelative, formatStepDuration } from '../utils/time'
-import { STATE_LABEL } from '../utils/searchLabels'
+import { dec, useT } from '../i18n'
 import { isTerminalState } from '../api/types'
 import type {
   DropReason,
@@ -23,10 +23,11 @@ import type {
 
 function StateBadge({ state }: { state?: JobSearchState }) {
   const s = state ?? 'succeeded'
-  return <span className={`state-badge state-badge--${s}`}>{STATE_LABEL[s]}</span>
+  return <span className={`state-badge state-badge--${s}`}>{useT('search').state[s]}</span>
 }
 
 function HistoryListView() {
+  const t = useT('history')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({
@@ -78,11 +79,7 @@ function HistoryListView() {
       setSelected(new Set())
       void queryClient.invalidateQueries({ queryKey: ['history'] })
       void queryClient.invalidateQueries({ queryKey: ['applications'] })
-      const skipped = res.missing.length
-      const msg = skipped > 0
-        ? `Deleted ${res.deleted} search${res.deleted === 1 ? '' : 'es'} (${skipped} skipped)`
-        : `Deleted ${res.deleted} search${res.deleted === 1 ? '' : 'es'}`
-      setToast({ kind: 'ok', message: msg })
+      setToast({ kind: 'ok', message: t.deleted(res.deleted, res.missing.length) })
     },
     onError: (err) => {
       setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
@@ -105,13 +102,7 @@ function HistoryListView() {
 
   function onDeleteClick() {
     if (selected.size === 0) return
-    const count = selected.size
-    const ok = window.confirm(
-      count === 1
-        ? 'Delete this search? Your ratings will also be removed. This cannot be undone.'
-        : `Delete ${count} searches? Your ratings will also be removed. This cannot be undone.`,
-    )
-    if (!ok) return
+    if (!window.confirm(t.deleteConfirm(selected.size))) return
     deleteMutation.mutate(Array.from(selected))
   }
 
@@ -120,30 +111,30 @@ function HistoryListView() {
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
       <header className="page__header">
-        <div className="page__eyebrow">04 / history</div>
-        <h1 className="page__heading">Past <em>searches</em></h1>
-        <p className="page__lede">Every search you've run, with the top jobs and your ratings kept.</p>
+        <div className="page__eyebrow">{t.eyebrow}</div>
+        <h1 className="page__heading">{t.heading()}</h1>
+        <p className="page__lede">{t.lede}</p>
       </header>
 
-      {isLoading && <div className="muted">Loading history…</div>}
-      {error && <div className="error-text">Failed to load history.</div>}
+      {isLoading && <div className="muted">{t.loading}</div>}
+      {error && <div className="error-text">{t.loadFailed}</div>}
 
       {data && data.runs.length === 0 && (
-        <div className="hint-card">No searches yet. Start one from the <Link to="/search">Search</Link> page.</div>
+        <div className="hint-card">{t.noneYet} <Link to="/search">{t.noneYetLink}</Link>{t.noneYetSuffix}</div>
       )}
 
       {data && data.runs.length > 0 && (
         <>
           {selected.size > 0 && (
-            <div className="selection-bar" role="region" aria-label="Selection actions">
-              <span className="selection-bar__count">{selected.size} selected</span>
+            <div className="selection-bar" role="region" aria-label={t.selectionAria}>
+              <span className="selection-bar__count">{t.selectedCount(selected.size)}</span>
               <button
                 type="button"
                 className="btn btn--small"
                 onClick={() => setSelected(new Set())}
                 disabled={deleteMutation.isPending}
               >
-                Clear
+                {t.clearSelection}
               </button>
               <button
                 type="button"
@@ -151,7 +142,7 @@ function HistoryListView() {
                 onClick={onDeleteClick}
                 disabled={deleteMutation.isPending}
               >
-                {deleteMutation.isPending ? 'Deleting…' : 'Delete selected'}
+                {deleteMutation.isPending ? t.deleting : t.deleteSelected}
               </button>
             </div>
           )}
@@ -164,18 +155,18 @@ function HistoryListView() {
                     <input
                       ref={headerCheckboxRef}
                       type="checkbox"
-                      aria-label={allSelected ? 'Deselect all searches' : 'Select all searches'}
+                      aria-label={allSelected ? t.deselectAll : t.selectAll}
                       checked={allSelected}
                       onChange={toggleAll}
                     />
                   </th>
-                  <th>When</th>
-                  <th>Status</th>
-                  <th>Sources</th>
-                  <th>Fetched</th>
-                  <th>Top jobs</th>
-                  <th>Best rating</th>
-                  <th>Good matches</th>
+                  <th>{t.colWhen}</th>
+                  <th>{t.colStatus}</th>
+                  <th>{t.colSources}</th>
+                  <th>{t.colFetched}</th>
+                  <th>{t.colTopJobs}</th>
+                  <th>{t.colBestRating}</th>
+                  <th>{t.colGoodMatches}</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,7 +187,7 @@ function HistoryListView() {
                       >
                         <input
                           type="checkbox"
-                          aria-label={`Select search from ${formatAbsolute(run.startedAt)}`}
+                          aria-label={t.selectRow(formatAbsolute(run.startedAt))}
                           checked={isSelected}
                           onChange={() => toggleRow(run.runId)}
                           onClick={e => e.stopPropagation()}
@@ -215,7 +206,7 @@ function HistoryListView() {
                       </td>
                       <td className="tabular">{run.fetchedCount}</td>
                       <td className="tabular">{run.shortlistCount}</td>
-                      <td className="tabular mono">{run.topScore.toFixed(2)}</td>
+                      <td className="tabular mono">{dec(run.topScore, 2)}</td>
                       <td>
                         <div className="marks-cell">
                           <span>{run.goodMarks} / {run.shortlistCount}</span>
@@ -271,10 +262,11 @@ function ResultsToggle({
   onChange: (tab: TabKey) => void
   data: RunDetail
 }) {
+  const t = useT('history')
   const longlistCount = data.scored?.length
   const longlistAvailable = !!data.scored
   return (
-    <div className="view-toggle" role="tablist" aria-label="Result view">
+    <div className="view-toggle" role="tablist" aria-label={t.resultViewAria}>
       <button
         type="button"
         role="tab"
@@ -282,7 +274,7 @@ function ResultsToggle({
         className={`view-toggle__seg ${active === 'shortlist' ? 'view-toggle__seg--active' : ''}`}
         onClick={() => onChange('shortlist')}
       >
-        Top jobs <span className="view-toggle__count">{data.shortlist.length}</span>
+        {t.tabTopJobs} <span className="view-toggle__count">{data.shortlist.length}</span>
       </button>
       <button
         type="button"
@@ -291,9 +283,9 @@ function ResultsToggle({
         className={`view-toggle__seg ${active === 'longlist' ? 'view-toggle__seg--active' : ''}`}
         onClick={() => longlistAvailable && onChange('longlist')}
         disabled={!longlistAvailable}
-        title={longlistAvailable ? 'All rated jobs — including those outside the top' : 'Not recorded for this search.'}
+        title={longlistAvailable ? t.tabAllRatedTitle : t.notRecorded}
       >
-        All rated {longlistCount !== undefined && <span className="view-toggle__count">{longlistCount}</span>}
+        {t.tabAllRated} {longlistCount !== undefined && <span className="view-toggle__count">{longlistCount}</span>}
       </button>
     </div>
   )
@@ -308,25 +300,26 @@ function AuditTabs({
   onChange: (tab: TabKey) => void
   data: RunDetail
 }) {
+  const t = useT('history')
   const tabs: { key: TabKey; label: string; count?: number; available: boolean }[] = [
-    { key: 'raw',     label: 'all fetched', count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
-    { key: 'dedupe',  label: 'duplicates',  count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
-    { key: 'dropped', label: 'removed',     count: data.dropped?.length, available: !!data.dropped },
+    { key: 'raw',     label: t.tabRaw,     count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
+    { key: 'dedupe',  label: t.tabDedupe,  count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
+    { key: 'dropped', label: t.tabDropped, count: data.dropped?.length, available: !!data.dropped },
   ]
   return (
-    <nav className="audit-tabs" aria-label="Details">
-      <span className="audit-tabs__label">show:</span>
-      {tabs.map(t => (
+    <nav className="audit-tabs" aria-label={t.detailsAria}>
+      <span className="audit-tabs__label">{t.showLabel}</span>
+      {tabs.map(tab => (
         <button
-          key={t.key}
+          key={tab.key}
           type="button"
-          className={`audit-tab ${active === t.key ? 'audit-tab--active' : ''} ${!t.available ? 'audit-tab--disabled' : ''}`}
-          onClick={() => t.available && onChange(t.key)}
-          disabled={!t.available}
-          title={t.available ? '' : 'Not recorded for this search.'}
+          className={`audit-tab ${active === tab.key ? 'audit-tab--active' : ''} ${!tab.available ? 'audit-tab--disabled' : ''}`}
+          onClick={() => tab.available && onChange(tab.key)}
+          disabled={!tab.available}
+          title={tab.available ? '' : t.notRecorded}
         >
-          {t.label}
-          {t.count !== undefined && <span className="audit-tab__count">{t.count}</span>}
+          {tab.label}
+          {tab.count !== undefined && <span className="audit-tab__count">{tab.count}</span>}
         </button>
       ))}
     </nav>
@@ -334,12 +327,13 @@ function AuditTabs({
 }
 
 function ShortlistTab({ data }: { data: RunDetail }) {
+  const t = useT('history')
   return (
     <section className="results">
       <h2 className="results__heading">
-        Top jobs <span className="muted serif" style={{ fontStyle: 'italic' }}>({data.shortlist.length})</span>
+        {t.tabTopJobs} <span className="muted serif" style={{ fontStyle: 'italic' }}>({data.shortlist.length})</span>
       </h2>
-      {data.shortlist.length === 0 && <div className="muted">No top jobs in this search.</div>}
+      {data.shortlist.length === 0 && <div className="muted">{t.noTopJobs}</div>}
       <div className="listing-list">
         {data.shortlist.map(m => (
           <ListingCard
@@ -357,6 +351,7 @@ function ShortlistTab({ data }: { data: RunDetail }) {
 }
 
 function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?: string }) {
+  const t = useT('history')
   const [open, setOpen] = useState<Set<string>>(() =>
     new Set(focusProvider ? [focusProvider] : data.raw?.map(p => p.provider) ?? [])
   )
@@ -373,7 +368,7 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
   }, [focusProvider])
 
   if (!data.raw) {
-    return <div className="muted">No fetched jobs recorded for this search.</div>
+    return <div className="muted">{t.noRawRecorded}</div>
   }
   const durationByProvider = new Map(data.providers.map(p => [p.name, p.durationMs]))
   return (
@@ -413,11 +408,11 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Company</th>
-                      <th>Location</th>
-                      <th>Posted</th>
-                      <th>Url</th>
+                      <th>{t.colTitle}</th>
+                      <th>{t.colCompany}</th>
+                      <th>{t.colLocation}</th>
+                      <th>{t.colPosted}</th>
+                      <th>{t.colUrl}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -429,7 +424,7 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
                         <td className="tabular mono">
                           {l.postedAt ? formatRelative(l.postedAt) : <span className="muted">—</span>}
                         </td>
-                        <td><a href={l.url} target="_blank" rel="noreferrer">open ↗</a></td>
+                        <td><a href={l.url} target="_blank" rel="noreferrer">{t.openListing}</a></td>
                       </tr>
                     ))}
                   </tbody>
@@ -437,7 +432,7 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
               </div>
             )}
             {isOpen && group.listings.length === 0 && (
-              <div className="muted" style={{ padding: '0.5rem 1rem' }}>0 listings.</div>
+              <div className="muted" style={{ padding: '0.5rem 1rem' }}>{t.zeroListings}</div>
             )}
           </div>
         )
@@ -447,11 +442,12 @@ function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?:
 }
 
 function DedupeTab({ data }: { data: RunDetail }) {
+  const t = useT('history')
   if (!data.dedupeMerges) {
-    return <div className="muted">No duplicate data recorded for this search.</div>
+    return <div className="muted">{t.noDedupeRecorded}</div>
   }
   if (data.dedupeMerges.length === 0) {
-    return <div className="muted">No duplicates were merged in this search.</div>
+    return <div className="muted">{t.noDuplicatesMerged}</div>
   }
   // Build a lookup so we can show titles for canonical / merged listings.
   const titleById = new Map<string, string>()
@@ -463,11 +459,11 @@ function DedupeTab({ data }: { data: RunDetail }) {
       {data.dedupeMerges.map(g => (
         <div key={g.canonicalId} className="dedupe-group">
           <div className="dedupe-group__canonical">
-            <span className="dedupe-group__label">kept</span>
+            <span className="dedupe-group__label">{t.dedupeKept}</span>
             <span className="dedupe-group__title">{titleById.get(g.canonicalId) ?? g.canonicalId}</span>
           </div>
           <div className="dedupe-group__merges">
-            <span className="dedupe-group__label">also seen on {g.mergedFromIds.length}</span>
+            <span className="dedupe-group__label">{t.dedupeAlsoSeen(g.mergedFromIds.length)}</span>
             <ul>
               {g.mergedFromIds.map(id => (
                 <li key={id}>
@@ -483,21 +479,14 @@ function DedupeTab({ data }: { data: RunDetail }) {
 }
 
 
-const REASON_LABELS: Record<DropReason, string> = {
-  disqualifier: 'deal-breaker',
-  below_min_score: 'rating too low',
-  beyond_top_n: 'outside top list',
-  above_max_age: 'too old',
-  missing_required_primary: 'no must-have skill',
-}
-
 function DroppedTab({ data }: { data: RunDetail }) {
+  const t = useT('history')
   const [filter, setFilter] = useState<DropReason | 'all'>('all')
   if (!data.dropped) {
-    return <div className="muted">No removed-job data recorded for this search.</div>
+    return <div className="muted">{t.noDroppedRecorded}</div>
   }
   if (data.dropped.length === 0) {
-    return <div className="muted">Nothing was removed in this search.</div>
+    return <div className="muted">{t.nothingRemoved}</div>
   }
 
   const counts = data.dropped.reduce<Record<string, number>>((acc, d) => {
@@ -515,9 +504,9 @@ function DroppedTab({ data }: { data: RunDetail }) {
           className={`chip ${filter === 'all' ? 'chip--active' : ''}`}
           onClick={() => setFilter('all')}
         >
-          all <span className="tab__count">{data.dropped.length}</span>
+          {t.dropFilterAll} <span className="tab__count">{data.dropped.length}</span>
         </button>
-        {(Object.keys(REASON_LABELS) as DropReason[]).map(r => (
+        {(Object.keys(t.dropReason) as DropReason[]).map(r => (
           counts[r] ? (
             <button
               key={r}
@@ -525,7 +514,7 @@ function DroppedTab({ data }: { data: RunDetail }) {
               className={`chip ${filter === r ? 'chip--active' : ''}`}
               onClick={() => setFilter(r)}
             >
-              {REASON_LABELS[r]} <span className="tab__count">{counts[r]}</span>
+              {t.dropReason[r]} <span className="tab__count">{counts[r]}</span>
             </button>
           ) : null
         ))}
@@ -534,11 +523,11 @@ function DroppedTab({ data }: { data: RunDetail }) {
         <table className="table">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Company</th>
-              <th>Rating</th>
-              <th>Reason</th>
-              <th>Why</th>
+              <th>{t.colTitle}</th>
+              <th>{t.colCompany}</th>
+              <th>{t.colRating}</th>
+              <th>{t.colReason}</th>
+              <th>{t.colWhy}</th>
             </tr>
           </thead>
           <tbody>
@@ -551,12 +540,13 @@ function DroppedTab({ data }: { data: RunDetail }) {
 }
 
 function DroppedRow({ entry }: { entry: DroppedEntry }) {
+  const t = useT('history')
   return (
     <tr>
       <td>{entry.title}</td>
       <td>{entry.company ?? <span className="muted">—</span>}</td>
-      <td className="tabular mono">{entry.score.toFixed(2)}</td>
-      <td><span className={`reason-badge reason-badge--${entry.reason}`}>{REASON_LABELS[entry.reason]}</span></td>
+      <td className="tabular mono">{dec(entry.score, 2)}</td>
+      <td><span className={`reason-badge reason-badge--${entry.reason}`}>{t.dropReason[entry.reason]}</span></td>
       <td className="muted">{entry.context}</td>
     </tr>
   )
@@ -605,6 +595,7 @@ function TimelineList({ data }: { data: RunDetail }) {
 }
 
 function RunDetailView({ runId }: { runId: string }) {
+  const t = useT('history')
   const navigate = useNavigate()
   const location = useLocation()
   const { tab, provider } = useMemo(() => parseHash(location.hash), [location.hash])
@@ -630,13 +621,13 @@ function RunDetailView({ runId }: { runId: string }) {
   return (
     <div className="page page--wide">
       <header className="page__header">
-        <Link to="/history" className="back-link">← back to history</Link>
-        <div className="page__eyebrow">04 / history / detail</div>
-        <h1 className="page__heading">Search <em>detail</em></h1>
+        <Link to="/history" className="back-link">{t.backToHistory}</Link>
+        <div className="page__eyebrow">{t.detailEyebrow}</div>
+        <h1 className="page__heading">{t.detailHeading()}</h1>
       </header>
 
-      {isLoading && <div className="muted">Loading search…</div>}
-      {error && <div className="error-text">Failed to load search.</div>}
+      {isLoading && <div className="muted">{t.detailLoading}</div>}
+      {error && <div className="error-text">{t.detailLoadFailed}</div>}
 
       {data && (
         <>

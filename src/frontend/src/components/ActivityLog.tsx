@@ -1,5 +1,6 @@
 import type { JobSearchEvent } from '../api/types'
 import { formatRelative } from '../utils/time'
+import { useT } from '../i18n'
 
 type Props = { events: JobSearchEvent[] }
 
@@ -7,10 +8,11 @@ type Props = { events: JobSearchEvent[] }
 // play is available for debugging without dominating the card — the source grid + summary already
 // show every source's count and status.
 export function ActivityLog({ events }: Props) {
+  const t = useT('search')
   if (events.length === 0) return null
   return (
     <details className="activity-log">
-      <summary className="activity-log__summary">Activity log ({events.length} events)</summary>
+      <summary className="activity-log__summary">{t.activityLog(events.length)}</summary>
       <div className="activity-log__scroll">
         <ol className="timeline">
           {events.map((ev, i) => (

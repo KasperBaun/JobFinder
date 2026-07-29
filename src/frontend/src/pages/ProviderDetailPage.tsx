@@ -9,8 +9,11 @@ import { OriginPanel } from '../components/provider/OriginPanel'
 import { SecretsCard } from '../components/provider/SecretsCard'
 import { TestPanel } from '../components/provider/TestPanel'
 import { formatRelative } from '../utils/time'
+import { useT } from '../i18n'
 
 export function ProviderDetailPage() {
+  const t = useT('providers')
+  const common = useT('common')
   const { id: idParam } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -35,7 +38,7 @@ export function ProviderDetailPage() {
     mutationFn: () => deleteProvider(id),
     onSuccess: (res) => {
       if (!res.success) {
-        setToast({ kind: 'err', message: res.error ?? 'Remove failed' })
+        setToast({ kind: 'err', message: res.error ?? t.removeFailed })
         return
       }
       void queryClient.invalidateQueries({ queryKey: ['providers'] })
@@ -48,7 +51,7 @@ export function ProviderDetailPage() {
     mutationFn: (enabled: boolean) => setProviderEnabled(id, enabled),
     onSuccess: (res) => {
       if (!res.success) {
-        setToast({ kind: 'err', message: res.error ?? 'Save failed' })
+        setToast({ kind: 'err', message: res.error ?? t.saveFailed })
         return
       }
       invalidateProvider()
@@ -60,24 +63,24 @@ export function ProviderDetailPage() {
     <div className="page">
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
-      <Link to="/providers" className="back-link">← all sources</Link>
+      <Link to="/providers" className="back-link">{t.backToAll}</Link>
 
-      {isLoading && <div className="muted">Loading…</div>}
-      {error && <div className="error-text">Failed to load source.</div>}
+      {isLoading && <div className="muted">{t.detailLoading}</div>}
+      {error && <div className="error-text">{t.detailLoadFailed}</div>}
 
       {data && (
         <>
           <header className="page__header">
             <div className="provider-detail__head">
               <div className="provider-detail__head-left">
-                <div className="page__eyebrow">source</div>
+                <div className="page__eyebrow">{t.sourceEyebrow}</div>
                 <h1 className="page__heading provider-detail__heading">{data.displayName}</h1>
               </div>
               <Toggle
                 checked={data.enabled}
                 onChange={(v) => toggle.mutate(v)}
-                label={data.enabled ? 'On' : 'Off'}
-                ariaLabel="on"
+                label={data.enabled ? t.on : t.off}
+                ariaLabel={t.enabledAria}
               />
             </div>
           </header>
@@ -113,20 +116,18 @@ export function ProviderDetailPage() {
               <section className="card">
                 <div className="row-spread">
                   <div>
-                    <h2 className="card__title" style={{ marginBottom: 0 }}>Remove this source</h2>
-                    <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>
-                      You added this source, so you can remove it. This only affects your setup.
-                    </p>
+                    <h2 className="card__title" style={{ marginBottom: 0 }}>{t.removeTitle}</h2>
+                    <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>{t.removeBody}</p>
                   </div>
                   {confirmRemove ? (
                     <div className="add-source__actions">
                       <button type="button" className="btn btn--danger btn--sm" disabled={remove.isPending} onClick={() => remove.mutate()}>
-                        {remove.isPending ? <span className="spinner" /> : 'Yes, remove'}
+                        {remove.isPending ? <span className="spinner" /> : t.removeConfirm}
                       </button>
-                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmRemove(false)}>Cancel</button>
+                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmRemove(false)}>{common.cancel}</button>
                     </div>
                   ) : (
-                    <button type="button" className="btn btn--danger btn--sm" onClick={() => setConfirmRemove(true)}>Remove</button>
+                    <button type="button" className="btn btn--danger btn--sm" onClick={() => setConfirmRemove(true)}>{common.remove}</button>
                   )}
                 </div>
               </section>
@@ -134,7 +135,7 @@ export function ProviderDetailPage() {
 
             {data.recentRuns.length > 0 && (
               <section className="card">
-                <h2 className="card__title">Recent searches</h2>
+                <h2 className="card__title">{t.recentSearches}</h2>
                 <ul className="provider-recent-runs">
                   {data.recentRuns.map((r) => (
                     <li key={r.runId} className={`provider-recent-runs__row provider-recent-runs__row--${r.status}`}>
@@ -143,7 +144,7 @@ export function ProviderDetailPage() {
                       <span className="provider-recent-runs__count tabular">
                         {typeof r.fetchedCount === 'number' ? r.fetchedCount : '—'}
                       </span>
-                      <Link to={`/history/${r.runId}`} className="provider-recent-runs__link">view search →</Link>
+                      <Link to={`/history/${r.runId}`} className="provider-recent-runs__link">{t.viewSearch}</Link>
                     </li>
                   ))}
                 </ul>

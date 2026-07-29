@@ -56,6 +56,9 @@ public static class PortalCatalogLoader
         var notes = el.TryGetProperty("notes", out var notesEl) && notesEl.ValueKind == JsonValueKind.String
             ? notesEl.GetString()
             : null;
+        var notesDa = el.TryGetProperty("notesDa", out var notesDaEl) && notesDaEl.ValueKind == JsonValueKind.String
+            ? notesDaEl.GetString()
+            : null;
         var method = el.TryGetProperty("method", out var methodEl) && methodEl.ValueKind == JsonValueKind.String
             ? methodEl.GetString()
             : null;
@@ -93,7 +96,8 @@ public static class PortalCatalogLoader
             Id: id,
             RequiresSecret: requiresSecret,
             DisplayName: displayName,
-            EnrichBody: enrichBody);
+            EnrichBody: enrichBody,
+            NotesDa: notesDa);
     }
 
     private static PaginationConfig? ReadPagination(JsonElement el, string portalName)

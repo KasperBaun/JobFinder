@@ -6,6 +6,9 @@ import type { ProviderSummary, ProviderTestResult } from '../api/types'
 import { Toast } from '../components/Toast'
 import { AddSourceModal } from '../components/AddSourceModal'
 import { formatRelative } from '../utils/time'
+import { useT } from '../i18n'
+import type { Messages } from '../i18n'
+import { friendlySecretLabel } from '../components/provider/SecretsCard'
 
 type Health = 'working' | 'failing' | 'stale' | 'untested' | 'blocked'
 
@@ -31,21 +34,8 @@ function classifyHealth(p: ProviderSummary, sessionTest?: SessionTest): Health {
   return (p.lastFetchCount ?? 0) > 0 ? 'working' : 'failing'
 }
 
-const HEALTH_LABEL: Record<Health, string> = {
-  working: 'OK',
-  failing: 'failing',
-  stale: 'stale',
-  untested: 'not tested yet',
-  blocked: 'needs key',
-}
-
-const FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'on', label: 'On' },
-  { key: 'off', label: 'Off' },
-  { key: 'failing', label: 'Failing' },
-] as const
-type FilterKey = (typeof FILTERS)[number]['key']
+const FILTER_KEYS = ['all', 'on', 'off', 'failing'] as const
+type FilterKey = (typeof FILTER_KEYS)[number]
 
 // The filter chips double as the source summary, so their counts carry the same tone the old
 // stats card used: enabled = good, failing = bad, off = muted. Zero failing stays neutral so an
@@ -58,6 +48,7 @@ function countTone(key: FilterKey, counts: Record<FilterKey, number>): 'good' | 
 }
 
 export function ProvidersPage() {
+  const t = useT('providers')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['providers'], queryFn: getProviders })
@@ -70,7 +61,7 @@ export function ProvidersPage() {
   const toggle = useMutation({
     mutationFn: async ({ p, enabled }: { p: ProviderSummary; enabled: boolean }) => {
       const res = await setProviderEnabled(p.id, enabled)
-      if (!res.success) throw new Error(res.error ?? 'Save failed')
+      if (!res.success) throw new Error(res.error ?? t.saveFailed)
       return enabled
     },
     onMutate: async ({ p, enabled }) => {
@@ -105,8 +96,8 @@ export function ProvidersPage() {
       setToast({
         kind: result.ok ? 'ok' : 'err',
         message: result.ok
-          ? `${nameById(data?.providers, id)}: ${result.fetchedCount} listings · ${result.durationMs}ms`
-          : `${nameById(data?.providers, id)}: ${result.error ?? 'failed'}`,
+          ? t.testResultOk(nameById(data?.providers, id), result.fetchedCount, result.durationMs)
+          : t.testResultFail(nameById(data?.providers, id), result.error ?? t.failedShort),
       })
     },
     onError: (err, vars) => {
@@ -155,14 +146,12 @@ export function ProvidersPage() {
 
       <header className="page__header page__header--with-action">
         <div>
-          <div className="page__eyebrow">01 / sources</div>
-          <h1 className="page__heading">Job <em>sites</em></h1>
-          <p className="page__lede">
-            Where listings come from. Turn each one on or off, test it, or add your own.
-          </p>
+          <div className="page__eyebrow">{t.eyebrow}</div>
+          <h1 className="page__heading">{t.heading()}</h1>
+          <p className="page__lede">{t.lede}</p>
         </div>
         <button type="button" className="btn btn--primary" onClick={() => setAdding(true)}>
-          + Add a source
+          {t.addSource}
         </button>
       </header>
 
@@ -172,40 +161,40 @@ export function ProvidersPage() {
           onCreated={(_id, name) => {
             setAdding(false)
             void queryClient.invalidateQueries({ queryKey: ['providers'] })
-            setToast({ kind: 'ok', message: `Added ${name}.` })
+            setToast({ kind: 'ok', message: t.added(name) })
           }}
         />
       )}
 
-      {isLoading && <div className="muted">Loading sources…</div>}
-      {error && <div className="error-text">Failed to load sources.</div>}
+      {isLoading && <div className="muted">{t.loading}</div>}
+      {error && <div className="error-text">{t.loadFailed}</div>}
 
       {data && data.providers.length > 0 && (
         <div className="provider-toolbar">
           <input
             type="search"
             className="input provider-toolbar__search"
-            placeholder="Search sources…"
+            placeholder={t.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search sources by name"
+            aria-label={t.searchAria}
           />
-          <div className="provider-toolbar__filters" role="group" aria-label="Filter sources">
-            {FILTERS.map((f) => {
-              const tone = countTone(f.key, counts)
+          <div className="provider-toolbar__filters" role="group" aria-label={t.filterAria}>
+            {FILTER_KEYS.map((key) => {
+              const tone = countTone(key, counts)
               return (
                 <button
-                  key={f.key}
+                  key={key}
                   type="button"
-                  className={filter === f.key ? 'chip chip--active' : 'chip'}
-                  onClick={() => setFilter(f.key)}
-                  aria-pressed={filter === f.key}
+                  className={filter === key ? 'chip chip--active' : 'chip'}
+                  onClick={() => setFilter(key)}
+                  aria-pressed={filter === key}
                 >
-                  {f.label}{' '}
+                  {t.filter[key]}{' '}
                   <span
                     className={`provider-toolbar__count${tone ? ` provider-toolbar__count--${tone}` : ''}`}
                   >
-                    {counts[f.key]}
+                    {counts[key]}
                   </span>
                 </button>
               )
@@ -216,17 +205,16 @@ export function ProvidersPage() {
 
       {data && data.providers.length === 0 && (
         <div className="hint-card">
-          <p>No job sites set up yet.</p>
+          <p>{t.noneYet}</p>
           <button type="button" className="btn btn--primary btn--sm" onClick={() => setAdding(true)}>
-            + Add your first source
+            {t.addFirstSource}
           </button>
         </div>
       )}
 
       {data && data.providers.length > 0 && filtered.length === 0 && (
         <div className="hint-card">
-          No sources match{query.trim() ? ` “${query.trim()}”` : ''}
-          {filter !== 'all' ? ` in “${filter}”` : ''}.
+          {t.noMatches(query.trim(), filter === 'all' ? '' : t.filter[filter])}
         </div>
       )}
 
@@ -240,7 +228,7 @@ export function ProvidersPage() {
               <article
                 key={p.id}
                 className={`provider-tile provider-tile--clickable${p.enabled ? '' : ' provider-tile--disabled'}`}
-                data-tooltip="Open this source to view its details and change how much it fetches"
+                data-tooltip={t.tileTooltip}
                 onClick={(e) => {
                   // The whole card is a shortcut to the detail page — but not when the click lands on
                   // an interactive control (Test button, the on/off toggle, or a link that navigates itself).
@@ -249,7 +237,7 @@ export function ProvidersPage() {
                 }}
               >
                 <div className="provider-tile__eyebrow">
-                  <span className="provider-tile__type">{friendlyType(p.type)}</span>
+                  <span className="provider-tile__type">{friendlyType(p.type, t)}</span>
                   <span className="provider-tile__id">#{p.id}</span>
                 </div>
 
@@ -259,25 +247,27 @@ export function ProvidersPage() {
 
                 <div className={`provider-tile__health provider-tile__health--${health}`}>
                   <span className="provider-tile__dot" aria-hidden />
-                  <span className="provider-tile__health-label">{HEALTH_LABEL[health]}</span>
-                  <span className="provider-tile__health-meta">
+                  <span className="provider-tile__health-label">{t.health[health]}</span>
+                  {/* Ellipsized by design (see .provider-tile__health-meta) — the title keeps the
+                      full text reachable, which matters more in Danish where the labels run longer. */}
+                  <span className="provider-tile__health-meta" title={healthMeta(p, session, t)}>
                     {session?.kind === 'done' ? (
                       session.result.ok
-                        ? `tested · ${session.result.fetchedCount} jobs · ${session.result.durationMs}ms`
-                        : `tested · ${truncate(session.result.error ?? 'failed', 32)}`
+                        ? t.testedOk(session.result.fetchedCount, session.result.durationMs)
+                        : t.testedFail(truncate(session.result.error ?? t.failedShort, 32))
                     ) : health === 'blocked' ? (
-                      "won't run until keyed"
+                      t.blockedMeta
                     ) : p.lastFetchedAt ? (
-                      `${formatRelative(p.lastFetchedAt)}${typeof p.lastFetchCount === 'number' ? ` · ${p.lastFetchCount} jobs` : ''}`
+                      t.fetchedMeta(formatRelative(p.lastFetchedAt), p.lastFetchCount)
                     ) : (
-                      'never used'
+                      t.neverUsed
                     )}
                   </span>
                 </div>
 
                 {p.requiresSecret && !p.hasSecret && (
-                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={`Add ${friendlySecretLabel(p.requiresSecret)} for ${p.displayName}`}>
-                    Add {friendlySecretLabel(p.requiresSecret)} →
+                  <Link to={`/providers/${p.id}`} className="provider-tile__needs-key" aria-label={t.addKeyAria(friendlySecretLabel(p.requiresSecret, t), p.displayName)}>
+                    {t.addKey(friendlySecretLabel(p.requiresSecret, t))}
                   </Link>
                 )}
 
@@ -287,9 +277,9 @@ export function ProvidersPage() {
                     className="btn btn--primary btn--sm"
                     onClick={() => test.mutate(p.id)}
                     disabled={testing || p.type === 'manual'}
-                    title={p.type === 'manual' ? "Manual sources can't be tested automatically" : undefined}
+                    title={p.type === 'manual' ? t.manualCantTest : undefined}
                   >
-                    {testing ? <span className="spinner" /> : 'Test'}
+                    {testing ? <span className="spinner" /> : t.test}
                   </button>
                 </div>
 
@@ -299,10 +289,10 @@ export function ProvidersPage() {
                     checked={p.enabled}
                     onChange={(e) => toggle.mutate({ p, enabled: e.target.checked })}
                     disabled={toggle.isPending}
-                    aria-label={`Enable ${p.displayName}`}
+                    aria-label={t.enableAria(p.displayName)}
                   />
                   <span className="provider-tile__switch" aria-hidden="true" />
-                  <span className="provider-tile__toggle-label">{p.enabled ? 'On' : 'Off'}</span>
+                  <span className="provider-tile__toggle-label">{p.enabled ? t.on : t.off}</span>
                 </label>
               </article>
             )
@@ -311,6 +301,21 @@ export function ProvidersPage() {
       )}
     </div>
   )
+}
+
+function healthMeta(
+  p: ProviderSummary,
+  session: SessionTest | undefined,
+  t: Messages['providers'],
+): string {
+  if (session?.kind === 'done') {
+    return session.result.ok
+      ? t.testedOk(session.result.fetchedCount, session.result.durationMs)
+      : t.testedFail(session.result.error ?? t.failedShort)
+  }
+  if (isBlocked(p)) return t.blockedMeta
+  if (p.lastFetchedAt) return t.fetchedMeta(formatRelative(p.lastFetchedAt), p.lastFetchCount)
+  return t.neverUsed
 }
 
 function nameById(list: ProviderSummary[] | undefined, id: number): string {
@@ -322,22 +327,6 @@ function truncate(s: string, max: number): string {
   return s.slice(0, max - 1) + '…'
 }
 
-function friendlyType(type: string): string {
-  switch (type) {
-    case 'api':        return 'Auto-fetched'
-    case 'rss':        return 'News feed'
-    case 'html':       return 'Read from website'
-    case 'teamtailor': return 'Auto-fetched'
-    case 'hrmanager':  return 'Auto-fetched'
-    case 'manual':     return 'Manual import'
-    default:           return type
-  }
-}
-
-function friendlySecretLabel(name: string): string {
-  switch (name) {
-    case 'api_key': return 'API key'
-    case 'affid':   return 'Affiliate ID'
-    default:        return 'Access key'
-  }
+function friendlyType(type: string, t: Messages['providers']): string {
+  return t.type[type as keyof Messages['providers']['type']] ?? type
 }

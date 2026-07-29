@@ -6,6 +6,7 @@ import type {
   HistoryResponse,
   ImportResponse,
   JobSearch,
+  LanguageResponse,
   MarkRequest,
   MarkResponse,
   MarkStatusRequest,
@@ -17,6 +18,7 @@ import type {
   RunDetail,
   SaveResponse,
   SearchRequest,
+  SetLanguageRequest,
   SetupRequest,
   SetupStatusResponse,
   SkillsetResponse,
@@ -47,6 +49,14 @@ export async function completeSetup(req: SetupRequest): Promise<SetupStatusRespo
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
+  })
+}
+
+export async function setLanguage(language: string): Promise<LanguageResponse> {
+  return apiFetch<LanguageResponse>('/api/settings/language', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ language } satisfies SetLanguageRequest),
   })
 }
 

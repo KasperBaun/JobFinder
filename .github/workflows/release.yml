@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.${{ github.run_number }}
+  VERSION: 0.3.${{ github.run_number }}
 
 jobs:
   cleanup:
@@ -55,6 +55,11 @@ jobs:
           # The runner has no git user.email; give UserContext.Resolve() a value so any
           # test that touches per-user paths resolves instead of throwing.
           JOBFINDER_USER: ci@jobfinder.local
+
+      - name: Test frontend
+        run: |
+          npm --prefix src/frontend ci
+          npm --prefix src/frontend run test
 
       - name: Publish backend (self-contained win-x64, GUI bundled)
         run: node src/scripts/publish-backend.mjs
@@ -105,6 +110,11 @@ jobs:
         run: dotnet test src/Jobmatch.slnx -c Release
         env:
           JOBFINDER_USER: ci@jobfinder.local
+
+      - name: Test frontend
+        run: |
+          npm --prefix src/frontend ci
+          npm --prefix src/frontend run test
 
       - name: Publish backend (self-contained linux-x64, GUI bundled)
         run: node src/scripts/publish-backend.mjs linux-x64
