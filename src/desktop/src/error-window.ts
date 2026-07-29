@@ -23,7 +23,7 @@ export function showErrorWindow(err: unknown): BrowserWindow {
   })
   win.setMenuBarVisibility(false)
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"></head>
+  const html = `<!doctype html><html lang="${s.htmlLang}"><head><meta charset="utf-8"><title>${escapeHtml(s.errorWindowTitle)}</title></head>
 <body style="font-family:system-ui,Segoe UI,sans-serif;margin:0;padding:28px;color:#04183B;background:#F4F6FB">
   <h2 style="margin:0 0 12px">${escapeHtml(s.errorHeading)}</h2>
   <p style="margin:0 0 16px;color:#2C4F8E">${escapeHtml(s.errorLede)}</p>
