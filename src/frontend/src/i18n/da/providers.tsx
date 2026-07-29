@@ -2,8 +2,9 @@ import type { Messages } from '../en'
 
 export const providers: Messages['providers'] = {
   eyebrow: '01 / jobkilder',
-  heading: () => <>Job<em>sider</em></>,
-  lede: 'Her kommer jobopslagene fra. Slå hver enkelt til eller fra, test den, eller tilføj din egen.',
+  // Matches the nav — "jobsider" would be a second word for the same thing.
+  heading: () => <>Dine <em>jobkilder</em></>,
+  lede: 'Her kommer opslagene fra. Slå dem til og fra, test dem, eller tilføj dine egne.',
   addSource: '+ Tilføj en jobkilde',
   addFirstSource: '+ Tilføj din første jobkilde',
   added: name => `${name} er tilføjet.`,
@@ -13,16 +14,16 @@ export const providers: Messages['providers'] = {
   searchAria: 'Søg i jobkilder efter navn',
   filterAria: 'Filtrér jobkilder',
   filter: { all: 'Alle', on: 'Til', off: 'Fra', failing: 'Fejler' },
-  noneYet: 'Der er ikke sat nogen jobsider op endnu.',
+  noneYet: 'Du har ingen jobkilder endnu.',
   noMatches: (query, filter) =>
     `Ingen jobkilder matcher${query ? ` “${query}”` : ''}${filter ? ` under “${filter}”` : ''}.`,
 
-  tileTooltip: 'Åbn jobkilden for at se detaljer og ændre, hvor meget den henter',
+  tileTooltip: 'Åbn jobkilden for at se detaljer og justere, hvor meget den henter',
   health: {
     working: 'OK',
     failing: 'fejler',
     stale: 'forældet',
-    untested: 'ikke testet endnu',
+    untested: 'ikke testet',
     blocked: 'mangler nøgle',
   },
   testedOk: (count, ms) => `testet · ${count} job · ${ms} ms`,
@@ -67,7 +68,7 @@ export const providers: Messages['providers'] = {
   sourceEyebrow: 'jobkilde',
   enabledAria: 'til',
   removeTitle: 'Fjern denne jobkilde',
-  removeBody: 'Du har selv tilføjet denne jobkilde, så du kan fjerne den igen. Det påvirker kun din opsætning.',
+  removeBody: 'Du har selv tilføjet den, så du kan fjerne den igen. Det påvirker kun din egen opsætning.',
   removeConfirm: 'Ja, fjern',
   removeFailed: 'Kunne ikke fjerne',
   recentSearches: 'Seneste søgninger',
@@ -85,26 +86,26 @@ export const providers: Messages['providers'] = {
   fullDescriptionsOn: 'Til — henter hvert opslags egen side',
   fullDescriptionsOff: 'Fra — kun data fra listen',
   notesLabel: 'Noter',
-  singleFetch: 'Én hentning — returnerer alt, hvad endpointet giver',
+  singleFetch: 'Én hentning — henter alt, hvad endpointet giver',
   upToPagesCeiling: (pages, size, ceiling) =>
     `Op til ${pages} sider × ${size} = højst ${ceiling} opslag`,
   upToPages: pages => `Op til ${pages} sider`,
 
   configurationTitle: 'Konfiguration',
   configurationHint:
-    'Tilpasninger gemmes på denne computer og gælder for både søgninger og tests. Hæv loftet for at '
-    + 'hente mere; Nulstil gendanner de leverede standardværdier.',
+    'Dine justeringer gemmes på denne computer og gælder både søgninger og tests. Hæv loftet for at '
+    + 'hente mere; Nulstil sætter alt tilbage til standard.',
   maxPages: 'Maks. sider',
   pageSize: 'Sidestørrelse',
   rateLimitField: 'Hastighedsgrænse (kald/sek.)',
   custom: ' · tilpasset',
   defaultIs: value => `Standard: ${value}`,
   enrichHint: defaultLabel =>
-    `Standard: ${defaultLabel}. Til er langsommere, men giver vurderingen hele teksten fra hvert opslag.`,
+    `Standard: ${defaultLabel}. Til er langsommere, men så vurderes opslaget ud fra hele teksten.`,
   resetToDefaults: 'Nulstil til standard',
   bodyEnrichmentAria: 'fulde beskrivelser',
 
-  secretHint: 'Gemmes kun på denne computer. Indtil du gemmer en værdi her, springes jobkilden over, når du søger.',
+  secretHint: 'Gemmes kun på denne computer. Uden en nøgle her springes jobkilden over, når du søger.',
   secretPlaceholderSet: '••••••••  (overskriv for at opdatere)',
   secretPlaceholder: label => `Indsæt din ${label}`,
   clear: 'Ryd',
@@ -115,22 +116,22 @@ export const providers: Messages['providers'] = {
   testTitle: 'Test jobkilden',
   testNow: 'Test nu',
   testManualHint: 'Denne jobkilde henter ikke automatisk — der er ikke noget at teste.',
-  testHint: 'Henter opslag én gang og viser, hvor mange der kom tilbage, hvor lang tid det tog, og hvert enkelt opslag.',
+  testHint: 'Henter opslag én gang og viser, hvor mange der kom, hvor lang tid det tog, og hvilke det var.',
   testWorking: 'Virker',
   testConnectionFailed: 'Forbindelsen mislykkedes',
   jobsFoundLabel: 'job fundet',
   errorLabel: 'fejl',
   hitPageCap: () => (
     <>
-      <strong>Ramte sidegrænsen.</strong> Denne jobkilde stoppede ved sin grænse for maks. sider,
-      mens der stadig kom flere opslag — der er næsten helt sikkert flere. Hæv <em>Maks. sider</em>{' '}
-      nedenfor, og test igen for at hente flere.
+      <strong>Ramte sidegrænsen.</strong> Jobkilden stoppede ved sin grænse for maks. sider, mens
+      der stadig kom flere opslag — så der er næsten helt sikkert flere. Hæv <em>Maks. sider</em>{' '}
+      nedenfor, og test igen.
     </>
   ),
   possiblyCapped: () => (
     <>
-      <strong>Muligvis afkortet.</strong> Denne jobkilde returnerede præcis sin fastsatte grænse, så
-      den holder måske flere resultater tilbage.
+      <strong>Muligvis afkortet.</strong> Jobkilden returnerede præcis sin grænse, så den holder
+      måske flere resultater tilbage.
     </>
   ),
   showingFirst: (shown, total) => `viser de første ${shown} af ${total}`,
@@ -141,5 +142,5 @@ export const providers: Messages['providers'] = {
   gridPending: 'afventer',
   gridCapped: '⚠ afkortet',
   gridCappedHard: 'Ramte sin sidegrænse — der kan være flere',
-  gridCappedSoft: 'Returnerede præcis sin fastsatte grænse — der kan være flere',
+  gridCappedSoft: 'Returnerede præcis sin grænse — der kan være flere',
 }

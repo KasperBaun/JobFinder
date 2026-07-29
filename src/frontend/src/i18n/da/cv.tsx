@@ -5,23 +5,23 @@ export const cv: Messages['cv'] = {
 
   aiDisabled: () => (
     <>
-      AI-gennemgang er slået fra (<code>llm.enabled</code> i <code>ranking.yml</code>), og det kræver
-      den lokale AI-model at læse et CV. Slå den til, og kom tilbage.
+      AI-gennemgang er slået fra (<code>llm.enabled</code> i <code>ranking.yml</code>), og det
+      kræver den lokale AI-model at læse et CV. Slå den til, og kom tilbage.
     </>
   ),
   modelMissing:
     'Det kræver den lokale AI-model at læse et CV, og den er ikke hentet endnu. Start hentningen '
-    + 'nedenfor — du kan roligt bruge appen imens og komme tilbage, når den er færdig.',
+    + 'nedenfor — du kan roligt bruge appen imens.',
 
   reading: 'Læser dit CV…',
   readingHint:
-    'Dette kører den lokale AI-model — typisk et minut eller to på CPU. Du kan lukke dialogen eller '
-    + 'gå videre; den kører videre, og resultatet er her, når du kommer tilbage.',
+    'Den lokale AI-model kører nu — typisk et minut eller to. Du kan lukke vinduet eller gå '
+    + 'videre; den kører færdig, og resultatet er her, når du kommer tilbage.',
 
   reviewHint:
-    'Her er, hvad CV’et angiver, ved siden af det, din profil har nu. At anvende udfylder kun '
-    + 'formularen — gennemgå resultatet, og tryk Gem for at beholde det.',
-  nothingNew: 'Intet nyt — din profil dækker allerede alt, hvad CV’et angiver.',
+    'Her er, hvad CV’et siger, ved siden af det, din profil har nu. At anvende udfylder kun '
+    + 'formularen — gennemgå det, og tryk Gem for at beholde det.',
+  nothingNew: 'Intet nyt — din profil dækker allerede alt, hvad CV’et siger.',
   colField: 'Felt',
   colCurrent: 'Nuværende',
   colFromCv: 'Fra CV',
@@ -33,7 +33,7 @@ export const cv: Messages['cv'] = {
   modeFile: 'Upload fil',
   modeUrl: 'Fra et link',
   pastePlaceholder: 'Indsæt hele teksten fra dit CV her…',
-  fileHint: '.pdf, .txt eller .md — for Word-dokumenter kan du indsætte teksten i stedet.',
+  fileHint: '.pdf, .txt eller .md — Word-dokumenter må du indsætte som tekst.',
   urlPlaceholder: 'https://example.com/mit-cv.pdf',
   extractionFailed: error => `Læsningen mislykkedes: ${error}`,
   unknownError: 'ukendt fejl',
@@ -41,7 +41,7 @@ export const cv: Messages['cv'] = {
 
   fields: {
     name: 'Navn',
-    location: 'Placering',
+    location: 'Sted',
     country: 'Land',
     region: 'Region',
     metro: 'Byer / områder',
@@ -60,7 +60,7 @@ export const cv: Messages['cv'] = {
   modelBannerExpects: (provider, path) => (
     <>Motoren <code>{provider}</code> forventer <code style={{ wordBreak: 'break-all' }}>{path}</code>.</>
   ),
-  retryDownload: 'Prøv at hente igen',
+  retryDownload: 'Prøv igen',
   downloadModel: 'Hent model (~2,3 GB)',
   downloading: (done, total, pct) =>
     `Henter ${done}${total ? ` af ${total}` : ''}${pct !== null ? ` (${pct} %)` : ''}`,
