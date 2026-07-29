@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import * as net from 'node:net'
 import * as path from 'node:path'
 import { backendExePath } from './paths'
+import { t } from './strings'
 
 export interface BackendHandle {
   port: number
@@ -26,7 +27,7 @@ function findFreePort(): Promise<number> {
         const { port } = addr
         srv.close(() => resolve(port))
       } else {
-        srv.close(() => reject(new Error('could not resolve a free port')))
+        srv.close(() => reject(new Error(t().noFreePort)))
       }
     })
   })
@@ -84,8 +85,8 @@ export async function startBackend(): Promise<BackendHandle> {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS
   while (Date.now() < deadline) {
     const err = getSpawnError()
-    if (err) throw new Error(`Could not launch the backend:\n${err.message}`)
-    if (hasExited()) throw new Error(`The backend exited during startup.\n\n${tail.join('')}`)
+    if (err) throw new Error(t().launchFailed(err.message))
+    if (hasExited()) throw new Error(t().exitedDuringStartup(tail.join('')))
     if (await ping(port)) return { port, child }
     await delay(PING_INTERVAL_MS)
   }
@@ -95,7 +96,7 @@ export async function startBackend(): Promise<BackendHandle> {
   } catch {
     // best effort
   }
-  throw new Error(`The backend did not become ready within 30s.\n\n${tail.join('')}`)
+  throw new Error(t().startupTimedOut(STARTUP_TIMEOUT_MS / 1000, tail.join('')))
 }
 
 // Graceful shutdown: ask the host to stop, wait briefly, then force-kill so nothing is orphaned.
