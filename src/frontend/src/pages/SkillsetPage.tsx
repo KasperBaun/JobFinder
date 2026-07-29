@@ -6,6 +6,7 @@ import { TagInput } from '../components/TagInput'
 import { SaveBar } from '../components/SaveBar'
 import { Toast } from '../components/Toast'
 import { CvImportModal } from '../components/CvImportModal'
+import { useT } from '../i18n'
 
 type Form = SkillsetUpdateRequest
 
@@ -45,6 +46,7 @@ function isDirty(a: Form, b: Form): boolean {
 }
 
 export function SkillsetPage() {
+  const t = useT('skillset')
   const queryClient = useQueryClient()
   const setup = useQuery({ queryKey: ['setup'], queryFn: getSetupStatus })
   const profileExists = setup.data?.profileExists
@@ -85,7 +87,7 @@ export function SkillsetPage() {
     mutationFn: async () => {
       if (!form) throw new Error('no form state')
       const res = await updateSkillset(form)
-      if (!res.success) throw new Error(res.error ?? 'Save failed')
+      if (!res.success) throw new Error(res.error ?? t.saveFailed)
       return form
     },
     onSuccess: (saved) => {
@@ -94,7 +96,7 @@ export function SkillsetPage() {
       // Invalidate setup too: a first save flips profileExists true (clears create-mode + nudges).
       void queryClient.invalidateQueries({ queryKey: ['skillset'] })
       void queryClient.invalidateQueries({ queryKey: ['setup'] })
-      setToast({ kind: 'ok', message: creating ? 'Profile created' : 'Profile saved' })
+      setToast({ kind: 'ok', message: creating ? t.created : t.saved })
     },
     onError: (err) => {
       setToast({ kind: 'err', message: err instanceof Error ? err.message : String(err) })
@@ -121,7 +123,7 @@ export function SkillsetPage() {
     setForm((f) => f ? { ...f, ...p } : f)
     setSuggested(new Set(keys))
     setCvOpen(false)
-    setToast({ kind: 'ok', message: 'Prefilled from CV — review, then save' })
+    setToast({ kind: 'ok', message: t.prefilled })
   }
 
   const sug = (key: keyof Form) => `field${suggested.has(key) ? ' field--suggested' : ''}`
@@ -131,16 +133,12 @@ export function SkillsetPage() {
       {toast && <Toast kind={toast.kind} message={toast.message} onDismiss={() => setToast(null)} />}
 
       <header className="page__header">
-        <div className="page__eyebrow">02 / profile</div>
-        <h1 className="page__heading">{creating ? <>Set up your <em>profile</em></> : <>Your <em>profile</em></>}</h1>
-        <p className="page__lede">
-          {creating
-            ? "You skipped this during setup. Fill it in so jobfinder can rate listings for you — at least a name and location to start."
-            : 'Edit what jobfinder uses to rate every listing. Saved automatically.'}
-        </p>
+        <div className="page__eyebrow">{t.eyebrow}</div>
+        <h1 className="page__heading">{creating ? t.headingCreate() : t.headingEdit()}</h1>
+        <p className="page__lede">{creating ? t.ledeCreate : t.ledeEdit}</p>
         <div style={{ marginTop: 'var(--space-3)' }}>
           <button type="button" className="btn btn--secondary" onClick={() => setCvOpen(true)}>
-            Fill from CV
+            {t.fillFromCv}
           </button>
         </div>
       </header>
@@ -149,142 +147,142 @@ export function SkillsetPage() {
         <CvImportModal current={form} onApply={applyCv} onClose={() => setCvOpen(false)} />
       )}
 
-      {isLoading && <div className="muted">Loading profile…</div>}
-      {error && <div className="error-text">Failed to load profile.</div>}
+      {isLoading && <div className="muted">{t.loading}</div>}
+      {error && <div className="error-text">{t.loadFailed}</div>}
 
       {form && (
         <>
           <div className="card-stack">
             <section className="card">
-              <h2 className="card__title">About you</h2>
+              <h2 className="card__title">{t.aboutYou}</h2>
               <div className="field-grid">
                 <div className={sug('name')}>
-                  <label className="field__label" htmlFor="sk-name">Name</label>
+                  <label className="field__label" htmlFor="sk-name">{t.name}</label>
                   <input id="sk-name" className="input" value={form.name}
                     onChange={(e) => patch({ name: e.target.value })} />
                 </div>
                 <div className={sug('location')}>
-                  <label className="field__label" htmlFor="sk-location">Location</label>
+                  <label className="field__label" htmlFor="sk-location">{t.location}</label>
                   <input id="sk-location" className="input" value={form.location}
                     onChange={(e) => patch({ location: e.target.value })} />
                 </div>
                 <div className={sug('country')}>
-                  <label className="field__label" htmlFor="sk-country">Country</label>
-                  <input id="sk-country" className="input" value={form.country ?? ''} placeholder="optional"
+                  <label className="field__label" htmlFor="sk-country">{t.country}</label>
+                  <input id="sk-country" className="input" value={form.country ?? ''} placeholder={t.optional}
                     onChange={(e) => patch({ country: e.target.value })} />
                 </div>
                 <div className={sug('region')}>
-                  <label className="field__label" htmlFor="sk-region">Region</label>
-                  <input id="sk-region" className="input" value={form.region ?? ''} placeholder="optional"
+                  <label className="field__label" htmlFor="sk-region">{t.region}</label>
+                  <input id="sk-region" className="input" value={form.region ?? ''} placeholder={t.optional}
                     onChange={(e) => patch({ region: e.target.value })} />
                 </div>
                 <div className={sug('experienceYears')}>
-                  <label className="field__label" htmlFor="sk-exp">Years of experience</label>
+                  <label className="field__label" htmlFor="sk-exp">{t.experienceYears}</label>
                   <input id="sk-exp" type="number" min={0} className="input input--narrow input--mono tabular"
                     value={form.experienceYears}
                     onChange={(e) => patch({ experienceYears: Number(e.target.value) || 0 })} />
                 </div>
                 <div className={sug('languages')} style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Languages</label>
+                  <label className="field__label">{t.languages}</label>
                   <TagInput values={form.languages}
                     onChange={(v) => patch({ languages: v })}
-                    placeholder="e.g. en, da" ariaLabel="Languages" />
+                    placeholder={t.languagesPlaceholder} ariaLabel={t.languages} />
                 </div>
                 <div className={sug('metro')} style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Cities / areas</label>
+                  <label className="field__label">{t.metro}</label>
                   <TagInput values={form.metro}
                     onChange={(v) => patch({ metro: v })}
-                    placeholder="optional — e.g. Copenhagen, Aarhus" ariaLabel="Cities or areas" />
+                    placeholder={t.metroPlaceholder} ariaLabel={t.metro} />
                 </div>
               </div>
             </section>
 
             <section className="card">
-              <h2 className="card__title">Roles &amp; preferences</h2>
+              <h2 className="card__title">{t.rolesAndPreferences}</h2>
               <div className="field-grid">
                 <div className={sug('seniority')}>
-                  <label className="field__label" htmlFor="sk-seniority">Experience level</label>
+                  <label className="field__label" htmlFor="sk-seniority">{t.seniorityLabel}</label>
                   <select id="sk-seniority" className="select"
                     value={form.seniority}
                     onChange={(e) => patch({ seniority: e.target.value })}>
-                    {SENIORITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    {SENIORITY_OPTIONS.map(o => <option key={o} value={o}>{t.seniority[o]}</option>)}
                   </select>
                 </div>
                 <div className={sug('remotePreference')}>
-                  <label className="field__label" htmlFor="sk-remote">Where you want to work</label>
+                  <label className="field__label" htmlFor="sk-remote">{t.remoteLabel}</label>
                   <select id="sk-remote" className="select"
                     value={form.remotePreference}
                     onChange={(e) => patch({ remotePreference: e.target.value })}>
-                    {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{t.remote[o]}</option>)}
                   </select>
                 </div>
                 <div className={sug('targetRoles')} style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Roles you want</label>
+                  <label className="field__label">{t.targetRoles}</label>
                   <TagInput values={form.targetRoles}
                     onChange={(v) => patch({ targetRoles: v })}
-                    placeholder="e.g. Senior Backend Engineer" ariaLabel="Roles you want" />
+                    placeholder={t.targetRolesPlaceholder} ariaLabel={t.targetRoles} />
                 </div>
                 <div className={sug('employmentTypes')} style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Employment types</label>
+                  <label className="field__label">{t.employmentTypes}</label>
                   <TagInput values={form.employmentTypes}
                     onChange={(v) => patch({ employmentTypes: v })}
-                    placeholder="e.g. full-time, contract" ariaLabel="Employment types" />
+                    placeholder={t.employmentTypesPlaceholder} ariaLabel={t.employmentTypes} />
                 </div>
               </div>
             </section>
 
             <section className="card">
-              <h2 className="card__title">Skills</h2>
+              <h2 className="card__title">{t.skills}</h2>
               <div className="field-grid">
                 <div className={sug('primaryStack')} style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Must-have skills — <span className="subtle">the job has to mention these. More matches = higher rating</span></label>
+                  <label className="field__label">{t.primaryStack} — <span className="subtle">{t.primaryStackHint}</span></label>
                   <TagInput variant="primary"
                     values={form.primaryStack}
                     onChange={(v) => patch({ primaryStack: v })}
-                    placeholder="e.g. C#, .NET, Postgres" ariaLabel="Must-have skills" />
+                    placeholder={t.primaryStackPlaceholder} ariaLabel={t.primaryStack} />
                 </div>
                 <div className={sug('secondaryStack')} style={{ gridColumn: '1 / -1' }}>
-                  <label className="field__label">Nice-to-have skills — <span className="subtle">small bonus when mentioned</span></label>
+                  <label className="field__label">{t.secondaryStack} — <span className="subtle">{t.secondaryStackHint}</span></label>
                   <TagInput
                     values={form.secondaryStack}
                     onChange={(v) => patch({ secondaryStack: v })}
-                    placeholder="e.g. Docker, Kubernetes" ariaLabel="Nice-to-have skills" />
+                    placeholder={t.secondaryStackPlaceholder} ariaLabel={t.secondaryStack} />
                 </div>
               </div>
             </section>
 
             <section className="card">
-              <h2 className="card__title">Industries</h2>
-              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Areas you'd like to work in.</p>
+              <h2 className="card__title">{t.industries}</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>{t.industriesHint}</p>
               <div className={sug('domains')}>
                 <TagInput values={form.domains}
                   onChange={(v) => patch({ domains: v })}
-                  placeholder="e.g. fintech, b2b saas" ariaLabel="Industries" />
+                  placeholder={t.industriesPlaceholder} ariaLabel={t.industries} />
               </div>
             </section>
 
             <section className="card">
-              <h2 className="card__title">Favorite companies</h2>
-              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>Employers you'd love to work for. Their listings get a rating boost.</p>
+              <h2 className="card__title">{t.favoriteCompanies}</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>{t.favoriteCompaniesHint}</p>
               <TagInput variant="primary"
                 values={form.preferredCompanies}
                 onChange={(v) => patch({ preferredCompanies: v })}
-                placeholder="e.g. LEGO, Maersk" ariaLabel="Favorite companies" />
+                placeholder={t.favoriteCompaniesPlaceholder} ariaLabel={t.favoriteCompanies} />
             </section>
 
             <section className="card">
-              <h2 className="card__title">Deal-breakers</h2>
-              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>A listing with any of these is removed.</p>
+              <h2 className="card__title">{t.dealBreakers}</h2>
+              <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>{t.dealBreakersHint}</p>
               <TagInput variant="warning"
                 values={form.disqualifiers}
                 onChange={(v) => patch({ disqualifiers: v })}
-                placeholder="e.g. on-site only, agency" ariaLabel="Deal-breakers" />
+                placeholder={t.dealBreakersPlaceholder} ariaLabel={t.dealBreakers} />
             </section>
           </div>
 
           <SaveBar
             visible={!!dirty}
-            message={dirty ? 'Unsaved changes' : ''}
+            message={dirty ? undefined : ''}
             saving={save.isPending}
             onSave={() => save.mutate()}
             onRevert={revert}
