@@ -12,7 +12,7 @@ import {
   type LonglistFilters,
 } from '../components/longlist/filterState'
 import { formatAbsolute, formatRelative, formatStepDuration } from '../utils/time'
-import { STATE_LABEL } from '../utils/searchLabels'
+import { useT } from '../i18n'
 import { isTerminalState } from '../api/types'
 import type {
   DropReason,
@@ -23,7 +23,7 @@ import type {
 
 function StateBadge({ state }: { state?: JobSearchState }) {
   const s = state ?? 'succeeded'
-  return <span className={`state-badge state-badge--${s}`}>{STATE_LABEL[s]}</span>
+  return <span className={`state-badge state-badge--${s}`}>{useT('search').state[s]}</span>
 }
 
 function HistoryListView() {
