@@ -1,0 +1,56 @@
+import type { ApplicationStatus } from '../../api/types'
+
+export const listing = {
+  favoriteBadge: '★ Favorite',
+  favoriteTitle: 'One of your favorite companies — rating boosted',
+  openPosting: 'Open job posting →',
+
+  markGood: 'Good match',
+  markBad: 'Not a match',
+  markUnset: 'Rate this job',
+  markTooltip: {
+    unset: 'Rate this job. Your ratings help jobfinder find better jobs next time. Click for a good match.',
+    good: 'Marked as a Good match. Click to flip to Not a match.',
+    bad: 'Marked as Not a match. Click to clear the rating.',
+  },
+  markFailed: 'Mark failed',
+
+  whyAdd: '+ why?',
+  whyTooltip: 'Add a short why — it teaches the AI what to look for next time.',
+  whyPlaceholder: 'Why? e.g. “I’m not a student”',
+  whyEdit: (reason: string) => `${reason} — click to edit`,
+
+  statusTooltip: 'Track what happened after applying. Interviews and offers teach the AI what a strong fit looks like.',
+  statusPlaceholder: 'Status…',
+  statusClear: 'Clear status',
+  statusFailed: 'Status update failed',
+  status: {
+    applied: 'Applied',
+    interview: 'Interview',
+    offer: 'Offer',
+    rejected: 'Rejected',
+    'no-response': 'No response',
+  } satisfies Record<ApplicationStatus, string>,
+
+  breakdownAria: 'rating breakdown',
+  component: {
+    primaryStack: 'must-have skills',
+    secondaryStack: 'nice-to-have skills',
+    seniority: 'experience level',
+    locationRemote: 'location',
+    domain: 'industry',
+    freshness: 'freshness',
+  },
+  disqualifierPenalty: 'deal-breaker penalty',
+  totalRating: 'total rating',
+
+  runTitle: 'Search',
+  runSources: 'Sources',
+  runOk: 'ok',
+  runFailed: 'failed',
+  runJobsFound: 'Jobs found',
+  runUniqueJobs: 'Unique jobs',
+  runTopJobs: 'Top jobs',
+  runBestRating: 'Best rating',
+  runGoodMatches: 'Good matches',
+}

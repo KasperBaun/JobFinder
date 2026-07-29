@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getHistory, getProviders, getSetupStatus, getWhoami } from '../api/client'
 import { StatCard } from '../components/StatCard'
+import { dec, useT } from '../i18n'
 import { formatRelative } from '../utils/time'
 import { lastCompletedRun } from '../utils/runs'
-import { STATE_LABEL } from '../utils/searchLabels'
 
 export function HomePage() {
+  const t = useT('home')
+  const states = useT('search').state
   const whoami = useQuery({ queryKey: ['whoami'], queryFn: getWhoami })
   const providers = useQuery({ queryKey: ['providers'], queryFn: getProviders })
   const history = useQuery({ queryKey: ['history'], queryFn: getHistory })
@@ -21,76 +23,73 @@ export function HomePage() {
   return (
     <div className="page page--wide">
       <section className="hero">
-        <div className="page__eyebrow">00 / overview</div>
-        <h1 className="hero__headline">Find work that <em>fits.</em></h1>
-        <p className="hero__lede">
-          Jobfinder helps you find work the easy way. It retreieves job openings from your chosen job sites, rates them against your profile and preferences,
-          and suggests the best matches. Everything runs locally so nothing leaves your computer.
-        </p>
+        <div className="page__eyebrow">{t.eyebrow}</div>
+        <h1 className="hero__headline">{t.headline()}</h1>
+        <p className="hero__lede">{t.lede}</p>
         <div className="hero__meta">
           <span className="hero__meta-item">
             <span className="hero__meta-dot" />
-            {whoami.data?.email ?? 'loading…'}
+            {whoami.data?.email ?? t.loading}
           </span>
           {whoami.data && <span className="muted">→ {whoami.data.dataDir}</span>}
         </div>
         <div className="cta-row">
-          <Link to="/search" className="btn btn--primary btn--lg">Run a new search</Link>
-          <Link to="/skillset" className="btn btn--secondary btn--lg">Edit profile</Link>
+          <Link to="/search" className="btn btn--primary btn--lg">{t.runSearch}</Link>
+          <Link to="/skillset" className="btn btn--secondary btn--lg">{t.editProfile}</Link>
         </div>
       </section>
 
       <div className="section-head">
-        <h2 className="section-title">At a glance</h2>
+        <h2 className="section-title">{t.atAGlance}</h2>
       </div>
 
       <div className="stat-grid">
         <StatCard
-          label="Sources"
+          label={t.sources}
           value={
             providers.isLoading ? <span className="muted">…</span> :
-            providers.error || !providers.data ? <span className="error-text">err</span> :
-            <span><span className="tabular">{enabledCount}</span> <span className="subtle small">on</span></span>
+            providers.error || !providers.data ? <span className="error-text">{t.errorShort}</span> :
+            <span><span className="tabular">{enabledCount}</span> <span className="subtle small">{t.sourcesOn}</span></span>
           }
-          subtitle={totalCount !== undefined ? `${totalCount} set up` : undefined}
+          subtitle={totalCount !== undefined ? t.sourcesSetUp(totalCount) : undefined}
           link="/providers"
         />
         <StatCard
-          label="Last search"
+          label={t.lastSearch}
           value={
             history.isLoading ? <span className="muted">…</span> :
-            history.error ? <span className="error-text">err</span> :
-            !lastRun ? <span className="muted">No searches yet</span> :
+            history.error ? <span className="error-text">{t.errorShort}</span> :
+            !lastRun ? <span className="muted">{t.noSearchesYet}</span> :
             formatRelative(lastRun.startedAt)
           }
           subtitle={
             lastRun && (
               <span>
-                <span className="tabular">{lastRun.shortlistCount}</span> top jobs · best <span className="tabular mono">{lastRun.topScore.toFixed(2)}</span>
+                <span className="tabular">{lastRun.shortlistCount}</span> {t.topJobs} · {t.best} <span className="tabular mono">{dec(lastRun.topScore, 2)}</span>
               </span>
             )
           }
           link={lastRun ? `/history/${lastRun.runId}` : '/history'}
         />
         <StatCard
-          label="Good matches"
+          label={t.goodMatches}
           value={
             history.isLoading ? <span className="muted">…</span> :
-            history.error ? <span className="error-text">err</span> :
+            history.error ? <span className="error-text">{t.errorShort}</span> :
             <span className="tabular">{totalGoodMarks}</span>
           }
-          subtitle="across all searches"
+          subtitle={t.acrossAllSearches}
           link="/history"
         />
         <StatCard
-          label="Profile"
+          label={t.profile}
           value={
             setup.isLoading ? <span className="muted">…</span> :
             setup.data?.profileExists
-              ? <span className="serif" style={{ fontSize: '1.4rem' }}>ready</span>
-              : <span className="serif" style={{ fontSize: '1.4rem' }}>not set up</span>
+              ? <span className="serif" style={{ fontSize: '1.4rem' }}>{t.profileReady}</span>
+              : <span className="serif" style={{ fontSize: '1.4rem' }}>{t.profileNotSetUp}</span>
           }
-          subtitle={setup.data?.profileExists ? 'skills, industries, deal-breakers' : 'finish setting up →'}
+          subtitle={setup.data?.profileExists ? t.profileReadyHint : t.profileFinishHint}
           link="/skillset"
         />
       </div>
@@ -98,17 +97,17 @@ export function HomePage() {
       {recent.length > 0 && (
         <>
           <div className="section-head">
-            <h2 className="section-title">Recent searches</h2>
-            <Link to="/history" className="link-button">View all →</Link>
+            <h2 className="section-title">{t.recentSearches}</h2>
+            <Link to="/history" className="link-button">{t.viewAll}</Link>
           </div>
           <div className="table-wrap">
             <table className="table table--clickable">
               <thead>
                 <tr>
-                  <th>When</th>
-                  <th>Top jobs</th>
-                  <th>Best rating</th>
-                  <th>Good matches</th>
+                  <th>{t.colWhen}</th>
+                  <th>{t.colTopJobs}</th>
+                  <th>{t.colBestRating}</th>
+                  <th>{t.colGoodMatches}</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,11 +118,11 @@ export function HomePage() {
                         {formatRelative(r.startedAt)}
                       </Link>
                       {r.state && r.state !== 'succeeded' && (
-                        <span className="muted small"> · {STATE_LABEL[r.state]}</span>
+                        <span className="muted small"> · {states[r.state]}</span>
                       )}
                     </td>
                     <td className="tabular">{r.shortlistCount}</td>
-                    <td className="tabular mono">{r.topScore.toFixed(2)}</td>
+                    <td className="tabular mono">{dec(r.topScore, 2)}</td>
                     <td className="tabular">{r.goodMarks} / {r.shortlistCount}</td>
                   </tr>
                 ))}

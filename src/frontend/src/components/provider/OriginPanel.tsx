@@ -1,58 +1,58 @@
 import type { ProviderDetail } from '../../api/types'
 import { platformHost, platformLabel } from '../../utils/platform'
+import { useLocale, useT } from '../../i18n'
+import type { Messages } from '../../i18n'
 
-function friendlyType(type: string): string {
-  switch (type) {
-    case 'api':        return 'Auto-fetched (API)'
-    case 'rss':        return 'News feed (RSS)'
-    case 'html':       return 'Read from website'
-    case 'teamtailor': return 'Auto-fetched (Teamtailor)'
-    case 'hrmanager':  return 'Auto-fetched (HR Manager)'
-    case 'manual':     return 'Manual import'
-    default:           return type
-  }
+function friendlyType(type: string, t: Messages['providers']): string {
+  return t.typeDetailed[type as keyof Messages['providers']['typeDetailed']] ?? type
 }
 
 // Read-only "where does this come from & how is it fetched" panel. The editable knobs live in
 // ConfigForm; this panel is the at-a-glance truth about origin, query, and fetch ceiling.
 export function OriginPanel({ data }: { data: ProviderDetail }) {
+  const t = useT('providers')
+  const { locale } = useLocale()
   const cfg = data.config
   const platform = platformLabel(data.endpoint)
   const host = platformHost(data.endpoint)
 
   const paginationSummary = !cfg.paginates
-    ? 'Single fetch — returns everything the endpoint gives'
+    ? t.singleFetch
     : cfg.hardCeiling != null
-      ? `Up to ${cfg.maxPages} pages × ${cfg.pageSize} = ${cfg.hardCeiling} listings max`
-      : `Up to ${cfg.maxPages ?? '?'} pages`
+      ? t.upToPagesCeiling(cfg.maxPages!, cfg.pageSize!, cfg.hardCeiling)
+      : t.upToPages(String(cfg.maxPages ?? '?'))
+
+  // The catalog ships a Danish rendering of the shipped notes; sources the user added themselves
+  // only ever have the English text the detector produced.
+  const notes = (locale === 'da' ? data.notesDa : undefined) ?? data.notes
 
   return (
     <section className="card">
-      <h2 className="card__title">Information</h2>
+      <h2 className="card__title">{t.informationTitle}</h2>
       <dl className="provider-config-grid">
         {platform && (
-          <Row label="Platform">
+          <Row label={t.platform}>
             <span className="provider-config-grid__platform">{platform}</span>
             {host && platform !== host && <span className="muted small"> · {host}</span>}
           </Row>
         )}
-        <Row label="Access method">{friendlyType(data.type)}</Row>
+        <Row label={t.accessMethod}>{friendlyType(data.type, t)}</Row>
         {data.endpoint && (
-          <Row label="Endpoint" wide>
+          <Row label={t.endpoint} wide>
             <span className="mono small break-anywhere">{data.endpoint}</span>
           </Row>
         )}
         {cfg.searchQuery && (
-          <Row label="Search query"><span className="mono">{cfg.searchQuery}</span></Row>
+          <Row label={t.searchQuery}><span className="mono">{cfg.searchQuery}</span></Row>
         )}
-        {data.type !== 'manual' && <Row label="Fetch strategy">{paginationSummary}</Row>}
+        {data.type !== 'manual' && <Row label={t.fetchStrategy}>{paginationSummary}</Row>}
         {data.type !== 'manual' && (
-          <Row label="Rate limit">{cfg.rateLimitRps}/s</Row>
+          <Row label={t.rateLimit}>{t.perSecond(cfg.rateLimitRps)}</Row>
         )}
         {data.type !== 'manual' && (
-          <Row label="Full descriptions">{cfg.enrichBody ? 'On — fetches each listing’s page' : 'Off — list data only'}</Row>
+          <Row label={t.fullDescriptions}>{cfg.enrichBody ? t.fullDescriptionsOn : t.fullDescriptionsOff}</Row>
         )}
-        {data.notes && <Row label="Notes" wide>{data.notes}</Row>}
+        {notes && <Row label={t.notesLabel} wide>{notes}</Row>}
       </dl>
     </section>
   )

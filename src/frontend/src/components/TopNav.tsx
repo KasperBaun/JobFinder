@@ -1,18 +1,21 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { shutdown } from '../api/client'
+import { useT } from '../i18n'
+import type { Messages } from '../i18n'
 
-const links: { to: string; label: string; end?: boolean }[] = [
-  { to: '/', label: 'Overview', end: true },
-  { to: '/providers', label: 'Sources' },
-  { to: '/skillset', label: 'Profile' },
-  { to: '/search', label: 'Search' },
-  { to: '/history', label: 'History' },
-  { to: '/applications', label: 'Applications' },
-  { to: '/settings', label: 'Settings' },
+const links: { to: string; label: keyof Messages['nav']; end?: boolean }[] = [
+  { to: '/', label: 'overview', end: true },
+  { to: '/providers', label: 'sources' },
+  { to: '/skillset', label: 'profile' },
+  { to: '/search', label: 'search' },
+  { to: '/history', label: 'history' },
+  { to: '/applications', label: 'applications' },
+  { to: '/settings', label: 'settings' },
 ]
 
 export function TopNav() {
   const navigate = useNavigate()
+  const t = useT('nav')
 
   async function handleQuit() {
     // Desktop app: one click closes the native window and quits — the same as the titlebar X.
@@ -24,7 +27,7 @@ export function TopNav() {
     }
     // Browser web-shell: there's no window to close, so confirm, stop the backend, then land on
     // the goodbye page telling the user they can close the tab.
-    if (!confirm('Close jobfinder?')) return
+    if (!confirm(t.quitConfirm)) return
     try {
       await shutdown()
     } catch {
@@ -62,7 +65,7 @@ export function TopNav() {
                   isActive ? 'nav-link nav-link--active' : 'nav-link'
                 }
               >
-                {link.label}
+                {t[link.label]}
               </NavLink>
             </li>
           ))}
@@ -71,8 +74,8 @@ export function TopNav() {
           type="button"
           className="top-nav__quit"
           onClick={handleQuit}
-          aria-label="Close jobfinder"
-          data-tooltip="Close jobfinder"
+          aria-label={t.quit}
+          data-tooltip={t.quit}
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
                stroke="currentColor" strokeWidth="2"

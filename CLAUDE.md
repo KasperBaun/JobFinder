@@ -103,6 +103,34 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 - The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
 - API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
 
+## Localization
+
+The GUI ships English and Danish. Catalogs live in `src/frontend/src/i18n/en/` and
+`src/frontend/src/i18n/da/`, one module per feature namespace; `useT('namespace')`
+returns the namespace object, so call sites are property accesses, not string keys.
+
+- **Both locales land in the same change.** `da/index.ts` is annotated with the English
+  catalog's type, so a missing key, an extra key or a mismatched interpolation signature
+  is a `tsc` error — and `tsc -b` runs in CI via the release publish. Never add a string
+  to one catalog only.
+- **No user-facing string literals in components** — including `aria-label`, `title`,
+  `placeholder` and `confirm()` text. Values keyed by a domain enum (statuses, phases,
+  drop reasons) belong in the catalog as `satisfies Record<TheEnum, string>`.
+- **Dates, numbers and sorting go through `i18n/format.ts`** (`n`, `dec`, `collator`,
+  `relativeTimeFormat`, `dateTimeFormat`) or `utils/time.ts`, never bare `toFixed`,
+  `toLocaleString` or `localeCompare` — Danish uses `0,82` / `1.234` and sorts æ/ø/å
+  after z.
+- **The language lives in `bootstrap.json`** (`BootstrapConfig.Language`, set via the
+  setup request or `PUT /api/settings/language`), with a `localStorage` copy used only as
+  a boot hint so reloads don't flash English.
+- **Backend prose is deliberately not localized yet** — run timeline entries, ranking
+  rationale, dropped-listing context, API error messages, `top-jobs.md` and LLM output
+  stay English and render as-is. Converting them to `key + args` so the frontend formats
+  them (which would also retranslate existing history) is in `todo.md`; don't
+  half-migrate it.
+- Brand names (`utils/platform.ts` ATS labels) and wire formats (the longlist URL hash)
+  are intentionally untranslated.
+
 ## Things to avoid
 
 - **No hard-coded personal context in code.** No keywords, locations, employers, or stacks bake into binaries. Everything personal is data.

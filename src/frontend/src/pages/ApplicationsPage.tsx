@@ -4,10 +4,12 @@ import { getApplications } from '../api/client'
 import { StatusSelect } from '../components/StatusSelect'
 import { formatAbsolute, formatRelative } from '../utils/time'
 import type { ApplicationEntry } from '../api/types'
+import { dec, useT } from '../i18n'
 
 // Cross-run tracker: every listing that carries an application status, with the
 // newest run's status when the same job was statused in several runs (R-097).
 export function ApplicationsPage() {
+  const t = useT('applications')
   const { data, isLoading, error } = useQuery({
     queryKey: ['applications'],
     queryFn: getApplications,
@@ -16,20 +18,18 @@ export function ApplicationsPage() {
   return (
     <div className="page page--wide">
       <header className="page__header">
-        <div className="page__eyebrow">05 / applications</div>
-        <h1 className="page__heading">Your <em>applications</em></h1>
-        <p className="page__lede">
-          Every job you've tracked, across all searches. Interviews and offers teach the AI what a strong fit looks like.
-        </p>
+        <div className="page__eyebrow">{t.eyebrow}</div>
+        <h1 className="page__heading">{t.heading()}</h1>
+        <p className="page__lede">{t.lede}</p>
       </header>
 
-      {isLoading && <div className="muted">Loading applications…</div>}
-      {error && <div className="error-text">Failed to load applications.</div>}
+      {isLoading && <div className="muted">{t.loading}</div>}
+      {error && <div className="error-text">{t.loadFailed}</div>}
 
       {data && data.applications.length === 0 && (
         <div className="hint-card">
-          Nothing tracked yet. Set a status — like <em>Applied</em> — on any job in a{' '}
-          <Link to="/history">past search</Link> to start tracking it here.
+          {t.emptyPrefix} <em>{t.emptyStatus}</em> {t.emptyMiddle}{' '}
+          <Link to="/history">{t.emptyLink}</Link> {t.emptySuffix}
         </div>
       )}
 
@@ -38,13 +38,13 @@ export function ApplicationsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Company</th>
-                <th>Source</th>
-                <th>Rating</th>
-                <th>Status</th>
-                <th>Your rating</th>
-                <th>From search</th>
+                <th>{t.colTitle}</th>
+                <th>{t.colCompany}</th>
+                <th>{t.colSource}</th>
+                <th>{t.colRating}</th>
+                <th>{t.colStatus}</th>
+                <th>{t.colYourRating}</th>
+                <th>{t.colFromSearch}</th>
               </tr>
             </thead>
             <tbody>
@@ -58,12 +58,13 @@ export function ApplicationsPage() {
 }
 
 function ApplicationRow({ entry }: { entry: ApplicationEntry }) {
+  const t = useT('listing')
   return (
     <tr>
       <td><a href={entry.url} target="_blank" rel="noreferrer">{entry.title}</a></td>
       <td>{entry.company ?? <span className="muted">—</span>}</td>
       <td><span className="badge badge--muted">{entry.portalDisplayName ?? entry.portal}</span></td>
-      <td className="tabular mono">{entry.score.toFixed(2)}</td>
+      <td className="tabular mono">{dec(entry.score, 2)}</td>
       <td>
         <StatusSelect runId={entry.runId} listingId={entry.listingId} current={entry.status} compact />
       </td>
@@ -74,7 +75,7 @@ function ApplicationRow({ entry }: { entry: ApplicationEntry }) {
               className={`badge ${entry.mark === 'good' ? 'badge--score' : 'badge--muted'}`}
               title={entry.reason ? `“${entry.reason}”` : undefined}
             >
-              {entry.mark === 'good' ? 'Good match' : 'Not a match'}
+              {entry.mark === 'good' ? t.markGood : t.markBad}
             </span>
           )
           : <span className="muted">—</span>}

@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
+import { useT } from '../i18n'
 
 interface Props {
   values: string[]
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function TagInput({ values, onChange, placeholder, variant = 'default', ariaLabel }: Props) {
+  const t = useT('common')
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -50,7 +52,7 @@ export function TagInput({ values, onChange, placeholder, variant = 'default', a
             type="button"
             className="tag__close"
             onClick={(e) => { e.stopPropagation(); remove(i) }}
-            aria-label={`Remove ${v}`}
+            aria-label={t.removeValue(v)}
           >
             ×
           </button>
@@ -60,7 +62,7 @@ export function TagInput({ values, onChange, placeholder, variant = 'default', a
         ref={inputRef}
         className="tag-input__entry"
         value={draft}
-        placeholder={values.length === 0 ? (placeholder ?? 'Type and press Enter') : ''}
+        placeholder={values.length === 0 ? (placeholder ?? t.typeAndPressEnter) : ''}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={handleKey}
         onBlur={commit}
