@@ -8,8 +8,9 @@ namespace Jobmatch.Ranking;
 /// </summary>
 public static partial class Ranker
 {
-    // Keys are persisted in run history — additive only. Mirrored by the frontend's
-    // src/frontend/src/i18n/serverKeys.ts.
+    // Keys are persisted in run history — additive only. The frontend's i18n/en/server.ts and
+    // i18n/da/server.ts own the wording; src/tests/fixtures/reasoning-en.json pins the English
+    // rendering so this file and the TypeScript one cannot drift.
     internal static IReadOnlyList<ReasoningNote> BuildNotes(
         IReadOnlyList<string> primaryHits,
         IReadOnlyList<string> secondaryHits,
@@ -94,15 +95,15 @@ public static partial class Ranker
         "domainHits" => $"Industry: {Join(note, "domains")}.",
         "seniorityClose" => "Experience level close fit.",
         "seniorityMatches" => "Experience level matches.",
-        "seniorityMismatch" => "Experience level doesn't match.",
+        "seniorityMismatch" => "Experience level doesn’t match.",
         "seniorityUnknown" => "Experience level not stated.",
-        "titleNotDeveloper" => "Title doesn't look like a developer role — rating reduced.",
+        "titleNotDeveloper" => "Title doesn’t look like a developer role — rating reduced.",
         "location" => $"Location: {Text(note, "location")}.",
         "remoteOk" => $"Remote work OK ({Text(note, "mode")}).",
         "neitherLocationNorRemote" => "Neither location nor remote setup matches.",
         "locationRemoteUnknown" => "Location and remote setup not stated.",
-        "locationMismatchRemoteUnknown" => "Location doesn't match; remote setup not stated.",
-        "locationUnknownRemoteMismatch" => "Location not stated; remote setup doesn't match.",
+        "locationMismatchRemoteUnknown" => "Location doesn’t match; remote setup not stated.",
+        "locationUnknownRemoteMismatch" => "Location not stated; remote setup doesn’t match.",
         "agePenalty" => $"Posted {Text(note, "days")} days ago — rating reduced for age.",
         _ => string.Empty,
     };
