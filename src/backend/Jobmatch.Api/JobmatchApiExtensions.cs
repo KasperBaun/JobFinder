@@ -110,6 +110,7 @@ public static class JobmatchApiExtensions
 
         // Handlers
         services.AddScoped<ISetupHandler, SetupHandler>();
+        services.AddScoped<ISettingsHandler, SettingsHandler>();
         services.AddScoped<ISystemHandler, SystemHandler>();
         services.AddScoped<IWhoamiHandler, WhoamiHandler>();
         services.AddScoped<IMarksHandler, MarksHandler>();
@@ -161,6 +162,7 @@ public static class JobmatchApiExtensions
         IEndpointRegistration[] registrations =
         [
             new SetupEndpoints(),
+            new SettingsEndpoints(),
             new SystemEndpoints(),
             new WhoamiEndpoints(),
             new MarksEndpoints(),

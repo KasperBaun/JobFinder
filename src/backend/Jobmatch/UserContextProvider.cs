@@ -10,7 +10,8 @@ public sealed record SetupState(
     string? DataDir,
     string SuggestedEmail,
     string SuggestedDataDir,
-    string BootstrapPath);
+    string BootstrapPath,
+    string? Language);
 
 /// <summary>
 /// Owns the active <see cref="UserContext"/> and the first-run lifecycle. Resolution is deferred: if a
@@ -28,7 +29,10 @@ public interface IUserContextProvider
     SetupState State();
 
     /// <summary>Performs first-run setup: creates/seeds the chosen directory and persists the choice.</summary>
-    UserContext Complete(string? email, string? dataDir);
+    UserContext Complete(string? email, string? dataDir, string? language = null);
+
+    /// <summary>Persists the interface language and returns the canonical tag. Requires setup to have completed.</summary>
+    string SetLanguage(string? language);
 }
 
 public sealed class UserContextProvider : IUserContextProvider
@@ -62,10 +66,11 @@ public sealed class UserContextProvider : IUserContextProvider
             DataDir: _ctx?.RootDir,
             SuggestedEmail: suggestedEmail,
             SuggestedDataDir: UserContext.SuggestDefaultDataDir(suggestedEmail),
-            BootstrapPath: _store.Path);
+            BootstrapPath: _store.Path,
+            Language: _store.TryLoad()?.Language);
     }
 
-    public UserContext Complete(string? email, string? dataDir)
+    public UserContext Complete(string? email, string? dataDir, string? language = null)
     {
         var trimmedEmail = email?.Trim();
         var trimmedDir = dataDir?.Trim();
@@ -78,9 +83,30 @@ public sealed class UserContextProvider : IUserContextProvider
         lock (_gate)
         {
             var ctx = Build(trimmedEmail, trimmedDir);
-            _store.Save(new BootstrapConfig(trimmedEmail, ctx.RootDir, DateTimeOffset.UtcNow));
+            _store.Save(new BootstrapConfig(
+                trimmedEmail,
+                ctx.RootDir,
+                DateTimeOffset.UtcNow,
+                AppLanguage.Normalize(language)));
             _ctx = ctx;
             return ctx;
+        }
+    }
+
+    public string SetLanguage(string? language)
+    {
+        var normalized = AppLanguage.Normalize(language)
+            ?? throw new InvalidRequestException(
+                $"'{language}' is not a supported language. Supported: {string.Join(", ", AppLanguage.Supported)}.");
+
+        lock (_gate)
+        {
+            // Only reachable once setup has run — before that the wizard carries the language in its
+            // own request, because there is no bootstrap record to attach it to yet.
+            var config = _store.TryLoad() ?? throw new SetupRequiredException(
+                "First-run setup is required before the language can be saved.");
+            _store.Save(config with { Language = normalized });
+            return normalized;
         }
     }
 
