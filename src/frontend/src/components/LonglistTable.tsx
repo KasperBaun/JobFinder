@@ -10,6 +10,8 @@ import { BreakdownBar, BreakdownDetail } from './BreakdownBar'
 import { MarkButton } from './MarkButton'
 import { StatusSelect } from './StatusSelect'
 import { formatRelative } from '../utils/time'
+import { activeLocale } from '../i18n/active'
+import { collator, dec } from '../i18n/format'
 
 interface Props {
   data: RunDetail
@@ -162,7 +164,7 @@ function FilterBar({
         <ChipGroup label="source">
           {[...portalCounts]
             .map(([p, n]) => ({ slug: p, label: portalDisplayNames.get(p) ?? p, count: n }))
-            .sort((a, b) => a.label.localeCompare(b.label))
+            .sort((a, b) => collator(activeLocale()).compare(a.label, b.label))
             .map(({ slug, label, count }) => (
               <Chip key={slug} active={filters.portals.includes(slug)} onClick={() => togglePortal(slug)}>
                 {label} <span className="chip__count">{count}</span>
@@ -291,7 +293,7 @@ function Row({ entry, runId, mark, markReason, markStatus }: {
         </td>
         <td className="tabular mono">
           <div className="longlist__score-cell">
-            <span>{entry.score.toFixed(2)}</span>
+            <span>{dec(entry.score, 2)}</span>
             <BreakdownBar b={entry.breakdown} />
           </div>
         </td>
@@ -368,18 +370,29 @@ function postedCutoff(p: LonglistFilters['posted']): number | null {
 
 function sortComparator(key: SortKey, dir: 'asc' | 'desc') {
   const sign = dir === 'asc' ? 1 : -1
+  // One collator for the whole sort rather than a fresh one per localeCompare call, and Danish
+  // collation so æ/ø/å land after z instead of wherever the host OS decides.
+  const text = collator(activeLocale())
   return (a: ScoredEntry, b: ScoredEntry) => {
     let v = 0
     switch (key) {
-      case 'title':    v = a.title.localeCompare(b.title); break
-      case 'company':  v = (a.company ?? '').localeCompare(b.company ?? ''); break
-      case 'portal':   v = (a.portalDisplayName ?? a.portal).localeCompare(b.portalDisplayName ?? b.portal); break
-      case 'location': v = (a.location ?? '').localeCompare(b.location ?? ''); break
-      case 'posted':   v = (a.postedAt ?? '').localeCompare(b.postedAt ?? ''); break
+      case 'title':    v = text.compare(a.title, b.title); break
+      case 'company':  v = text.compare(a.company ?? '', b.company ?? ''); break
+      case 'portal':   v = text.compare(a.portalDisplayName ?? a.portal, b.portalDisplayName ?? b.portal); break
+      case 'location': v = text.compare(a.location ?? '', b.location ?? ''); break
+      // ISO-8601 timestamps, not human text — collating them is wrong, and under numeric collation
+      // "2026-07-09" would sort before "2026-07-8".
+      case 'posted':   v = compareIso(a.postedAt, b.postedAt); break
       case 'score':    v = a.score - b.score; break
     }
     return sign * v
   }
+}
+
+function compareIso(a: string | undefined, b: string | undefined): number {
+  const l = a ?? ''
+  const r = b ?? ''
+  return l < r ? -1 : l > r ? 1 : 0
 }
 
 function countBy<T, K extends string>(rows: readonly T[], key: (row: T) => K): Map<K, number> {

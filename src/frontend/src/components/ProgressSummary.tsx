@@ -1,6 +1,7 @@
 import type { JobSearch } from '../api/types'
 import type { SourceCounts } from '../utils/progress'
 import { useElapsed } from '../hooks/useElapsed'
+import { dec, n } from '../i18n'
 
 type Props = {
   job: JobSearch
@@ -30,15 +31,15 @@ export function ProgressSummary({ job, counts, active, showDedupe, showRank }: P
         <span className="progress-hero__timer tabular mono">{elapsed}</span>
       </div>
       <div className="progress-hero__aggregate tabular">
-        {job.fetchedCount.toLocaleString()} jobs found
+        {n(job.fetchedCount)} jobs found
         {active && counts.running > 0 && (
           <> · <span className="progress-hero__running">{counts.running} running</span></>
         )}
         {counts.failed > 0 && (
           <> · <span className="progress-hero__failed">{counts.failed} failed</span></>
         )}
-        {showDedupe && <> · {job.dedupedCount.toLocaleString()} unique</>}
-        {showRank && <> · top {job.topScore.toFixed(2)}</>}
+        {showDedupe && <> · {n(job.dedupedCount)} unique</>}
+        {showRank && <> · top {dec(job.topScore, 2)}</>}
       </div>
     </div>
   )
