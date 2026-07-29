@@ -5,28 +5,30 @@ import type { ExtractedProfile, SkillsetUpdateRequest } from '../api/types'
 import { useCvExtraction } from '../hooks/useCvExtraction'
 import { useElapsed } from '../hooks/useElapsed'
 import { LlmModelBanner } from './LlmModelBanner'
+import { useT } from '../i18n'
+import type { Messages } from '../i18n'
 
 type Form = SkillsetUpdateRequest
 type FieldKey = keyof Form
 type Mode = 'paste' | 'file' | 'url'
 
-type FieldSpec = { key: FieldKey; label: string; kind: 'text' | 'number' | 'list' }
+type FieldSpec = { key: FieldKey; labelKey: keyof Messages['cv']['fields']; kind: 'text' | 'number' | 'list' }
 
 const FIELDS: FieldSpec[] = [
-  { key: 'name', label: 'Name', kind: 'text' },
-  { key: 'location', label: 'Location', kind: 'text' },
-  { key: 'country', label: 'Country', kind: 'text' },
-  { key: 'region', label: 'Region', kind: 'text' },
-  { key: 'metro', label: 'Cities / areas', kind: 'list' },
-  { key: 'experienceYears', label: 'Years of experience', kind: 'number' },
-  { key: 'seniority', label: 'Experience level', kind: 'text' },
-  { key: 'remotePreference', label: 'Where you want to work', kind: 'text' },
-  { key: 'targetRoles', label: 'Roles you want', kind: 'list' },
-  { key: 'primaryStack', label: 'Must-have skills', kind: 'list' },
-  { key: 'secondaryStack', label: 'Nice-to-have skills', kind: 'list' },
-  { key: 'domains', label: 'Industries', kind: 'list' },
-  { key: 'languages', label: 'Languages', kind: 'list' },
-  { key: 'employmentTypes', label: 'Employment types', kind: 'list' },
+  { key: 'name', labelKey: 'name', kind: 'text' },
+  { key: 'location', labelKey: 'location', kind: 'text' },
+  { key: 'country', labelKey: 'country', kind: 'text' },
+  { key: 'region', labelKey: 'region', kind: 'text' },
+  { key: 'metro', labelKey: 'metro', kind: 'list' },
+  { key: 'experienceYears', labelKey: 'experienceYears', kind: 'number' },
+  { key: 'seniority', labelKey: 'seniority', kind: 'text' },
+  { key: 'remotePreference', labelKey: 'remotePreference', kind: 'text' },
+  { key: 'targetRoles', labelKey: 'targetRoles', kind: 'list' },
+  { key: 'primaryStack', labelKey: 'primaryStack', kind: 'list' },
+  { key: 'secondaryStack', labelKey: 'secondaryStack', kind: 'list' },
+  { key: 'domains', labelKey: 'domains', kind: 'list' },
+  { key: 'languages', labelKey: 'languages', kind: 'list' },
+  { key: 'employmentTypes', labelKey: 'employmentTypes', kind: 'list' },
 ]
 
 type DiffRow = { spec: FieldSpec; current: string; suggested: string; value: Form[FieldKey] }
@@ -72,6 +74,8 @@ export function CvImportModal({
   onApply: (patch: Partial<Form>, keys: FieldKey[]) => void
   onClose: () => void
 }) {
+  const t = useT('cv')
+  const { close } = useT('common')
   const titleId = useId()
   const llm = useQuery({ queryKey: ['llm-status'], queryFn: getLlmStatus, refetchOnWindowFocus: false })
   const ready = llm.data?.enabled === true && llm.data.modelPresent
@@ -149,49 +153,37 @@ export function CvImportModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-card__head">
-          <h2 id={titleId} className="modal-card__title">Fill from CV</h2>
-          <button type="button" className="modal-card__close" aria-label="Close" onClick={onClose}>×</button>
+          <h2 id={titleId} className="modal-card__title">{t.title}</h2>
+          <button type="button" className="modal-card__close" aria-label={close} onClick={onClose}>×</button>
         </div>
 
         {llm.data && !llm.data.enabled && (
-          <p className="field__hint">
-            AI review is turned off (<code>llm.enabled</code> in <code>ranking.yml</code>), and reading a CV
-            needs the local AI model. Enable it and come back.
-          </p>
+          <p className="field__hint">{t.aiDisabled()}</p>
         )}
 
         {llm.data?.enabled && !llm.data.modelPresent && (
           <div className="cv-import__body">
-            <p className="field__hint">
-              Reading a CV uses the local AI model, which hasn't been downloaded yet. Start the download
-              below — you can keep using the app and come back when it's done.
-            </p>
+            <p className="field__hint">{t.modelMissing}</p>
             <LlmModelBanner />
           </div>
         )}
 
         {ready && extracting && (
           <div className="cv-import__body">
-            <p><span className="spinner" /> Reading your CV… <strong>{elapsed}</strong></p>
-            <p className="field__hint">
-              This runs the local AI model — typically a minute or two on CPU. You can close this dialog
-              or navigate away; it keeps running and the result will be here when you return.
-            </p>
+            <p><span className="spinner" /> {t.reading} <strong>{elapsed}</strong></p>
+            <p className="field__hint">{t.readingHint}</p>
           </div>
         )}
 
         {ready && reviewing && (
           <div className="cv-import__body">
-            <p className="field__hint">
-              Here's what the CV states, next to what your profile has now. Applying only fills the form —
-              review the result and hit Save to keep it.
-            </p>
+            <p className="field__hint">{t.reviewHint}</p>
             {diff.length === 0 ? (
-              <p className="field__hint">Nothing new — your profile already covers everything the CV states.</p>
+              <p className="field__hint">{t.nothingNew}</p>
             ) : (
               <table className="cv-import__table">
                 <thead>
-                  <tr><th /><th>Field</th><th>Current</th><th>From CV</th></tr>
+                  <tr><th /><th>{t.colField}</th><th>{t.colCurrent}</th><th>{t.colFromCv}</th></tr>
                 </thead>
                 <tbody>
                   {diff.map((row) => (
@@ -199,12 +191,12 @@ export function CvImportModal({
                       <td>
                         <input
                           type="checkbox"
-                          aria-label={`Apply ${row.spec.label}`}
+                          aria-label={t.applyAria(t.fields[row.spec.labelKey])}
                           checked={!unchecked.has(row.spec.key)}
                           onChange={() => toggle(row.spec.key)}
                         />
                       </td>
-                      <td>{row.spec.label}</td>
+                      <td>{t.fields[row.spec.labelKey]}</td>
                       <td className="cv-import__current">{row.current}</td>
                       <td>{row.suggested}</td>
                     </tr>
@@ -220,11 +212,11 @@ export function CvImportModal({
                   disabled={diff.every((r) => unchecked.has(r.spec.key))}
                   onClick={() => apply(diff)}
                 >
-                  Apply {diff.filter((r) => !unchecked.has(r.spec.key)).length} field(s)
+                  {t.applyFields(diff.filter((r) => !unchecked.has(r.spec.key)).length)}
                 </button>
               )}
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setDismissedResult(true)}>
-                Start over
+                {t.startOver}
               </button>
             </div>
           </div>
@@ -242,7 +234,7 @@ export function CvImportModal({
                   className={`btn btn--sm ${mode === m ? 'btn--secondary' : 'btn--ghost'}`}
                   onClick={() => setMode(m)}
                 >
-                  {m === 'paste' ? 'Paste text' : m === 'file' ? 'Upload file' : 'From a link'}
+                  {m === 'paste' ? t.modePaste : m === 'file' ? t.modeFile : t.modeUrl}
                 </button>
               ))}
             </div>
@@ -252,7 +244,7 @@ export function CvImportModal({
                 className="input cv-import__textarea"
                 rows={8}
                 autoFocus
-                placeholder="Paste the full text of your CV here…"
+                placeholder={t.pastePlaceholder}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
@@ -265,7 +257,7 @@ export function CvImportModal({
                   accept=".pdf,.txt,.md"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
-                <p className="field__hint">.pdf, .txt or .md — for Word documents, paste the text instead.</p>
+                <p className="field__hint">{t.fileHint}</p>
               </>
             )}
             {mode === 'url' && (
@@ -273,20 +265,20 @@ export function CvImportModal({
                 className="input"
                 type="url"
                 autoFocus
-                placeholder="https://example.com/my-cv.pdf"
+                placeholder={t.urlPlaceholder}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
               />
             )}
 
             {status?.state === 'failed' && !startError && (
-              <p className="error-text">Extraction failed: {status.error ?? 'unknown error'}</p>
+              <p className="error-text">{t.extractionFailed(status.error ?? t.unknownError)}</p>
             )}
             {startError && <p className="error-text">{startError}</p>}
 
             <div className="add-source__actions">
               <button type="button" className="btn btn--primary" disabled={!canStart} onClick={() => void onStart()}>
-                {busy ? <span className="spinner" /> : 'Read my CV'}
+                {busy ? <span className="spinner" /> : t.readMyCv}
               </button>
             </div>
           </div>

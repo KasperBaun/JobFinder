@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getLlmStatus, startLlmDownload } from '../api/client'
+import { useT } from '../i18n'
 
 function formatBytes(n: number | null): string {
   if (n === null || n === undefined) return '?'
@@ -16,6 +17,7 @@ function formatBytes(n: number | null): string {
 // and its progress bar — survive navigating away and reloading: the query just refetches on
 // remount and picks the transfer back up.
 export function LlmModelBanner() {
+  const t = useT('cv')
   const queryClient = useQueryClient()
   const { data: status, isLoading } = useQuery({
     queryKey: ['llm-status'],
@@ -67,10 +69,9 @@ export function LlmModelBanner() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
         <div>
-          <strong>AI review is enabled, but the local model hasn't been downloaded yet.</strong>
+          <strong>{t.modelBannerTitle}</strong>
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            Engine <code>{status.provider}</code> expects {' '}
-            <code style={{ wordBreak: 'break-all' }}>{status.modelPath}</code>.
+            {t.modelBannerExpects(status.provider, status.modelPath)}
           </div>
         </div>
         {!downloading && (
@@ -86,7 +87,7 @@ export function LlmModelBanner() {
               whiteSpace: 'nowrap',
             }}
           >
-            {dl.state === 'failed' ? 'Retry download' : 'Download model (~2.3 GB)'}
+            {dl.state === 'failed' ? t.retryDownload : t.downloadModel}
           </button>
         )}
       </div>
@@ -94,9 +95,7 @@ export function LlmModelBanner() {
       {downloading && (
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 13 }}>
-            Downloading {formatBytes(dl.downloadedBytes)}{' '}
-            {dl.totalBytes ? `of ${formatBytes(dl.totalBytes)}` : ''}
-            {pct !== null ? ` (${pct}%)` : ''}
+            {t.downloading(formatBytes(dl.downloadedBytes), dl.totalBytes ? formatBytes(dl.totalBytes) : null, pct)}
           </div>
           <div style={{ height: 4, background: '#e0e0e0', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
             <div
@@ -113,7 +112,7 @@ export function LlmModelBanner() {
 
       {error && (
         <div style={{ marginTop: 12, fontSize: 13, color: '#a00' }}>
-          Download failed: {error}
+          {t.downloadFailed(error)}
         </div>
       )}
     </aside>

@@ -1,4 +1,5 @@
 import { common } from './common'
+import { cv } from './cv'
 import { home } from './home'
 import { nav } from './nav'
 import { providers } from './providers'
@@ -10,6 +11,7 @@ import { skillset } from './skillset'
 
 export const en = {
   common,
+  cv,
   home,
   nav,
   providers,
