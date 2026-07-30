@@ -31,7 +31,15 @@ public enum JobSearchEventLevel
     Error,
 }
 
-/// <summary>One timestamped entry in a run's timeline — the "what happened, when" audit shown in the UI.</summary>
+/// <summary>
+/// One timestamped entry in a run's timeline — the "what happened, when" audit shown in the UI.
+/// <para>
+/// <see cref="Message"/> is the English rendering, kept for logs and for runs recorded before
+/// <see cref="MessageKey"/> existed; the GUI prefers the key + <see cref="Args"/> so the timeline
+/// reads in the user's language, including for runs already on disk. Keys are persisted, so they are
+/// additive only — never rename or repurpose one.
+/// </para>
+/// </summary>
 public sealed record JobSearchEvent(
     DateTimeOffset Timestamp,
     JobSearchEventLevel Level,
@@ -39,7 +47,9 @@ public sealed record JobSearchEvent(
     string Message,
     string? Provider = null,
     int? Count = null,
-    long? DurationMs = null);
+    long? DurationMs = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? Args = null);
 
 /// <summary>
 /// Lifecycle aggregate for a single background search run. The state machine is the source of truth
@@ -95,7 +105,7 @@ public sealed record JobSearch(
         HangfireJobId: null,
         Attempt: 0,
         LastHeartbeat: now,
-        Timeline: [new JobSearchEvent(now, JobSearchEventLevel.Info, JobSearchPhase.Pending, "Search queued")]);
+        Timeline: [new JobSearchEvent(now, JobSearchEventLevel.Info, JobSearchPhase.Pending, "Search queued", MessageKey: "queued")]);
 
     public JobSearch WithHangfireJobId(string hangfireJobId) => this with { HangfireJobId = hangfireJobId };
 
@@ -107,10 +117,12 @@ public sealed record JobSearch(
         DateTimeOffset now,
         string? provider = null,
         int? count = null,
-        long? durationMs = null)
+        long? durationMs = null,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? args = null)
     {
         RequireNonTerminal(nameof(Log));
-        return AppendLog(level, phase, message, now, provider, count, durationMs);
+        return AppendLog(level, phase, message, now, provider, count, durationMs, messageKey, args);
     }
 
     // Unguarded append — used by the terminal transitions to record their own final entry after the
@@ -122,11 +134,13 @@ public sealed record JobSearch(
         DateTimeOffset now,
         string? provider = null,
         int? count = null,
-        long? durationMs = null) => this with
+        long? durationMs = null,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? args = null) => this with
         {
             Phase = phase,
             LastHeartbeat = now,
-            Timeline = [.. Timeline, new JobSearchEvent(now, level, phase, message, provider, count, durationMs)],
+            Timeline = [.. Timeline, new JobSearchEvent(now, level, phase, message, provider, count, durationMs, messageKey, args)],
         };
 
     public JobSearch Heartbeat(DateTimeOffset now) => this with { LastHeartbeat = now };
@@ -156,7 +170,13 @@ public sealed record JobSearch(
             CurrentAttemptStartedAt = now,
             Attempt = Attempt + 1,
             LastHeartbeat = now,
-        }).AppendLog(JobSearchEventLevel.Info, JobSearchPhase.Fetching, Attempt > 0 ? $"Search resumed (attempt {Attempt + 1})" : "Search started", now);
+        }).AppendLog(
+            JobSearchEventLevel.Info,
+            JobSearchPhase.Fetching,
+            Attempt > 0 ? $"Search resumed (attempt {Attempt + 1})" : "Search started",
+            now,
+            messageKey: Attempt > 0 ? "resumed" : "started",
+            args: Attempt > 0 ? new Dictionary<string, object> { ["attempt"] = Attempt + 1 } : null);
     }
 
     public JobSearch MarkSucceeded(int shortlistCount, double topScore, DateTimeOffset now)
@@ -170,7 +190,13 @@ public sealed record JobSearch(
             ShortlistCount = shortlistCount,
             TopScore = topScore,
             LastHeartbeat = now,
-        }).AppendLog(JobSearchEventLevel.Info, JobSearchPhase.Done, $"Search complete — {shortlistCount} top jobs", now);
+        }).AppendLog(
+            JobSearchEventLevel.Info,
+            JobSearchPhase.Done,
+            $"Search complete — {shortlistCount} top jobs",
+            now,
+            messageKey: "complete",
+            args: new Dictionary<string, object> { ["count"] = shortlistCount });
     }
 
     public JobSearch MarkFailed(string error, DateTimeOffset now)
@@ -182,7 +208,13 @@ public sealed record JobSearch(
             FinishedAt = now,
             Error = error,
             LastHeartbeat = now,
-        }).AppendLog(JobSearchEventLevel.Error, Phase, $"Search failed: {error}", now);
+        }).AppendLog(
+            JobSearchEventLevel.Error,
+            Phase,
+            $"Search failed: {error}",
+            now,
+            messageKey: "failed",
+            args: new Dictionary<string, object> { ["error"] = error });
     }
 
     public JobSearch MarkCancelled(DateTimeOffset now)
@@ -193,7 +225,7 @@ public sealed record JobSearch(
             State = JobSearchState.Cancelled,
             FinishedAt = now,
             LastHeartbeat = now,
-        }).AppendLog(JobSearchEventLevel.Warn, Phase, "Search cancelled", now);
+        }).AppendLog(JobSearchEventLevel.Warn, Phase, "Search cancelled", now, messageKey: "cancelled");
     }
 
     /// <summary>Display-only transition for a stale Running/Queued record whose worker is gone (host killed mid-run).</summary>

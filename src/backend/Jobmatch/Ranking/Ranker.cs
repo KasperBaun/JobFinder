@@ -4,7 +4,7 @@ using Match = Jobmatch.Models.Match;
 
 namespace Jobmatch.Ranking;
 
-public static class Ranker
+public static partial class Ranker
 {
     public static IReadOnlyList<Match> Rank(IEnumerable<Listing> listings, Skillset skillset, RankingConfig ranking) =>
         Filter(Score(listings, skillset, ranking), ranking);
@@ -85,7 +85,7 @@ public static class Ranker
             // Only mention the title gate in the notes when it actually changed the score —
             // matching the regex with a multiplier of 1.0 means the user opted out of the gate.
             var titleGateActive = nonEngineeringTitle && ranking.NonEngineeringTitleMultiplier < 1.0;
-            var notes = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, listing, ageDays, ranking.FreshnessHalfLifeDays);
+            var noteKeys = BuildNotes(primaryHits, secondaryHits, domainHits, seniorityMatch, seniorityIsAdjacent, locationMatch, remoteMatch, disqualifierHits, titleGateActive, listing, ageDays, ranking.FreshnessHalfLifeDays);
 
             matches.Add(new Match(
                 Listing: listing,
@@ -99,7 +99,8 @@ public static class Ranker
                     LocationMatch: locationMatch,
                     RemoteMatch: remoteMatch,
                     DisqualifierHits: disqualifierHits,
-                    Notes: notes)));
+                    Notes: RenderEnglish(noteKeys),
+                    NoteKeys: noteKeys)));
         }
 
         return matches;
@@ -235,176 +236,6 @@ public static class Ranker
         return false;
     }
 
-    private static (double score, bool? locationMatch, bool? remoteMatch) ScoreLocationRemote(Listing listing, Skillset skillset, RankingConfig ranking)
-    {
-        bool? remoteMatch = ComputeRemoteMatch(listing.RemoteMode, skillset.RemotePreference);
-
-        if (skillset.RemotePreference == RemotePreference.Any)
-        {
-            return (1.0, locationMatch: null, remoteMatch);
-        }
-
-        // R: how compatible the listing's remote mode is with the user's preference.
-        var R = (listing.RemoteMode, skillset.RemotePreference) switch
-        {
-            (RemoteMode.Remote, RemotePreference.Remote) => 1.0,
-            (RemoteMode.Hybrid, RemotePreference.Hybrid) => 1.0,
-            (RemoteMode.Onsite, RemotePreference.Onsite) => 1.0,
-            (RemoteMode.Remote, RemotePreference.Hybrid) => 0.5,
-            (RemoteMode.Hybrid, RemotePreference.Remote) => 0.5,
-            (RemoteMode.Hybrid, RemotePreference.Onsite) => 0.5,
-            (RemoteMode.Unknown, _) => 0.0,
-            _ => 0.0,
-        };
-
-        // L: how feasible the listing's location is for the user (nullable when listing has no location).
-        var (L, locationMatch) = LocationTier(listing.Location, skillset, ranking.LocationTierWeights);
-
-        if (L is null)
-        {
-            // Listing didn't disclose a location — fall back to remote-mode compatibility alone.
-            return (R, locationMatch, remoteMatch);
-        }
-
-        double score;
-        if (listing.RemoteMode == RemoteMode.Unknown)
-        {
-            // Adapter couldn't tell remote/hybrid/onsite — fall back to location alone
-            // rather than zeroing the signal.
-            score = L.Value;
-        }
-        else if (listing.RemoteMode == RemoteMode.Remote)
-        {
-            // For remote listings, location acts as a regional restriction. If the listing
-            // sits in the user's region or closer (L >= region tier), don't penalise; else
-            // multiply by the tier so US-only remote roles get heavily discounted.
-            var threshold = ranking.LocationTierWeights.Region;
-            var effective = L.Value >= threshold ? 1.0 : L.Value;
-            score = R * effective;
-        }
-        else
-        {
-            // For onsite/hybrid listings, the user must physically be there at some
-            // cadence — multiply remote-mode compatibility by the location tier so a
-            // city role beats a same-country role beats a foreign role.
-            score = R * L.Value;
-        }
-
-        return (score, locationMatch, remoteMatch);
-    }
-
-    // Returns the tier weight for the listing location relative to the user, and a
-    // boolean for "did this match the user's specific location" (city or metro tier).
-    // Returns (null, null) when the listing has no location string.
-    private static (double? tier, bool? locationMatch) LocationTier(string? listingLocation, Skillset skillset, LocationTierWeights w)
-    {
-        if (string.IsNullOrWhiteSpace(listingLocation)) return (null, null);
-        var l = listingLocation.ToLowerInvariant();
-
-        // Worldwide / global = top tier regardless of user.
-        string[] global = ["worldwide", "anywhere", "global"];
-        if (global.Any(t => l.Contains(t, StringComparison.Ordinal))) return (w.City, true);
-
-        // City: substring match on the user's location string (last comma-piece treated as country, rest as city).
-        // Expanded with known cross-language aliases so "København" in a Danish-language listing matches a user
-        // who declared "Copenhagen" in English (and vice versa).
-        var (userCity, derivedCountry) = SplitCityCountry(skillset.Location);
-        if (!string.IsNullOrWhiteSpace(userCity) && AnyAliasMatches(l, userCity!))
-            return (w.City, true);
-
-        // Metro: any of the user's declared metro names (also alias-expanded).
-        foreach (var m in skillset.Metro)
-        {
-            if (!string.IsNullOrWhiteSpace(m) && AnyAliasMatches(l, m))
-                return (w.Metro, true);
-        }
-
-        // Country: explicit Country field, or derived from Location.
-        var country = !string.IsNullOrWhiteSpace(skillset.Country) ? skillset.Country : derivedCountry;
-        if (!string.IsNullOrWhiteSpace(country) && ContainsToken(l, country!.ToLowerInvariant()))
-            return (w.Country, false);
-
-        // Region: explicit Region field, with synonyms for the EU cluster.
-        if (!string.IsNullOrWhiteSpace(skillset.Region))
-        {
-            var region = skillset.Region!.ToLowerInvariant();
-            if (ContainsToken(l, region)) return (w.Region, false);
-            if (region is "eu" or "europe" or "emea" or "eea")
-            {
-                string[] euSynonyms = ["europe", "european", "emea", "eea", "nordic", "scandinavia"];
-                if (euSynonyms.Any(t => l.Contains(t, StringComparison.Ordinal))) return (w.Region, false);
-                if (ContainsToken(l, "eu")) return (w.Region, false);
-                if (EuMemberStates.Any(c => ContainsToken(l, c))) return (w.Region, false);
-            }
-        }
-
-        return (w.Else, false);
-    }
-
-    // Cross-language aliases for cities the user might declare in one language and a listing
-    // might use in another. Lowercase keys and values. Alphabetic order.
-    // Symmetric: each name maps to the *other* names that should also match. Add new entries
-    // sparingly — most cities don't need this and substring matching usually suffices.
-    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> CityAliases =
-        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            // Greater Copenhagen
-            ["copenhagen"] = ["københavn", "kbh", "cph"],
-            ["københavn"] = ["copenhagen", "kbh", "cph"],
-            ["kbh"] = ["copenhagen", "københavn", "cph"],
-            ["cph"] = ["copenhagen", "københavn", "kbh"],
-            // "Greater Copenhagen" maps to the 14 suburb municipalities that make up
-            // Statistics Denmark's Greater Copenhagen (plus the city itself). A listing
-            // located in any of these earns the Metro tier when the user has
-            // "Greater Copenhagen" or "Hovedstaden" in their metro list.
-            ["greater copenhagen"] = [
-                "storkøbenhavn", "københavn", "copenhagen",
-                "brøndby", "albertslund", "ballerup", "dragør", "farum", "gentofte",
-                "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
-                "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
-            ],
-            ["storkøbenhavn"] = [
-                "greater copenhagen", "københavn", "copenhagen",
-                "brøndby", "albertslund", "ballerup", "dragør", "farum", "gentofte",
-                "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
-                "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
-            ],
-            ["hovedstaden"] = [
-                "capital region", "københavn", "copenhagen",
-                "brøndby", "albertslund", "ballerup", "dragør", "farum", "gentofte",
-                "gladsaxe", "glostrup", "herlev", "hvidovre", "høje-taastrup",
-                "ishøj", "lyngby-taarbæk", "rødovre", "tårnby", "vallensbæk",
-            ],
-
-            // Aarhus / Århus / Aalborg / Ålborg — DK uses both spellings interchangeably
-            ["aarhus"] = ["århus"],
-            ["århus"] = ["aarhus"],
-            ["aalborg"] = ["ålborg"],
-            ["ålborg"] = ["aalborg"],
-            ["odense"] = [], // identical in EN/DA, here for completeness
-
-            // Other DK metros that get hit
-            ["helsingør"] = ["elsinore"],
-            ["elsinore"] = ["helsingør"],
-        };
-
-    // True when the listing location contains the user's city name OR any known alias.
-    // Substring + word-boundary check, same rules as ContainsToken.
-    private static bool AnyAliasMatches(string lowerListingLocation, string userCity)
-    {
-        var lower = userCity.ToLowerInvariant();
-        if (ContainsToken(lowerListingLocation, lower)) return true;
-        if (!CityAliases.TryGetValue(lower, out var aliases)) return false;
-        foreach (var a in aliases)
-        {
-            if (ContainsToken(lowerListingLocation, a)) return true;
-        }
-        return false;
-    }
-
-    // EU 27 + EEA non-EU (Iceland, Norway, Liechtenstein) + Switzerland.
-    // UK is intentionally excluded post-Brexit; users who want UK can declare
-    // Country: "United Kingdom" explicitly.
     private static readonly string[] EuMemberStates = [
         "austria", "belgium", "bulgaria", "croatia", "cyprus",
         "czech republic", "czechia", "denmark", "estonia", "finland",
@@ -471,75 +302,4 @@ public static class Ranker
         return age < 0 ? 0 : age;
     }
 
-    private static string BuildNotes(
-        IReadOnlyList<string> primaryHits,
-        IReadOnlyList<string> secondaryHits,
-        IReadOnlyList<string> domainHits,
-        bool? seniorityMatch,
-        bool seniorityIsAdjacent,
-        bool? locationMatch,
-        bool? remoteMatch,
-        IReadOnlyList<string> disqualifierHits,
-        bool nonEngineeringTitle,
-        Listing listing,
-        double? ageDays,
-        double halfLifeDays)
-    {
-        if (disqualifierHits.Count > 0)
-        {
-            return $"Removed because of: {string.Join(", ", disqualifierHits)}.";
-        }
-
-        // The preferred-company boost is deliberately absent here — it renders as a
-        // badge in the GUI (from Breakdown.PreferredCompanyBonus), not as note prose.
-        var parts = new List<string>();
-        if (primaryHits.Count > 0)
-        {
-            parts.Add($"Must-have skill match: {string.Join(", ", primaryHits)}.");
-        }
-        else
-        {
-            parts.Add("None of your must-have skills mentioned.");
-        }
-
-        if (secondaryHits.Count > 0)
-        {
-            parts.Add($"Also matches: {string.Join(", ", secondaryHits)}.");
-        }
-        if (domainHits.Count > 0)
-        {
-            parts.Add($"Industry: {string.Join(", ", domainHits)}.");
-        }
-
-        parts.Add((seniorityMatch, seniorityIsAdjacent) switch
-        {
-            (true, true) => "Experience level close fit.",
-            (true, false) => "Experience level matches.",
-            (false, _) => "Experience level doesn't match.",
-            (null, _) => "Experience level not stated.",
-        });
-
-        if (nonEngineeringTitle)
-        {
-            parts.Add("Title doesn't look like a developer role — rating reduced.");
-        }
-
-        var locPart = (locationMatch, remoteMatch) switch
-        {
-            (true, _) => $"Location: {listing.Location}.",
-            (_, true) => $"Remote work OK ({listing.RemoteMode.ToString().ToLowerInvariant()}).",
-            (false, false) => "Neither location nor remote setup matches.",
-            (null, null) => "Location and remote setup not stated.",
-            (false, null) => "Location doesn't match; remote setup not stated.",
-            (null, false) => "Location not stated; remote setup doesn't match.",
-        };
-        parts.Add(locPart);
-
-        if (ageDays is double age && age > 2 * halfLifeDays)
-        {
-            parts.Add($"Posted {(int)Math.Round(age)} days ago — rating reduced for age.");
-        }
-
-        return string.Join(" ", parts);
-    }
 }
