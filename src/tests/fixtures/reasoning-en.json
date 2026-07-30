@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Golden English rendering of every ReasoningNote key, validated from BOTH sides:",
+    "  - Ranking/Ranker.Notes.cs  -> RankerNotesTests.English_Rendering_Matches_The_Shared_Fixture",
+    "  - i18n/en/server.ts        -> serverText.test.ts 'matches the shared English fixture'",
+    "The wording necessarily exists twice: C# renders top-jobs.md and the persisted `Notes` prose,",
+    "TypeScript renders the UI. This file is what stops the two from drifting — they already had,",
+    "on straight vs curly apostrophes. Change a string here and both tests tell you what to update.",
+    "Keys are persisted in run history: additive only, never renamed."
+  ],
+  "notes": [
+    { "key": "disqualified", "args": { "hits": ["unpaid", "agency"] }, "english": "Removed because of: unpaid, agency." },
+    { "key": "primaryHits", "args": { "skills": ["C#", ".NET"] }, "english": "Must-have skill match: C#, .NET." },
+    { "key": "noPrimaryHits", "args": {}, "english": "None of your must-have skills mentioned." },
+    { "key": "secondaryHits", "args": { "skills": ["Docker", "Kubernetes"] }, "english": "Also matches: Docker, Kubernetes." },
+    { "key": "domainHits", "args": { "domains": ["fintech"] }, "english": "Industry: fintech." },
+    { "key": "seniorityClose", "args": {}, "english": "Experience level close fit." },
+    { "key": "seniorityMatches", "args": {}, "english": "Experience level matches." },
+    { "key": "seniorityMismatch", "args": {}, "english": "Experience level doesn’t match." },
+    { "key": "seniorityUnknown", "args": {}, "english": "Experience level not stated." },
+    { "key": "titleNotDeveloper", "args": {}, "english": "Title doesn’t look like a developer role — rating reduced." },
+    { "key": "location", "args": { "location": "Copenhagen" }, "english": "Location: Copenhagen." },
+    { "key": "remoteOk", "args": { "mode": "hybrid" }, "english": "Remote work OK (hybrid)." },
+    { "key": "neitherLocationNorRemote", "args": {}, "english": "Neither location nor remote setup matches." },
+    { "key": "locationRemoteUnknown", "args": {}, "english": "Location and remote setup not stated." },
+    { "key": "locationMismatchRemoteUnknown", "args": {}, "english": "Location doesn’t match; remote setup not stated." },
+    { "key": "locationUnknownRemoteMismatch", "args": {}, "english": "Location not stated; remote setup doesn’t match." },
+    { "key": "agePenalty", "args": { "days": 41 }, "english": "Posted 41 days ago — rating reduced for age." }
+  ]
+}

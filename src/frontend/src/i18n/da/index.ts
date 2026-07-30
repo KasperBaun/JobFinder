@@ -8,6 +8,7 @@ import { listing } from './listing'
 import { nav } from './nav'
 import { providers } from './providers'
 import { search } from './search'
+import { server } from './server'
 import { settings } from './settings'
 import { setup } from './setup'
 import { sources } from './sources'
@@ -23,6 +24,7 @@ export const da: Messages = {
   nav,
   providers,
   search,
+  server,
   settings,
   setup,
   skillset,
