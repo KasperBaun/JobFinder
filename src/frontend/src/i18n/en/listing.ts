@@ -5,6 +5,13 @@ export const listing = {
   favoriteTitle: 'One of your favorite companies — rating boosted',
   openPosting: 'Open job posting →',
 
+  savePdf: 'Save as PDF',
+  savePdfTooltip: 'Save this job posting as a PDF file',
+  savePdfFailed: 'Could not save the PDF',
+  printPortal: 'Portal',
+  printPosted: 'Posted',
+  printSource: 'Source',
+
   markGood: 'Good match',
   markBad: 'Not a match',
   markUnset: 'Rate this job',

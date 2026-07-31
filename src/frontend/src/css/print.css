@@ -1,0 +1,61 @@
+/* Save-a-listing-as-PDF (T-009). The print portal is mounted only while a save is in flight and
+   is invisible on screen; printing hides the app root and renders the portal alone. The same
+   rules drive both paths: the browser's system print dialog and Electron's printToPDF capture. */
+
+.print-listing {
+  display: none;
+}
+
+@page {
+  margin: 15mm 18mm;
+}
+
+@media print {
+  #root,
+  .toast {
+    display: none !important;
+  }
+
+  .print-listing {
+    display: block;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  .print-listing__title {
+    margin: 0 0 4pt;
+    font-size: 17pt;
+    line-height: 1.25;
+  }
+
+  .print-listing__subline {
+    margin: 0 0 10pt;
+    font-size: 12pt;
+    color: #333;
+  }
+
+  .print-listing__meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2pt 10pt;
+    margin: 0 0 14pt;
+    padding-bottom: 10pt;
+    border-bottom: 1pt solid #999;
+    font-size: 10pt;
+  }
+
+  .print-listing__meta dt {
+    color: #555;
+  }
+
+  .print-listing__meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .print-listing__body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

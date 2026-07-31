@@ -201,6 +201,8 @@ export type ListingMatch = {
   primaryStackHits: string[]
   secondaryStackHits: string[]
   favoriteCompany?: boolean
+  /** Full fetched ad text. Absent on runs recorded before the field existed (T-009). */
+  description?: string
 }
 
 export type ProviderRunStatus = {
