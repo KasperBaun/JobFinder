@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
@@ -45,8 +46,8 @@ public sealed partial class MarksService
         return result;
     }
 
-    // Two on-disk shapes: the original bare string ("good") and an object once a
-    // reason or status exists ({ "mark": "bad", "reason": "...", "status": "applied" }).
+    // Two on-disk shapes: the original bare string ("good") and an object once any
+    // extra exists ({ "mark": "bad", "reason": "...", "status": "applied", "statusAt": "..." }).
     // Any field may be absent; an entry needs at least a valid mark or status to load.
     private static ListingMark? ParseMark(JsonElement value)
     {
@@ -64,7 +65,8 @@ public sealed partial class MarksService
             var status = ReadString(value, "status");
             if (status is not null && !ApplicationStatus.IsValid(status)) status = null;
             if (mark is null && status is null) return null;
-            return new ListingMark(mark, string.IsNullOrWhiteSpace(reason) ? null : reason, status);
+            var statusAt = status is null ? null : ReadTimestamp(value, "statusAt");
+            return new ListingMark(mark, string.IsNullOrWhiteSpace(reason) ? null : reason, status, statusAt);
         }
 
         return null;
@@ -74,6 +76,13 @@ public sealed partial class MarksService
         => value.TryGetProperty(property, out var el) && el.ValueKind == JsonValueKind.String
             ? el.GetString()
             : null;
+
+    private static DateTimeOffset? ReadTimestamp(JsonElement value, string property)
+        => value.TryGetProperty(property, out var el)
+            && el.ValueKind == JsonValueKind.String
+            && el.TryGetDateTimeOffset(out var at)
+                ? at
+                : null;
 
     private void AtomicWrite(Dictionary<string, Dictionary<string, ListingMark>> all)
     {
@@ -92,13 +101,15 @@ public sealed partial class MarksService
 
     private static object Project(ListingMark mark)
     {
-        if (mark is { Reason: null, Status: null } && mark.Mark is not null)
+        if (mark is { Reason: null, Status: null, StatusChangedAt: null } && mark.Mark is not null)
             return mark.Mark;
 
         var fields = new Dictionary<string, string>(StringComparer.Ordinal);
         if (mark.Mark is not null) fields["mark"] = mark.Mark;
         if (mark.Reason is not null) fields["reason"] = mark.Reason;
         if (mark.Status is not null) fields["status"] = mark.Status;
+        if (mark.StatusChangedAt is not null)
+            fields["statusAt"] = mark.StatusChangedAt.Value.ToString("O", CultureInfo.InvariantCulture);
         return fields;
     }
 }

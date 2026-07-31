@@ -81,27 +81,18 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
         if (detail is null && job is null)
             throw new NotFoundException($"history run '{runId}' not found");
 
-        var runMarks = marks.GetForRun(safeId);
-        var goodMarks = runMarks.Values.Count(v => string.Equals(v.Mark, "good", StringComparison.OrdinalIgnoreCase));
-        var marksMap = runMarks
-            .Where(kvp => kvp.Value.Mark is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Mark!, StringComparer.Ordinal);
-        var reasonsMap = runMarks
-            .Where(kvp => kvp.Value.Reason is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Reason!, StringComparer.Ordinal);
-        var statusesMap = runMarks
-            .Where(kvp => kvp.Value.Status is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Status!, StringComparer.Ordinal);
+        var maps = BuildMarkMaps(marks.GetForRun(safeId));
 
         if (detail is not null)
         {
             // Rich results exist (succeeded run). Overlay lifecycle from the JobSearch when present.
             return detail with
             {
-                Marks = marksMap,
-                MarkReasons = reasonsMap.Count > 0 ? reasonsMap : null,
-                MarkStatuses = statusesMap.Count > 0 ? statusesMap : null,
-                GoodMarks = goodMarks,
+                Marks = maps.Marks,
+                MarkReasons = maps.Reasons,
+                MarkStatuses = maps.Statuses,
+                MarkStatusAt = maps.StatusAt,
+                GoodMarks = maps.GoodMarks,
                 State = job?.State ?? JobSearchState.Succeeded,
                 Phase = job?.Phase ?? JobSearchPhase.Done,
                 Timeline = job?.Timeline ?? detail.Timeline,
@@ -118,14 +109,45 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
             RankedCount: job.RankedCount,
             ShortlistCount: job.ShortlistCount,
             TopScore: job.TopScore,
-            GoodMarks: goodMarks,
+            GoodMarks: maps.GoodMarks,
             Shortlist: [],
-            Marks: marksMap,
-            MarkReasons: reasonsMap.Count > 0 ? reasonsMap : null,
-            MarkStatuses: statusesMap.Count > 0 ? statusesMap : null,
+            Marks: maps.Marks,
+            MarkReasons: maps.Reasons,
+            MarkStatuses: maps.Statuses,
+            MarkStatusAt: maps.StatusAt,
             State: job.State,
             Phase: job.Phase,
             Timeline: job.Timeline);
+    }
+
+    private sealed record MarkMaps(
+        IReadOnlyDictionary<string, string> Marks,
+        IReadOnlyDictionary<string, string>? Reasons,
+        IReadOnlyDictionary<string, string>? Statuses,
+        IReadOnlyDictionary<string, DateTimeOffset>? StatusAt,
+        int GoodMarks);
+
+    private static MarkMaps BuildMarkMaps(IReadOnlyDictionary<string, ListingMark> runMarks)
+    {
+        var marksMap = runMarks
+            .Where(kvp => kvp.Value.Mark is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Mark!, StringComparer.Ordinal);
+        var reasonsMap = runMarks
+            .Where(kvp => kvp.Value.Reason is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Reason!, StringComparer.Ordinal);
+        var statusesMap = runMarks
+            .Where(kvp => kvp.Value.Status is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Status!, StringComparer.Ordinal);
+        var statusAtMap = runMarks
+            .Where(kvp => kvp.Value.StatusChangedAt is not null)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.StatusChangedAt!.Value, StringComparer.Ordinal);
+
+        return new MarkMaps(
+            marksMap,
+            reasonsMap.Count > 0 ? reasonsMap : null,
+            statusesMap.Count > 0 ? statusesMap : null,
+            statusAtMap.Count > 0 ? statusAtMap : null,
+            runMarks.Values.Count(v => string.Equals(v.Mark, "good", StringComparison.OrdinalIgnoreCase)));
     }
 
     public HistoryDeleteResult Delete(IReadOnlyList<string> runIds)

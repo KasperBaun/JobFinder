@@ -17,4 +17,5 @@ public sealed record ApplicationEntry(
     string Url,
     string Portal,
     string? PortalDisplayName,
-    double Score);
+    double Score,
+    DateTimeOffset? StatusChangedAt = null);

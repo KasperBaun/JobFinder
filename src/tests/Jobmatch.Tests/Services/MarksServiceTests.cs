@@ -8,6 +8,7 @@ public sealed class MarksServiceTests : IDisposable
     private readonly string _tempRoot;
     private readonly string? _envBackup;
     private readonly JobmatchUserContext _ctx;
+    private readonly FixedTimeProvider _clock = new(DateTimeOffset.Parse("2026-07-01T10:00:00+00:00"));
     private readonly MarksService _marks;
 
     public MarksServiceTests()
@@ -17,7 +18,13 @@ public sealed class MarksServiceTests : IDisposable
         _envBackup = Environment.GetEnvironmentVariable("JOBFINDER_USER");
         Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
         _ctx = JobmatchUserContext.Resolve(emailOverride: "marks@example.com", repoRoot: _tempRoot, seedExamples: false);
-        _marks = new MarksService(_ctx);
+        _marks = new MarksService(_ctx, _clock);
+    }
+
+    internal sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; } = utcNow;
+        public override DateTimeOffset GetUtcNow() => UtcNow;
     }
 
     public void Dispose()
@@ -107,7 +114,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.SetStatus("run-1", "l1", "applied");
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark("good", "great fit", "applied"), mark);
+        Assert.Equal(new ListingMark("good", "great fit", "applied", _clock.UtcNow), mark);
     }
 
     [Fact]
@@ -116,7 +123,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.SetStatus("run-1", "l1", "interview");
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark(null, null, "interview"), mark);
+        Assert.Equal(new ListingMark(null, null, "interview", _clock.UtcNow), mark);
     }
 
     [Fact]
@@ -127,7 +134,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.Set("run-1", "l1", null, null);
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark(null, null, "applied"), mark);
+        Assert.Equal(new ListingMark(null, null, "applied", _clock.UtcNow), mark);
     }
 
     [Fact]
@@ -193,5 +200,68 @@ public sealed class MarksServiceTests : IDisposable
 
         var run = _marks.LoadAll()["run-1"];
         Assert.Equal(new ListingMark("good", null), run["l1"]);
+    }
+
+    [Fact]
+    public void SetStatus_ChangedStatus_Restamps()
+    {
+        _marks.SetStatus("run-1", "l1", "applied");
+        _clock.UtcNow = _clock.UtcNow.AddDays(3);
+        _marks.SetStatus("run-1", "l1", "interview");
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal(_clock.UtcNow, mark.StatusChangedAt);
+    }
+
+    [Fact]
+    public void SetStatus_SameStatus_KeepsOriginalTimestamp()
+    {
+        var first = _clock.UtcNow;
+        _marks.SetStatus("run-1", "l1", "applied");
+        _clock.UtcNow = first.AddDays(3);
+        _marks.SetStatus("run-1", "l1", "applied");
+
+        var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
+        Assert.Equal(first, mark.StatusChangedAt);
+    }
+
+    [Fact]
+    public void SetStatus_WritesStatusAt_AndRoundTripsThroughDisk()
+    {
+        _marks.SetStatus("run-1", "l1", "applied");
+
+        Assert.Contains("\"statusAt\"", File.ReadAllText(_ctx.MarksPath));
+        var reloaded = new MarksService(_ctx).GetForRun("run-1")["l1"];
+        Assert.Equal(_clock.UtcNow, reloaded.StatusChangedAt);
+    }
+
+    [Fact]
+    public void ClearingStatus_CollapsesBackToBareStringShape()
+    {
+        _marks.Set("run-1", "l1", "good", null);
+        _marks.SetStatus("run-1", "l1", "applied");
+        _marks.SetStatus("run-1", "l1", null);
+
+        var json = File.ReadAllText(_ctx.MarksPath);
+        Assert.Contains("\"l1\": \"good\"", json);
+        Assert.DoesNotContain("statusAt", json);
+    }
+
+    [Fact]
+    public void LoadAll_ObjectWithoutStatusAt_LoadsWithNullTimestamp()
+    {
+        File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "mark": "bad", "status": "applied" } } }""");
+
+        var run = _marks.LoadAll()["run-1"];
+        Assert.Equal(new ListingMark("bad", null, "applied"), run["l1"]);
+    }
+
+    [Fact]
+    public void LoadAll_IgnoresStatusAt_WhenStatusMissing()
+    {
+        File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "mark": "good", "statusAt": "2026-07-01T10:00:00+00:00" } } }""");
+
+        var run = _marks.LoadAll()["run-1"];
+        Assert.Null(run["l1"].StatusChangedAt);
     }
 }

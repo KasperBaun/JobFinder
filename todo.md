@@ -77,11 +77,6 @@ Current status of work on `jobfinder`.
   [`docs/tasks/T-008-radius/plan.md`](docs/tasks/T-008-radius/plan.md). DAWA geocode at
   profile-save time, bundled offline gazetteer, haversine hard filter with drop reason
   `outside_radius`. *(Tester feedback: listings from Bangladesh/Warsaw/Århus.)*
-- **T-010 — Application follow-up (R-107).** Plan:
-  [`docs/tasks/T-010-application-followup/plan.md`](docs/tasks/T-010-application-followup/plan.md).
-  Timestamp on status changes, Applications view date column + stat tiles + status
-  filter, awaiting-response badge, pruned-run robustness fix. *(Tracking itself shipped
-  as R-096–098.)*
 
 ## Shipped
 

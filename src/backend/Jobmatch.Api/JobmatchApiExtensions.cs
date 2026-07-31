@@ -46,6 +46,9 @@ public static class JobmatchApiExtensions
         // Filesystem abstraction — physical by default; tests stage in-memory.
         services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();
 
+        // Injectable clock (MarksService stamps status changes with it; tests pin a fixed one).
+        services.AddSingleton(TimeProvider.System);
+
         // Domain services
         services.AddScoped<IWhoamiService, WhoamiService>();
         services.AddScoped<IMarksService, MarksService>();

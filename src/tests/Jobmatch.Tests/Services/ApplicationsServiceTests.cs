@@ -12,6 +12,7 @@ public sealed class ApplicationsServiceTests : IDisposable
     private readonly string _tempRoot;
     private readonly string? _envBackup;
     private readonly JobmatchUserContext _ctx;
+    private readonly MarksServiceTests.FixedTimeProvider _clock = new(DateTimeOffset.Parse("2026-07-01T10:00:00+00:00"));
     private readonly MarksService _marks;
     private readonly ApplicationsService _applications;
 
@@ -22,7 +23,7 @@ public sealed class ApplicationsServiceTests : IDisposable
         _envBackup = Environment.GetEnvironmentVariable("JOBFINDER_USER");
         Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
         _ctx = JobmatchUserContext.Resolve(emailOverride: "apps@example.com", repoRoot: _tempRoot, seedExamples: false);
-        _marks = new MarksService(_ctx);
+        _marks = new MarksService(_ctx, _clock);
         _applications = new ApplicationsService(_ctx, _marks);
     }
 
@@ -130,5 +131,48 @@ public sealed class ApplicationsServiceTests : IDisposable
 
         var statuses = _applications.List().Select(e => e.Status).ToList();
         Assert.Equal(["offer", "interview", "applied", "rejected"], statuses);
+    }
+
+    [Fact]
+    public void List_CarriesStatusChangedAt()
+    {
+        WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Role A", "Co A")]);
+        _marks.SetStatus("20260701-100000-aaaaaa", "l1", "applied");
+
+        var entry = Assert.Single(_applications.List());
+        Assert.Equal(_clock.UtcNow, entry.StatusChangedAt);
+    }
+
+    [Fact]
+    public void List_EntryWithoutTimestamp_StillListed()
+    {
+        WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Role A", "Co A")]);
+        File.WriteAllText(_ctx.MarksPath, """{ "20260701-100000-aaaaaa": { "l1": { "status": "applied" } } }""");
+
+        var entry = Assert.Single(_applications.List());
+        Assert.Null(entry.StatusChangedAt);
+    }
+
+    [Fact]
+    public void List_PrunedRun_DoesNotHideOtherRuns()
+    {
+        WriteHistory("20260601-100000-oldaaa", scored: [Scored("l2", "Role B", "Co B")]);
+        _marks.SetStatus("20260701-100000-gonaaa", "l1", "applied");
+        _marks.SetStatus("20260601-100000-oldaaa", "l2", "interview");
+
+        var entry = Assert.Single(_applications.List());
+        Assert.Equal("l2", entry.ListingId);
+    }
+
+    [Fact]
+    public void List_PrunedNewestRun_FallsBackToOlderRunForSameListing()
+    {
+        WriteHistory("20260601-100000-oldaaa", scored: [Scored("l1", "Role A", "Co A")]);
+        _marks.SetStatus("20260601-100000-oldaaa", "l1", "applied");
+        _marks.SetStatus("20260701-100000-gonaaa", "l1", "interview");
+
+        var entry = Assert.Single(_applications.List());
+        Assert.Equal("20260601-100000-oldaaa", entry.RunId);
+        Assert.Equal("applied", entry.Status);
     }
 }
