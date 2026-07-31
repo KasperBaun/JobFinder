@@ -384,6 +384,9 @@ a.btn--danger:hover {
 
 .badge--muted   { background: transparent; color: var(--c-text-subtle); border-color: var(--c-slate-200); }
 
+/* Awaiting-response marker on the Applications view (R-107). */
+.badge--waiting { background: var(--c-warn-bg); color: var(--c-warn); border-color: var(--c-warn-border); }
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -1457,6 +1460,53 @@ a.btn--danger:hover {
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* ============================================================
+   applications view — stat tiles + status-set column (R-107)
+   ============================================================ */
+
+.app-stat-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.app-stat-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 0.32rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-slate-300);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+
+.app-stat-tile:hover { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+.app-stat-tile:focus { outline: none; border-color: var(--c-navy-400); }
+
+.app-stat-tile--active {
+  border-color: var(--c-navy-500);
+  background: var(--c-surface-alt);
+  color: var(--c-navy-700);
+}
+
+.app-stat-tile__count {
+  font-weight: 600;
+  color: var(--c-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.apps__status-set { white-space: nowrap; }
+.apps__status-set .badge--waiting { margin-left: var(--space-2); }
+
+.apps__no-match { padding: var(--space-4); }
 
 /* ============================================================
    progress bar (history list)

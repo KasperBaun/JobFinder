@@ -368,6 +368,8 @@ export type RunDetail = RunSummary & {
   marks: Record<string, 'good' | 'bad'>
   markReasons?: Record<string, string>
   markStatuses?: Record<string, ApplicationStatus>
+  /** ISO timestamp of the last status change per listing; absent for statuses set before R-107. */
+  markStatusAt?: Record<string, string>
   raw?: ProviderRaw[]
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
@@ -404,6 +406,8 @@ export type ApplicationEntry = {
   portal: string
   portalDisplayName?: string
   score: number
+  /** ISO timestamp of the last status change; absent for statuses set before R-107. */
+  statusChangedAt?: string
 }
 
 export type ApplicationsResponse = { applications: ApplicationEntry[] }
