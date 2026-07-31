@@ -8,6 +8,7 @@ import { I18nProvider } from './i18n'
 import { LanguageSync } from './i18n/LanguageSync'
 import './css/base.css'
 import './css/components.css'
+import './css/print.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {
