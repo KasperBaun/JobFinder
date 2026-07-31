@@ -73,10 +73,6 @@ Current status of work on `jobfinder`.
 
 ## In progress
 
-- **T-008 — Radius filter from the user's home address (R-105).** Plan:
-  [`docs/tasks/T-008-radius/plan.md`](docs/tasks/T-008-radius/plan.md). DAWA geocode at
-  profile-save time, bundled offline gazetteer, haversine hard filter with drop reason
-  `outside_radius`. *(Tester feedback: listings from Bangladesh/Warsaw/Århus.)*
 - **T-009 — Save a listing as PDF (R-106).** Plan:
   [`docs/tasks/T-009-listing-pdf/plan.md`](docs/tasks/T-009-listing-pdf/plan.md).
   Persist the ad text per run (additive), print view + print CSS, Electron
