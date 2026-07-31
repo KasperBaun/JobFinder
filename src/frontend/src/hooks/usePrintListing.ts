@@ -6,12 +6,19 @@ export function suggestedPdfFileName(match: Pick<ListingMatch, 'company' | 'titl
   return `${[match.company, match.title].filter(Boolean).join(' - ')}.pdf`
 }
 
+// Without the desktop shell's source capture, a PDF is only worth offering when the ad text is
+// persisted — the metadata-only header alone isn't a useful save (use "Open job posting" instead).
+export function canPrintListing(match: Pick<ListingMatch, 'description'>): boolean {
+  return Boolean(window.jobfinderDesktop?.printSourceToPdf) || Boolean(match.description)
+}
+
 type PrintState = 'idle' | 'printing' | 'failed'
 
 /**
- * Drives the save-as-PDF flow for one listing: while `printing` the caller mounts the print
- * portal, then the desktop shell's native save dialog takes over when present
- * (`window.jobfinderDesktop.printToPdf`), else the system print dialog (`window.print`).
+ * Drives the save-as-PDF flow for one listing. Preferred path: the desktop shell captures the
+ * posting page itself (`printSourceToPdf`) — the PDF is the ad as the site renders it. Fallbacks
+ * capture the SPA's print portal instead: `printToPdf` (older desktop shells) or `window.print()`
+ * (the browser web-shell).
  */
 export function usePrintListing(match: ListingMatch) {
   const [state, setState] = useState<PrintState>('idle')
@@ -22,12 +29,22 @@ export function usePrintListing(match: ListingMatch) {
     const finish = (failed: boolean) => {
       if (!cancelled) setState(failed ? 'failed' : 'idle')
     }
-    // Two frames so the portal is painted before the page is captured.
+    const desktop = window.jobfinderDesktop
+    if (desktop?.printSourceToPdf) {
+      desktop
+        .printSourceToPdf(match.url, suggestedPdfFileName(match))
+        .then(saved => finish(!saved))
+        .catch(() => finish(true))
+      return () => {
+        cancelled = true
+      }
+    }
+    // Portal-capture paths: two frames so the print view is painted before the page is captured.
     const frame = requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        const desktopPrint = window.jobfinderDesktop?.printToPdf
-        if (desktopPrint) {
-          desktopPrint(suggestedPdfFileName(match))
+        if (desktop?.printToPdf) {
+          desktop
+            .printToPdf(suggestedPdfFileName(match))
             .then(saved => finish(!saved))
             .catch(() => finish(true))
         } else {

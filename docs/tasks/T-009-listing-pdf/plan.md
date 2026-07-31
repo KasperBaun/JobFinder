@@ -78,6 +78,16 @@ Draft R-106:
 - Manual/`verify`-skill: print dialog opens from a shortlist card and the preview
   contains the ad text; Electron smoke test of the IPC save path.
 
+## Amendment (post-test feedback, 2026-07-31)
+
+First user test showed the summary-portal PDF (metadata + link) is not what the tester
+wants — they archive *the ad itself*. Revised behavior: the desktop shell now loads the
+posting URL in a hidden sandboxed BrowserWindow (`jobfinder:printSourceToPdf`, 30s load
+timeout + 2.5s settle, popups denied) and captures *that* page, so the PDF matches what
+"Open job posting" shows. The summary portal remains as the browser-shell /
+older-desktop-shell fallback, and the button hides when neither the source capture nor
+persisted ad text is available. R-106 reworded accordingly.
+
 ## Out of scope
 
 Longlist rows; PDF generation server-side (PdfPig is read-only CV tooling); batch
