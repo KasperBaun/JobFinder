@@ -82,11 +82,6 @@ Current status of work on `jobfinder`.
   Persist the ad text per run (additive), print view + print CSS, Electron
   save-as-PDF IPC with browser `window.print()` fallback. *(Tester archives each ad as
   a PDF before applying.)*
-- **T-010 — Application follow-up (R-107).** Plan:
-  [`docs/tasks/T-010-application-followup/plan.md`](docs/tasks/T-010-application-followup/plan.md).
-  Timestamp on status changes, Applications view date column + stat tiles + status
-  filter, awaiting-response badge, pruned-run robustness fix. *(Tracking itself shipped
-  as R-096–098.)*
 
 ## Shipped
 
