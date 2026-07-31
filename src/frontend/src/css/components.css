@@ -545,6 +545,9 @@ a.btn--danger:hover {
 }
 
 .field__hint { font-size: 0.8rem; color: var(--c-text-subtle); }
+.address-status { font-size: 0.8rem; color: var(--c-text-subtle); }
+.address-status--ok { color: var(--c-good); }
+.address-status--warn { color: var(--c-warn); }
 
 .field--row .field__label { min-width: 8rem; }
 
@@ -2528,6 +2531,7 @@ a.btn--danger:hover {
 .reason-badge--beyond_top_n             { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 .reason-badge--above_max_age            { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 .reason-badge--missing_required_primary { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
+.reason-badge--outside_radius           { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 
 /* ------------------------------------------------------------------------
    Search progress rows — linkify when complete (T-006h)
