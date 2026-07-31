@@ -16,7 +16,13 @@ public sealed record SkillsetResponse(
     string? Country,
     string? Region,
     IReadOnlyList<string> Metro,
-    IReadOnlyList<string> PreferredCompanies);
+    IReadOnlyList<string> PreferredCompanies,
+    string? Address = null,
+    double? RadiusKm = null,
+    // Server-computed at save time (DAWA geocoding) — response-only, never client input.
+    double? Latitude = null,
+    double? Longitude = null,
+    string? ResolvedAddress = null);
 
 public sealed record SkillsetUpdateRequest(
     string? Name,
@@ -34,6 +40,8 @@ public sealed record SkillsetUpdateRequest(
     string? Country,
     string? Region,
     IReadOnlyList<string>? Metro,
-    IReadOnlyList<string>? PreferredCompanies);
+    IReadOnlyList<string>? PreferredCompanies,
+    string? Address = null,
+    double? RadiusKm = null);
 
 public sealed record SaveResponse(bool Success, string? Error = null);
