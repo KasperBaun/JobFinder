@@ -77,6 +77,7 @@ export const history: Messages['history'] = {
     beyond_top_n: 'uden for toplisten',
     above_max_age: 'for gammelt',
     missing_required_primary: 'ingen skal-have-kompetence',
+    outside_radius: 'for langt væk',
   },
   colRating: 'Score',
   colReason: 'Årsag',

@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using Jobmatch.Adapters;
 using Jobmatch.Configuration;
 using Jobmatch.Deduplication;
+using Jobmatch.Geo;
 using Jobmatch.IO;
 using Jobmatch.Llm;
 using Jobmatch.Models;
@@ -36,6 +37,7 @@ public sealed partial class SearchService : ISearchService
     private readonly ILoggerFactory _loggerFactory;
     private readonly IMarksService _marks;
     private readonly TimeSpan _perSourceTimeout;
+    private readonly Gazetteer? _gazetteer;
 
     // A single source may paginate and body-enrich hundreds of listings; without a ceiling one
     // slow host holds up the whole run (every fetch is awaited under Task.WhenAll). This budget
@@ -49,13 +51,15 @@ public sealed partial class SearchService : ISearchService
         IFileSystem fs,
         ILoggerFactory? loggerFactory = null,
         IMarksService? marks = null,
-        TimeSpan? perSourceTimeout = null)
+        TimeSpan? perSourceTimeout = null,
+        Gazetteer? gazetteer = null)
     {
         _ctx = ctx;
         _fs = fs;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _marks = marks ?? new MarksService(ctx);
         _perSourceTimeout = perSourceTimeout ?? DefaultPerSourceTimeout;
+        _gazetteer = gazetteer;
     }
 
     public IAsyncEnumerable<SearchProgressEvent> RunAsync(
@@ -129,7 +133,8 @@ public sealed partial class SearchService : ISearchService
             scoredAll = await JudgeAndBlend(scoredAll, prep.Skillset, examples, prep.Ranking.Llm, llmTopN, http, ct).ConfigureAwait(false);
         }
 
-        var (shortlist, dropped) = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN);
+        var radiusFilter = RadiusFilter.Create(prep.Skillset, _gazetteer ?? Gazetteer.LoadBundled());
+        var (shortlist, dropped) = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN, radiusFilter);
         yield return new RankEvent(shortlist.Count, shortlist.Count > 0 ? shortlist[0].Score : 0.0);
 
         var listingMatches = WriteReportsAndHistory(
