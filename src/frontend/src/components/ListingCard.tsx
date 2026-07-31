@@ -1,5 +1,6 @@
 import type { ApplicationStatus, ListingMatch } from '../api/types'
 import { MarkButton } from './MarkButton'
+import { PrintListingButton } from './PrintListingButton'
 import { StatusSelect } from './StatusSelect'
 import { dec, serverText, useT } from '../i18n'
 
@@ -57,6 +58,7 @@ export function ListingCard({ match, runId, mark, markReason, markStatus }: Prop
       <footer className="listing-card__footer">
         <MarkButton runId={runId} listingId={match.id} current={mark} reason={markReason} />
         <StatusSelect runId={runId} listingId={match.id} current={markStatus} />
+        <PrintListingButton match={match} />
         <a href={match.url} target="_blank" rel="noreferrer" className="btn btn--primary">
           {t.openPosting}
         </a>

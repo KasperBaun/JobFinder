@@ -5,6 +5,13 @@ export const listing: Messages['listing'] = {
   favoriteTitle: 'En af dine favoritvirksomheder — scoren er løftet',
   openPosting: 'Åbn jobopslaget →',
 
+  savePdf: 'Gem som PDF',
+  savePdfTooltip: 'Gem dette jobopslag som en PDF-fil',
+  savePdfFailed: 'PDF’en kunne ikke gemmes',
+  printPortal: 'Portal',
+  printPosted: 'Opslået',
+  printSource: 'Kilde',
+
   markGood: 'Godt match',
   markBad: 'Ikke et match',
   markUnset: 'Vurdér dette job',
