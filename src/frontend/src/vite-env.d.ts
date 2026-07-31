@@ -5,5 +5,7 @@
 interface Window {
   jobfinderDesktop?: {
     quit: () => void
+    /** Optional: shells older than the channel don't expose it — callers must probe and fall back to window.print(). */
+    printToPdf?: (suggestedFileName: string) => Promise<boolean>
   }
 }
