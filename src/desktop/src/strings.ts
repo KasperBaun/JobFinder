@@ -24,6 +24,9 @@ const STRINGS = {
     installIncomplete: 'The install looks incomplete — reinstall Jobfinder.',
     publishBackendFirst: 'Run "npm run publish:backend" from the repo root first.',
     backendNotFound: (exe: string, hint: string) => `Backend not found at:\n${exe}\n\n${hint}`,
+
+    pdfFilter: 'PDF',
+    pdfDefaultName: 'job listing',
   },
   da: {
     htmlLang: 'da',
@@ -41,6 +44,9 @@ const STRINGS = {
     installIncomplete: 'Installationen ser ufuldstændig ud — geninstallér Jobfinder.',
     publishBackendFirst: 'Kør "npm run publish:backend" fra repo-roden først.',
     backendNotFound: (exe: string, hint: string) => `Baggrundstjenesten blev ikke fundet i:\n${exe}\n\n${hint}`,
+
+    pdfFilter: 'PDF',
+    pdfDefaultName: 'jobopslag',
   },
 } satisfies Record<Locale, unknown>
 
