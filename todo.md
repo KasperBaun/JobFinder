@@ -30,9 +30,10 @@ Current status of work on `jobfinder`.
   the frontend hides the badge but the data is recoverable from source.
   SmartRecruiters' JSON `customField` array commonly carries "Workplace
   policy / Hybrid"; HR-Manager's JSON-LD often has `workLocation` /
-  `employmentType`. Per-adapter: pull the structured value first, fall
-  through to `BaseAdapter.InferRemoteMode` only when those fields are
-  silent.
+  `employmentType`; Workday's CXS detail JSON (which enrichment now
+  fetches for locations/description) has a `remoteType` field ready to
+  map. Per-adapter: pull the structured value first, fall through to
+  `BaseAdapter.InferRemoteMode` only when those fields are silent.
 - **"New since last run" flag.** Mark listings in results/longlist that never appeared in any
   prior history run (compare canonical dedupe keys against `history/*.json`); badge + filter in
   `LonglistTable`. *(Concept from MadsLorentzen/ai-job-search `seen_jobs.json` cross-run dedupe.)*

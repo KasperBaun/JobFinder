@@ -690,8 +690,8 @@
       },
       "staticFields": { "company": "LEGO" },
       "rateLimitRps": 1.0,
-      "notes": "LEGO's Workday career site via the public CXS JSON endpoint (POST, no auth). The list response has no description, so body enrichment fetches each job page and pulls the posting text from its embedded JSON-LD. postedOn is relative text, so the posting date stays unknown. searchText 'software' pre-filters ~40 global engineering roles (Billund-heavy); location ranking handles the rest. Some postings omit locationsText. Verified 2026-06-12.",
-      "notesDa": "LEGO's Workday-karriereside via det offentlige CXS-JSON-endpoint (POST, uden login). Listesvaret indeholder ingen beskrivelse, så fulde beskrivelser henter hver jobside og trækker opslagsteksten ud af den indlejrede JSON-LD. postedOn er relativ tekst, så opslagsdatoen forbliver ukendt. searchText 'software' forfiltrerer til ca. 40 globale engineering-roller (mange i Billund); stedvurderingen klarer resten. Nogle opslag mangler locationsText. Verificeret 12-06-2026."
+      "notes": "LEGO's Workday career site via the public CXS JSON endpoint (POST, no auth). The list response has no description, so body enrichment fetches each posting's CXS detail JSON — the full description plus every location (multi-site postings otherwise arrive as a literal 'N Locations'). postedOn is relative text, so the posting date stays unknown. searchText 'software' pre-filters ~40 global engineering roles (Billund-heavy); location ranking handles the rest. Some postings omit locationsText. Verified 2026-06-12.",
+      "notesDa": "LEGO's Workday-karriereside via det offentlige CXS-JSON-endpoint (POST, uden login). Listesvaret indeholder ingen beskrivelse, så fulde beskrivelser hentes fra hvert opslags CXS-detalje-JSON — hele beskrivelsen plus alle lokationer (opslag med flere steder kommer ellers som et bogstaveligt 'N Locations'). postedOn er relativ tekst, så opslagsdatoen forbliver ukendt. searchText 'software' forfiltrerer til ca. 40 globale engineering-roller (mange i Billund); stedvurderingen klarer resten. Nogle opslag mangler locationsText. Verificeret 12-06-2026."
     },
     {
       "id": 38,
@@ -714,8 +714,8 @@
       },
       "staticFields": { "company": "SimCorp" },
       "rateLimitRps": 1.0,
-      "notes": "SimCorp's Workday career site via the public CXS JSON endpoint (POST, no auth). ~270 global roles unfiltered — searchText 'developer' narrows to engineering; Copenhagen HQ roles rank up via location. Body enrichment pulls each posting's text from the job page's embedded JSON-LD; no posting date (relative text only). Verified 2026-06-12.",
-      "notesDa": "SimCorps Workday-karriereside via det offentlige CXS-JSON-endpoint (POST, uden login). Ca. 270 globale stillinger ufiltreret — searchText 'developer' indsnævrer til engineering, og roller på hovedkontoret i København rangerer op via stedvurderingen. Fulde beskrivelser henter hvert opslags tekst fra jobsidens indlejrede JSON-LD; ingen opslagsdato (kun relativ tekst). Verificeret 12-06-2026."
+      "notes": "SimCorp's Workday career site via the public CXS JSON endpoint (POST, no auth). ~270 global roles unfiltered — searchText 'developer' narrows to engineering; Copenhagen HQ roles rank up via location. Body enrichment fetches each posting's CXS detail JSON — the full description plus every location (multi-site postings otherwise arrive as a literal 'N Locations'); no posting date (relative text only). Verified 2026-06-12.",
+      "notesDa": "SimCorps Workday-karriereside via det offentlige CXS-JSON-endpoint (POST, uden login). Ca. 270 globale stillinger ufiltreret — searchText 'developer' indsnævrer til engineering, og roller på hovedkontoret i København rangerer op via stedvurderingen. Fulde beskrivelser hentes fra hvert opslags CXS-detalje-JSON — hele beskrivelsen plus alle lokationer (opslag med flere steder kommer ellers som et bogstaveligt 'N Locations'); ingen opslagsdato (kun relativ tekst). Verificeret 12-06-2026."
     },
     {
       "id": 39,
@@ -738,8 +738,8 @@
       },
       "staticFields": { "company": "Maersk" },
       "rateLimitRps": 1.0,
-      "notes": "Maersk's Workday career site via the public CXS JSON endpoint (POST, no auth). Site name is 'Maersk_Careers' — 'Maersk' alone 404s; the 6-job 'PT_Careers' side board is ignored. ~70 software roles globally, large Copenhagen tech hub. Body enrichment pulls each posting's text from the job page's embedded JSON-LD; no posting date (relative text only). Verified 2026-06-12.",
-      "notesDa": "Mærsks Workday-karriereside via det offentlige CXS-JSON-endpoint (POST, uden login). Site-navnet er 'Maersk_Careers' — 'Maersk' alene giver 404; sideboardet 'PT_Careers' med 6 job ignoreres. Ca. 70 softwareroller globalt, stort teknologimiljø i København. Fulde beskrivelser henter hvert opslags tekst fra jobsidens indlejrede JSON-LD; ingen opslagsdato (kun relativ tekst). Verificeret 12-06-2026."
+      "notes": "Maersk's Workday career site via the public CXS JSON endpoint (POST, no auth). Site name is 'Maersk_Careers' — 'Maersk' alone 404s; the 6-job 'PT_Careers' side board is ignored. ~70 software roles globally, large Copenhagen tech hub. Body enrichment fetches each posting's CXS detail JSON — the full description plus every location (multi-site postings otherwise arrive as a literal 'N Locations'); no posting date (relative text only). Verified 2026-06-12.",
+      "notesDa": "Mærsks Workday-karriereside via det offentlige CXS-JSON-endpoint (POST, uden login). Site-navnet er 'Maersk_Careers' — 'Maersk' alene giver 404; sideboardet 'PT_Careers' med 6 job ignoreres. Ca. 70 softwareroller globalt, stort teknologimiljø i København. Fulde beskrivelser hentes fra hvert opslags CXS-detalje-JSON — hele beskrivelsen plus alle lokationer (opslag med flere steder kommer ellers som et bogstaveligt 'N Locations'); ingen opslagsdato (kun relativ tekst). Verificeret 12-06-2026."
     },
     {
       "id": 40,
