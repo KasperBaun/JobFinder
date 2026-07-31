@@ -96,6 +96,10 @@ Two ways in:
 
 - [`CHANGELOG.md`](./CHANGELOG.md) — what's shipped.
 
+Place data for the distance filter comes from [GeoNames](https://www.geonames.org/)
+(licensed [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)) and
+[Danmarks Adresser / DAWA](https://dataforsyningen.dk/) (Danish public-sector data).
+
 ---
 
 <div align="center">

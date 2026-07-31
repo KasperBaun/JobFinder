@@ -129,6 +129,12 @@ export type SkillsetResponse = {
   region?: string | null
   metro: string[]
   preferredCompanies: string[]
+  address?: string | null
+  radiusKm?: number | null
+  /** Server-computed at save time (DAWA geocoding) — never sent by the client. */
+  latitude?: number | null
+  longitude?: number | null
+  resolvedAddress?: string | null
 }
 
 export type SkillsetUpdateRequest = {
@@ -148,6 +154,8 @@ export type SkillsetUpdateRequest = {
   region?: string | null
   metro: string[]
   preferredCompanies: string[]
+  address?: string | null
+  radiusKm?: number | null
 }
 
 export type CvExtractionState = 'idle' | 'extracting' | 'completed' | 'failed'
@@ -349,6 +357,7 @@ export type DropReason =
   | 'beyond_top_n'
   | 'above_max_age'
   | 'missing_required_primary'
+  | 'outside_radius'
 
 export type DroppedEntry = {
   id: string

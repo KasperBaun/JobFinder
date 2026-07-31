@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Jobmatch.Models;
@@ -60,6 +61,11 @@ public static class SkillsetParser
         if (!string.IsNullOrWhiteSpace(skillset.Country)) frontmatter["country"] = skillset.Country;
         if (!string.IsNullOrWhiteSpace(skillset.Region)) frontmatter["region"] = skillset.Region;
         if (skillset.Metro.Count > 0) frontmatter["metro"] = skillset.Metro.ToList();
+        if (!string.IsNullOrWhiteSpace(skillset.Address)) frontmatter["address"] = skillset.Address;
+        if (skillset.RadiusKm is double radiusKm) frontmatter["radius_km"] = radiusKm;
+        if (skillset.Latitude is double latitude) frontmatter["latitude"] = latitude;
+        if (skillset.Longitude is double longitude) frontmatter["longitude"] = longitude;
+        if (!string.IsNullOrWhiteSpace(skillset.ResolvedAddress)) frontmatter["resolved_address"] = skillset.ResolvedAddress;
 
         var yaml = Serializer.Serialize(frontmatter).TrimEnd();
 
@@ -154,6 +160,11 @@ public static class SkillsetParser
             Region = region,
             Metro = metro,
             PreferredCompanies = ReadSection(sections, PreferredCompaniesSection),
+            Address = OptionalString(yaml, "address"),
+            RadiusKm = OptionalDouble(yaml, "radius_km"),
+            Latitude = OptionalDouble(yaml, "latitude"),
+            Longitude = OptionalDouble(yaml, "longitude"),
+            ResolvedAddress = OptionalString(yaml, "resolved_address"),
         };
     }
 
@@ -162,6 +173,17 @@ public static class SkillsetParser
         if (!yaml.TryGetValue(key, out var v) || v is null) return null;
         var s = v.ToString();
         return string.IsNullOrWhiteSpace(s) ? null : s;
+    }
+
+    private static double? OptionalDouble(IReadOnlyDictionary<string, object?> yaml, string key)
+    {
+        var s = OptionalString(yaml, key);
+        if (s is null) return null;
+        if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+        {
+            throw new ConfigException($"skillset frontmatter: '{key}' must be a number, got '{s}'");
+        }
+        return d;
     }
 
     private static string RequireString(IReadOnlyDictionary<string, object?> yaml, string key)

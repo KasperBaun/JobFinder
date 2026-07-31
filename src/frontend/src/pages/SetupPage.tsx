@@ -54,6 +54,8 @@ export function SetupPage() {
   const [remote, setRemote] = useState('any')
   const [targetRoles, setTargetRoles] = useState<string[]>([])
   const [primaryStack, setPrimaryStack] = useState<string[]>([])
+  const [address, setAddress] = useState('')
+  const [radiusKm, setRadiusKm] = useState(0)
   const [cvOpen, setCvOpen] = useState(false)
 
   function finishToApp() {
@@ -99,6 +101,8 @@ export function SetupPage() {
         region: '',
         metro: [],
         preferredCompanies: [],
+        address: address.trim(),
+        radiusKm,
       }
       return updateSkillset(payload)
     },
@@ -246,6 +250,20 @@ export function SetupPage() {
               <span className="setup__label">{t.primaryStackLabel} <span className="subtle">{t.primaryStackHint}</span></span>
               <TagInput variant="primary" values={primaryStack} onChange={setPrimaryStack}
                 placeholder={t.primaryStackPlaceholder} ariaLabel={t.primaryStackLabel} />
+            </div>
+
+            <div className="setup__row">
+              <label className="setup__field">
+                <span className="setup__label">{t.addressLabel}</span>
+                <input className="setup__input" type="text" value={address}
+                  placeholder={t.addressPlaceholder} onChange={(e) => setAddress(e.target.value)} />
+                <span className="setup__note">{t.addressNote}</span>
+              </label>
+              <label className="setup__field">
+                <span className="setup__label">{t.radiusLabel}</span>
+                <input className="setup__input" type="number" min={0} value={radiusKm}
+                  onChange={(e) => setRadiusKm(Math.max(0, Number(e.target.value) || 0))} />
+              </label>
             </div>
 
             {error && <div className="setup__error">{error}</div>}

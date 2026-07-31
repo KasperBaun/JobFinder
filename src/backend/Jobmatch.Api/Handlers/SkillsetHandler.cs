@@ -13,7 +13,10 @@ public interface ISkillsetHandler
     Task<IResult> Update(SkillsetUpdateRequest? request);
 }
 
-public sealed class SkillsetHandler(ISkillsetService skillset, ILogger<SkillsetHandler> logger)
+public sealed class SkillsetHandler(
+    ISkillsetService skillset,
+    IGeocodingService geocoding,
+    ILogger<SkillsetHandler> logger)
     : HandlerBase(logger), ISkillsetHandler
 {
     public Task<IResult> Get() => ExecuteAsync(
@@ -26,11 +29,12 @@ public sealed class SkillsetHandler(ISkillsetService skillset, ILogger<SkillsetH
 
     public Task<IResult> Update(SkillsetUpdateRequest? request) => ExecuteAsync(
         "update skillset",
-        () =>
+        async () =>
         {
             if (request is null)
                 throw new InvalidRequestException("request body is required");
 
+            var geocode = await ResolveGeocodeAsync(request);
             var input = new SkillsetUpdate(
                 Name: request.Name,
                 Location: request.Location,
@@ -47,11 +51,33 @@ public sealed class SkillsetHandler(ISkillsetService skillset, ILogger<SkillsetH
                 Country: request.Country,
                 Region: request.Region,
                 Metro: request.Metro,
-                PreferredCompanies: request.PreferredCompanies);
+                PreferredCompanies: request.PreferredCompanies,
+                Address: request.Address,
+                RadiusKm: request.RadiusKm,
+                Latitude: geocode?.Latitude,
+                Longitude: geocode?.Longitude,
+                ResolvedAddress: geocode?.ResolvedAddress);
 
             skillset.Update(input);
-            return Task.FromResult<IResult>(Results.Ok(new SaveResponse(true)));
+            return Results.Ok(new SaveResponse(true));
         });
+
+    // Geocode only when the address is new or was never resolved; an unchanged address
+    // keeps its stored coordinates without a network call, and a blank address clears
+    // everything. A failed geocode still saves — coordinates just stay empty (R-105).
+    private async Task<GeocodeResult?> ResolveGeocodeAsync(SkillsetUpdateRequest request)
+    {
+        var address = request.Address?.Trim();
+        if (string.IsNullOrEmpty(address)) return null;
+
+        var existing = skillset.Find();
+        if (existing is { Latitude: double lat, Longitude: double lon }
+            && string.Equals(existing.Address, address, StringComparison.Ordinal))
+        {
+            return new GeocodeResult(lat, lon, existing.ResolvedAddress ?? address);
+        }
+        return await geocoding.GeocodeAsync(address);
+    }
 
     private static SkillsetResponse ToResponse(Skillset s) => new(
         Name: s.Name,
@@ -69,5 +95,10 @@ public sealed class SkillsetHandler(ISkillsetService skillset, ILogger<SkillsetH
         Country: s.Country,
         Region: s.Region,
         Metro: s.Metro,
-        PreferredCompanies: s.PreferredCompanies);
+        PreferredCompanies: s.PreferredCompanies,
+        Address: s.Address,
+        RadiusKm: s.RadiusKm,
+        Latitude: s.Latitude,
+        Longitude: s.Longitude,
+        ResolvedAddress: s.ResolvedAddress);
 }
