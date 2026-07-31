@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import type { ListingMatch } from '../api/types'
 import { useT } from '../i18n'
-import { usePrintListing } from '../hooks/usePrintListing'
+import { canPrintListing, usePrintListing } from '../hooks/usePrintListing'
 import { formatAbsolute } from '../utils/time'
 import { Toast } from './Toast'
 
@@ -12,6 +12,7 @@ interface Props {
 export function PrintListingButton({ match }: Props) {
   const t = useT('listing')
   const { printing, failed, print, dismissError } = usePrintListing(match)
+  if (!canPrintListing(match)) return null
   return (
     <>
       <button type="button" className="btn" onClick={print} disabled={printing} title={t.savePdfTooltip}>
@@ -23,8 +24,9 @@ export function PrintListingButton({ match }: Props) {
   )
 }
 
-// Hidden on screen; @media print (css/print.css) swaps the app chrome out for it. Old runs have
-// no persisted ad text — the header block and source link still print, the body is simply absent.
+// Fallback print view for the portal-capture paths (browser shell / older desktop shells) —
+// hidden on screen; @media print (css/print.css) swaps the app chrome out for it. The current
+// desktop shell captures the posting page itself instead and never prints this.
 function PrintListingView({ match }: Props) {
   const t = useT('listing')
   const subline = [match.company, match.location].filter(Boolean).join(' · ')

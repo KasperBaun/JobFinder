@@ -22,9 +22,9 @@ const match: ListingMatch = {
   description: 'Full ad text.\nSecond paragraph.',
 }
 
-function stubDesktop(printToPdf: (name: string) => Promise<boolean>) {
-  window.jobfinderDesktop = { quit: vi.fn(), printToPdf: vi.fn(printToPdf) }
-  return window.jobfinderDesktop.printToPdf as ReturnType<typeof vi.fn>
+function stubDesktop(bridge: Partial<NonNullable<Window['jobfinderDesktop']>>) {
+  window.jobfinderDesktop = { quit: vi.fn(), ...bridge }
+  return window.jobfinderDesktop
 }
 
 afterEach(() => {
@@ -32,9 +32,40 @@ afterEach(() => {
 })
 
 describe('PrintListingButton', () => {
-  it('mounts the print portal with the full ad text while the desktop save is in flight', async () => {
+  it('sends the posting URL to the desktop source capture — the PDF is the ad, not the summary', async () => {
+    const printSourceToPdf = vi.fn(() => Promise.resolve(true))
+    stubDesktop({ printSourceToPdf })
+    render(<PrintListingButton match={match} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
+
+    await waitFor(() =>
+      expect(printSourceToPdf).toHaveBeenCalledWith('https://acme.com/jobs/1', 'Acme - Senior .NET Engineer.pdf'),
+    )
+  })
+
+  it('offers the source capture even when the run has no persisted ad text', async () => {
+    const printSourceToPdf = vi.fn(() => Promise.resolve(true))
+    stubDesktop({ printSourceToPdf })
+    const legacy = { ...match, description: undefined }
+    render(<PrintListingButton match={legacy} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
+
+    await waitFor(() => expect(printSourceToPdf).toHaveBeenCalledWith('https://acme.com/jobs/1', expect.any(String)))
+  })
+
+  it('hides the button when neither the source capture nor persisted ad text can make a useful PDF', () => {
+    const legacy = { ...match, description: undefined }
+    render(<PrintListingButton match={legacy} />)
+
+    expect(screen.queryByRole('button', { name: 'Save as PDF' })).not.toBeInTheDocument()
+  })
+
+  it('mounts the print portal with the full ad text while an older shell captures the page', async () => {
     let resolve!: (saved: boolean) => void
-    const printToPdf = stubDesktop(() => new Promise<boolean>(r => { resolve = r }))
+    const printToPdf = vi.fn(() => new Promise<boolean>(r => { resolve = r }))
+    stubDesktop({ printToPdf })
     render(<PrintListingButton match={match} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
@@ -50,20 +81,6 @@ describe('PrintListingButton', () => {
     await waitFor(() => expect(screen.queryByText('Senior .NET Engineer')).not.toBeInTheDocument())
   })
 
-  it('prints the header block without a body for runs recorded before the ad text persisted', async () => {
-    let resolve!: (saved: boolean) => void
-    const printToPdf = stubDesktop(() => new Promise<boolean>(r => { resolve = r }))
-    const legacy = { ...match, description: undefined }
-    render(<PrintListingButton match={legacy} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
-
-    await waitFor(() => expect(printToPdf).toHaveBeenCalled())
-    expect(screen.getByText('Senior .NET Engineer')).toBeInTheDocument()
-    expect(document.body.querySelector('.print-listing__body')).toBeNull()
-    resolve(true)
-  })
-
   it('falls back to window.print() outside the desktop shell', async () => {
     const print = vi.fn()
     vi.stubGlobal('print', print)
@@ -76,20 +93,8 @@ describe('PrintListingButton', () => {
     vi.unstubAllGlobals()
   })
 
-  it('falls back to window.print() when an older shell lacks the channel', async () => {
-    window.jobfinderDesktop = { quit: vi.fn() }
-    const print = vi.fn()
-    vi.stubGlobal('print', print)
-    render(<PrintListingButton match={match} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
-
-    await waitFor(() => expect(print).toHaveBeenCalled())
-    vi.unstubAllGlobals()
-  })
-
-  it('shows the failure toast when the desktop save reports an error', async () => {
-    stubDesktop(() => Promise.resolve(false))
+  it('shows the failure toast when the source capture reports an error', async () => {
+    stubDesktop({ printSourceToPdf: vi.fn(() => Promise.resolve(false)) })
     render(<PrintListingButton match={match} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
@@ -97,6 +102,15 @@ describe('PrintListingButton', () => {
     expect(await screen.findByText('Could not save the PDF')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Could not save the PDF'))
     expect(screen.queryByText('Could not save the PDF')).not.toBeInTheDocument()
+  })
+
+  it('shows the failure toast when an older shell reports a failed save', async () => {
+    stubDesktop({ printToPdf: vi.fn(() => Promise.resolve(false)) })
+    render(<PrintListingButton match={match} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
+
+    expect(await screen.findByText('Could not save the PDF')).toBeInTheDocument()
   })
 })
 
