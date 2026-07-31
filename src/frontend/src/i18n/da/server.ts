@@ -64,5 +64,7 @@ export const server: Messages['server'] = {
       `score ${dec(num(a, 'score'), 2)} under grænsen ${dec(num(a, 'threshold'), 2)}`,
     beyond_top_n: (a: ServerArgs) =>
       `nr. ${num(a, 'rank')} af ${num(a, 'total')} (de ${num(a, 'topN')} bedste blev taget)`,
+    outside_radius: (a: ServerArgs) =>
+      `ligger ca. ${num(a, 'km')} km væk (${str(a, 'place')}), maks. ${num(a, 'maxKm')} km`,
   },
 }
