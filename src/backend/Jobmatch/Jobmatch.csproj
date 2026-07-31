@@ -28,6 +28,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>portals.json</TargetPath>
     </None>
+    <None Update="Geo/gazetteer.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>geo/gazetteer.tsv</TargetPath>
+    </None>
   </ItemGroup>
 
 </Project>
