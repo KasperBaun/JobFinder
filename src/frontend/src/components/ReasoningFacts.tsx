@@ -11,7 +11,7 @@ import { formatRelative } from '../utils/time'
 const LEGACY_AI_REVIEW = /\bAI review: (\d+[.,]\d+) — (.+)$/
 
 type Tone = 'muted' | 'warn' | 'good'
-type Fact = { id: string; label: string; value: React.ReactNode; tone?: Tone }
+type Fact = { id: string; label: string; value: React.ReactNode; tone?: Tone; title?: string }
 
 interface Props {
   match: ListingMatch
@@ -62,13 +62,15 @@ export function ReasoningFacts({ match }: Props) {
     facts.push({ id: 'industry', label: t.facts.industry, value: list(domains.args ?? {}, 'domains').join(', ') })
   }
 
+  // The level is inferred from the ad's title/description and compared to the profile —
+  // "close" means one step away (junior↔mid↔senior↔lead). The tooltip spells that out.
   add(byKey.has('seniorityMatches')
-    ? { id: 'seniority', label: t.facts.seniority, value: `✓ ${t.facts.seniorityFits}`, tone: 'good' }
+    ? { id: 'seniority', label: t.facts.seniority, value: `✓ ${t.facts.seniorityFits}`, tone: 'good', title: t.facts.seniorityFitsTitle }
     : byKey.has('seniorityClose')
-      ? { id: 'seniority', label: t.facts.seniority, value: `✓ ${t.facts.seniorityClose}`, tone: 'good' }
+      ? { id: 'seniority', label: t.facts.seniority, value: `≈ ${t.facts.seniorityClose}`, tone: 'good', title: t.facts.seniorityCloseTitle }
       : byKey.has('seniorityMismatch')
-        ? { id: 'seniority', label: t.facts.seniority, value: t.facts.seniorityMismatch, tone: 'warn' }
-        : { id: 'seniority', label: t.facts.seniority, value: t.facts.notStated, tone: 'muted' })
+        ? { id: 'seniority', label: t.facts.seniority, value: t.facts.seniorityMismatch, tone: 'warn', title: t.facts.seniorityMismatchTitle }
+        : { id: 'seniority', label: t.facts.seniority, value: t.facts.notStated, tone: 'muted', title: t.facts.seniorityUnknownTitle })
 
   const locationMismatch = byKey.has('locationMismatchRemoteUnknown') || byKey.has('neitherLocationNorRemote')
   add(match.location
@@ -137,7 +139,12 @@ function Row({ fact }: { fact: Fact }) {
   return (
     <>
       <dt className="listing-card__fact-label">{fact.label}</dt>
-      <dd className={`listing-card__fact-value${fact.tone ? ` listing-card__fact-value--${fact.tone}` : ''}`}>{fact.value}</dd>
+      <dd
+        className={`listing-card__fact-value${fact.tone ? ` listing-card__fact-value--${fact.tone}` : ''}${fact.title ? ' listing-card__fact-value--hinted' : ''}`}
+        title={fact.title}
+      >
+        {fact.value}
+      </dd>
     </>
   )
 }
