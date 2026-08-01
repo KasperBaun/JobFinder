@@ -1,8 +1,9 @@
 import type { ApplicationStatus, ListingMatch } from '../api/types'
 import { MarkButton } from './MarkButton'
 import { PrintListingButton } from './PrintListingButton'
+import { ReasoningFacts } from './ReasoningFacts'
 import { StatusSelect } from './StatusSelect'
-import { dec, serverText, useT } from '../i18n'
+import { dec, useT } from '../i18n'
 
 interface Props {
   match: ListingMatch
@@ -19,14 +20,11 @@ const LEGACY_FAVORITE_NOTE = /One of your favorite companies \([^)]*\) — ratin
 
 export function ListingCard({ match, runId, mark, markReason, markStatus }: Props) {
   const t = useT('listing')
-  const s = useT('server')
   const subline = [match.company, match.location].filter(Boolean).join(' · ')
   const favorite = match.favoriteCompany || LEGACY_FAVORITE_NOTE.test(match.reasoning)
   // Runs ranked before the notes were structured carry only prose, so fall back to it (and to the
-  // legacy-badge strip). Newer runs re-render in whatever language is active, including old history.
-  const reasoning = match.reasoningNotes
-    ? match.reasoningNotes.map(note => serverText(s.reasoning, note.key, note.args, '')).filter(Boolean).join(' ')
-    : match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
+  // legacy-badge strip). Newer runs render the structured fact list in whatever language is active.
+  const legacyReasoning = match.reasoningNotes ? null : match.reasoning.replace(LEGACY_FAVORITE_NOTE, '').trim()
   return (
     <article className="listing-card">
       <header className="listing-card__header">
@@ -42,9 +40,12 @@ export function ListingCard({ match, runId, mark, markReason, markStatus }: Prop
         </div>
       </header>
 
-      {reasoning && <p className="listing-card__reasoning">{reasoning}</p>}
+      {match.reasoningNotes && <ReasoningFacts match={match} />}
+      {legacyReasoning && <p className="listing-card__reasoning">{legacyReasoning}</p>}
 
-      {(match.primaryStackHits.length > 0 || match.secondaryStackHits.length > 0) && (
+      {/* The fact list renders skill pills inline; the standalone pill strip remains only for
+          runs recorded before the notes were structured. */}
+      {!match.reasoningNotes && (match.primaryStackHits.length > 0 || match.secondaryStackHits.length > 0) && (
         <div className="listing-card__pills">
           {match.primaryStackHits.map(p => (
             <span key={`p-${p}`} className="pill pill--primary">{p}</span>
