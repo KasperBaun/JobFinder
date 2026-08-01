@@ -1,30 +1,29 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getSkillset } from '../api/client'
 import type { ListingMatch } from '../api/types'
-import { serverText, useT } from '../i18n'
+import { dec, useT } from '../i18n'
 import { list } from '../i18n/serverText'
+import { formatRelative } from '../utils/time'
 
 // Runs recorded before LlmScore/LlmReason were structured carry the judge's verdict inside the
-// English prose string — recover it so old runs get the AI row too.
-const LEGACY_AI_REVIEW = /\bAI review: \d+[.,]\d+ — (.+)$/
+// English prose string — recover it so old runs get the AI strip too.
+const LEGACY_AI_REVIEW = /\bAI review: (\d+[.,]\d+) — (.+)$/
 
-// Note keys this component renders as labelled rows; anything else (a future backend key) falls
-// back to the sentence catalog as a full-width row instead of being dropped.
-const KNOWN_KEYS = new Set([
-  'disqualified', 'primaryHits', 'noPrimaryHits', 'secondaryHits', 'domainHits',
-  'seniorityClose', 'seniorityMatches', 'seniorityMismatch', 'seniorityUnknown',
-  'titleNotDeveloper', 'location', 'remoteOk', 'neitherLocationNorRemote',
-  'locationRemoteUnknown', 'locationMismatchRemoteUnknown', 'locationUnknownRemoteMismatch',
-  'agePenalty',
-])
+type Tone = 'muted' | 'warn' | 'good'
+type Fact = { id: string; label: string; value: React.ReactNode; tone?: Tone }
 
 interface Props {
   match: ListingMatch
 }
 
-// The card's rationale as a scannable label + value list. Every axis is always present —
-// "not stated" is rendered muted rather than omitted, so the eye learns where things live.
+// The card's rationale as a scannable label + value list in a fixed order, so the eye can
+// column-scan a whole shortlist. Axes the posting doesn't state are folded into one muted row
+// when there are several — named, but not paying a full row each.
 export function ReasoningFacts({ match }: Props) {
   const t = useT('listing')
   const s = useT('server')
+  const skillset = useQuery({ queryKey: ['skillset'], queryFn: getSkillset, staleTime: 5 * 60_000 })
   const notes = match.reasoningNotes ?? []
   const byKey = new Map(notes.map(note => [note.key, note]))
 
@@ -32,71 +31,125 @@ export function ReasoningFacts({ match }: Props) {
   if (disqualified) {
     return (
       <dl className="listing-card__facts">
-        <Row label={t.facts.disqualified} value={list(disqualified.args ?? {}, 'hits').join(', ')} tone="warn" />
+        <Row fact={{ id: 'disq', label: t.facts.disqualified, value: list(disqualified.args ?? {}, 'hits').join(', '), tone: 'warn' }} />
       </dl>
     )
   }
 
-  const primary = byKey.get('primaryHits')
-  const secondary = byKey.get('secondaryHits')
-  const domains = byKey.get('domainHits')
-  const age = byKey.get('agePenalty')
+  const facts: Fact[] = []
+  const notStated: Fact[] = []
+  const add = (fact: Fact) => (fact.tone === 'muted' ? notStated : facts).push(fact)
 
-  const seniority = byKey.has('seniorityMatches')
-    ? { value: t.facts.seniorityFits }
+  const primary = byKey.get('primaryHits')
+  const primaryHits = primary ? list(primary.args ?? {}, 'skills') : []
+  const ghosts = (skillset.data?.primaryStack ?? [])
+    .filter(skill => !primaryHits.some(hit => hit.localeCompare(skill, undefined, { sensitivity: 'base' }) === 0))
+  facts.push({
+    id: 'mustHave',
+    label: t.facts.mustHave,
+    value: primary
+      ? <Pills hits={primaryHits} ghosts={ghosts} kind="primary" ghostTitle={t.facts.ghostTooltip} />
+      : <span>{t.facts.noPrimary}{ghosts.length > 0 && <> <Pills hits={[]} ghosts={ghosts} kind="primary" ghostTitle={t.facts.ghostTooltip} /></>}</span>,
+    tone: primary ? undefined : 'warn',
+  })
+
+  const secondary = byKey.get('secondaryHits')
+  if (secondary) {
+    facts.push({ id: 'niceToHave', label: t.facts.niceToHave, value: <Pills hits={list(secondary.args ?? {}, 'skills')} ghosts={[]} kind="secondary" ghostTitle="" /> })
+  }
+  const domains = byKey.get('domainHits')
+  if (domains) {
+    facts.push({ id: 'industry', label: t.facts.industry, value: list(domains.args ?? {}, 'domains').join(', ') })
+  }
+
+  add(byKey.has('seniorityMatches')
+    ? { id: 'seniority', label: t.facts.seniority, value: `✓ ${t.facts.seniorityFits}`, tone: 'good' }
     : byKey.has('seniorityClose')
-      ? { value: t.facts.seniorityClose }
+      ? { id: 'seniority', label: t.facts.seniority, value: `✓ ${t.facts.seniorityClose}`, tone: 'good' }
       : byKey.has('seniorityMismatch')
-        ? { value: t.facts.seniorityMismatch, tone: 'warn' as const }
-        : { value: t.facts.notStated, tone: 'muted' as const }
+        ? { id: 'seniority', label: t.facts.seniority, value: t.facts.seniorityMismatch, tone: 'warn' }
+        : { id: 'seniority', label: t.facts.seniority, value: t.facts.notStated, tone: 'muted' })
 
   const locationMismatch = byKey.has('locationMismatchRemoteUnknown') || byKey.has('neitherLocationNorRemote')
-  const location = match.location
-    ? { value: locationMismatch ? `${match.location} — ${t.facts.outsideArea}` : match.location, tone: locationMismatch ? ('warn' as const) : undefined }
-    : { value: t.facts.notStated, tone: 'muted' as const }
+  add(match.location
+    ? locationMismatch
+      ? { id: 'location', label: t.facts.location, value: `${match.location} — ${t.facts.outsideArea}`, tone: 'warn' }
+      : { id: 'location', label: t.facts.location, value: byKey.has('location') ? `✓ ${match.location}` : match.location, tone: byKey.has('location') ? 'good' : undefined }
+    : { id: 'location', label: t.facts.location, value: t.facts.notStated, tone: 'muted' })
 
-  const remote = match.remoteMode && match.remoteMode !== 'unknown'
-    ? { value: s.remoteMode[match.remoteMode] ?? match.remoteMode }
-    : { value: t.facts.notStated, tone: 'muted' as const }
+  add(match.remoteMode && match.remoteMode !== 'unknown'
+    ? {
+        id: 'remote',
+        label: t.facts.remote,
+        value: byKey.has('remoteOk') ? `✓ ${s.remoteMode[match.remoteMode] ?? match.remoteMode}` : s.remoteMode[match.remoteMode] ?? match.remoteMode,
+        tone: byKey.has('remoteOk') ? 'good' : undefined,
+      }
+    : { id: 'remote', label: t.facts.remote, value: t.facts.notStated, tone: 'muted' })
 
-  const aiReason = match.llmReason ?? LEGACY_AI_REVIEW.exec(match.reasoning)?.[1]
-  const extras = notes.filter(note => !KNOWN_KEYS.has(note.key))
+  const agePenalty = byKey.get('agePenalty')
+  add(match.postedAt
+    ? agePenalty
+      ? { id: 'posted', label: t.facts.posted, value: `${formatRelative(match.postedAt)} — ${t.facts.ratingReduced}`, tone: 'warn' }
+      : { id: 'posted', label: t.facts.posted, value: formatRelative(match.postedAt) }
+    : { id: 'posted', label: t.facts.posted, value: t.facts.notStated, tone: 'muted' })
+
+  if (byKey.has('titleNotDeveloper')) {
+    facts.push({ id: 'titleGate', label: t.facts.titleGate, value: t.facts.titleNotDeveloper, tone: 'warn' })
+  }
 
   return (
     <dl className="listing-card__facts">
-      {primary
-        ? <Row label={t.facts.mustHave} value={<Pills names={list(primary.args ?? {}, 'skills')} kind="primary" />} />
-        : <Row label={t.facts.mustHave} value={t.facts.noPrimary} tone="warn" />}
-      {secondary && <Row label={t.facts.niceToHave} value={<Pills names={list(secondary.args ?? {}, 'skills')} kind="secondary" />} />}
-      {domains && <Row label={t.facts.industry} value={list(domains.args ?? {}, 'domains').join(', ')} />}
-      <Row label={t.facts.seniority} value={seniority.value} tone={seniority.tone} />
-      <Row label={t.facts.location} value={location.value} tone={location.tone} />
-      <Row label={t.facts.remote} value={remote.value} tone={remote.tone} />
-      {byKey.has('titleNotDeveloper') && <Row label={t.facts.titleGate} value={t.facts.titleNotDeveloper} tone="warn" />}
-      {age && <Row label={t.facts.age} value={t.facts.agePenalty(typeof age.args?.days === 'number' ? age.args.days : 0)} tone="warn" />}
-      {extras.map(note => {
-        const text = serverText(s.reasoning, note.key, note.args, '')
-        return text ? <dd key={note.key} className="listing-card__fact-extra">{text}</dd> : null
-      })}
-      {aiReason && <Row label={t.facts.ai} value={aiReason} tone="ai" />}
+      {facts.map(fact => <Row key={fact.id} fact={fact} />)}
+      {notStated.length === 1 && <Row fact={notStated[0]} />}
+      {notStated.length > 1 && (
+        <Row fact={{ id: 'fold', label: t.facts.notStated, value: notStated.map(f => f.label).join(' · '), tone: 'muted' }} />
+      )}
     </dl>
   )
 }
 
-function Row({ label, value, tone }: { label: string; value: React.ReactNode; tone?: 'muted' | 'warn' | 'ai' }) {
+// The judge's verdict as its own strip under the header — the one sentence-shaped judgement on
+// the card. English by design (local model). Cards the judge never reached say so explicitly,
+// so a missing strip reads as "unjudged", not "bad". Click toggles the 2-line clamp.
+export function AiVerdict({ match }: Props) {
+  const t = useT('listing')
+  const [expanded, setExpanded] = useState(false)
+  const legacy = LEGACY_AI_REVIEW.exec(match.reasoning)
+  const reason = match.llmReason ?? legacy?.[2]
+  const score = match.llmScore ?? (legacy ? Number(legacy[1].replace(',', '.')) : undefined)
+  if (!reason) {
+    return <p className="listing-card__ai listing-card__ai--none">{t.facts.aiNotReviewed}</p>
+  }
+  return (
+    <button
+      type="button"
+      className={`listing-card__ai${expanded ? ' listing-card__ai--expanded' : ''}`}
+      onClick={() => setExpanded(v => !v)}
+      title={t.facts.aiExpand}
+    >
+      <span className="listing-card__ai-tag">✦ {t.facts.ai}{typeof score === 'number' && !Number.isNaN(score) ? ` ${dec(score, 2)}` : ''}</span>
+      {' '}{reason}
+    </button>
+  )
+}
+
+function Row({ fact }: { fact: Fact }) {
   return (
     <>
-      <dt className="listing-card__fact-label">{label}</dt>
-      <dd className={`listing-card__fact-value${tone ? ` listing-card__fact-value--${tone}` : ''}`}>{value}</dd>
+      <dt className="listing-card__fact-label">{fact.label}</dt>
+      <dd className={`listing-card__fact-value${fact.tone ? ` listing-card__fact-value--${fact.tone}` : ''}`}>{fact.value}</dd>
     </>
   )
 }
 
-function Pills({ names, kind }: { names: string[]; kind: 'primary' | 'secondary' }) {
+function Pills({ hits, ghosts, kind, ghostTitle }: { hits: string[]; ghosts: string[]; kind: 'primary' | 'secondary'; ghostTitle: string }) {
   return (
     <span className="listing-card__fact-pills">
-      {names.map(name => (
+      {hits.map(name => (
         <span key={name} className={`pill pill--${kind}`}>{name}</span>
+      ))}
+      {ghosts.map(name => (
+        <span key={`g-${name}`} className="pill pill--ghost" title={ghostTitle}>{name}</span>
       ))}
     </span>
   )

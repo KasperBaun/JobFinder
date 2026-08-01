@@ -343,6 +343,7 @@ function ShortlistTab({ data }: { data: RunDetail }) {
             mark={data.marks[m.id]}
             markReason={data.markReasons?.[m.id]}
             markStatus={data.markStatuses?.[m.id]}
+            breakdownEntry={data.scored?.find(e => e.id === m.id)}
           />
         ))}
       </div>

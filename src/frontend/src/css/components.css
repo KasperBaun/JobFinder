@@ -1333,20 +1333,70 @@ a.btn--danger:hover {
   color: var(--c-warn);
 }
 
-.listing-card__fact-value--ai {
-  color: var(--c-text-muted);
-}
-
-.listing-card__fact-extra {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--c-text-mid);
+.listing-card__fact-value--good {
+  color: var(--c-good);
 }
 
 .listing-card__fact-pills {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+}
+
+.pill--ghost {
+  color: var(--c-text-subtle);
+  background: transparent;
+  border: 1px dashed var(--c-border, var(--c-text-subtle));
+  opacity: 0.75;
+}
+
+/* The judge's verdict strip — a full-width, left-aligned "button" that toggles the 2-line clamp. */
+.listing-card__ai {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  width: 100%;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.listing-card__ai--expanded {
+  -webkit-line-clamp: unset;
+}
+
+.listing-card__ai--none {
+  cursor: default;
+  font-style: italic;
+  color: var(--c-text-subtle);
+}
+
+.listing-card__ai-tag {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--c-text-mid);
+}
+
+.listing-card__breakdown {
+  margin: 0 0 var(--space-4);
+  max-width: 26rem;
+}
+
+/* A .badge rendered as a <button> — keep the badge look, just make it press-able. */
+.badge--clickable {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: inherit;
 }
 
 .listing-card__pills {
