@@ -319,6 +319,9 @@ export type ScoreBreakdown = {
   domain: number
   freshness: number
   disqualifierPenalty: number
+  /** Deltas the payload has always carried but the UI ignored; optional for legacy safety. */
+  nonEngineeringTitlePenalty?: number
+  preferredCompanyBonus?: number
 }
 
 export type RawListing = {
