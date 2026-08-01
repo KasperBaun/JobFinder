@@ -206,6 +206,10 @@ export type ListingMatch = {
   /** English prose. Kept as the fallback for runs recorded before `reasoningNotes` existed. */
   reasoning: string
   reasoningNotes?: ReasoningNote[]
+  /** The LLM judge's verdict (English by design). Absent when the judge didn't run; runs recorded
+   * before the fields existed carry it inside `reasoning` as "AI review: …". */
+  llmScore?: number
+  llmReason?: string
   primaryStackHits: string[]
   secondaryStackHits: string[]
   favoriteCompany?: boolean

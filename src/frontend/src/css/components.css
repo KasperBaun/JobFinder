@@ -1303,6 +1303,52 @@ a.btn--danger:hover {
   line-height: 1.55;
 }
 
+.listing-card__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  margin: 0 0 var(--space-4);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.listing-card__fact-label {
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.listing-card__fact-value {
+  margin: 0;
+  color: var(--c-text-mid);
+}
+
+.listing-card__fact-value--muted {
+  color: var(--c-text-subtle);
+  font-style: italic;
+}
+
+.listing-card__fact-value--warn {
+  color: var(--c-warn);
+}
+
+.listing-card__fact-value--ai {
+  color: var(--c-text-muted);
+}
+
+.listing-card__fact-extra {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--c-text-mid);
+}
+
+.listing-card__fact-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
 .listing-card__pills {
   display: flex;
   flex-wrap: wrap;
