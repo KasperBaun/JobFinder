@@ -1337,6 +1337,13 @@ a.btn--danger:hover {
   color: var(--c-good);
 }
 
+/* A value with an explanatory tooltip — hint that hovering pays off. */
+.listing-card__fact-value--hinted {
+  text-decoration: underline dotted var(--c-text-subtle);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 .listing-card__fact-pills {
   display: inline-flex;
   flex-wrap: wrap;

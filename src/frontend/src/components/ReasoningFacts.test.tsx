@@ -53,6 +53,7 @@ describe('ReasoningFacts', () => {
     expect(screen.getByText('Docker')).toBeInTheDocument()
     expect(screen.getByText('fintech')).toBeInTheDocument()
     expect(screen.getByText('✓ Fits').className).toContain('--good')
+    expect(screen.getByText('✓ Fits')).toHaveAttribute('title', expect.stringContaining('same experience level'))
     expect(screen.getByText('✓ Copenhagen').className).toContain('--good')
     expect(screen.getByText('hybrid')).toBeInTheDocument()
     expect(screen.getByText('Posted')).toBeInTheDocument()
@@ -108,6 +109,7 @@ describe('ReasoningFacts', () => {
 
     expect(screen.getByText('Bad Homburg — outside your area').className).toContain('--warn')
     expect(screen.getByText(/rating reduced for age/).className).toContain('--warn')
+    expect(screen.getByText('≈ Close fit')).toHaveAttribute('title', expect.stringContaining('one step'))
   })
 
   it('warns when no must-have skills are mentioned', () => {
