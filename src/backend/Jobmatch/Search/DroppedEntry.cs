@@ -3,7 +3,7 @@ namespace Jobmatch.Search;
 /// <summary>
 /// One listing that didn't reach the shortlist, with the explicit reason.
 /// Reason values: disqualifier, below_min_score, beyond_top_n, above_max_age,
-/// missing_required_primary. Context carries a one-line specific (e.g.
+/// missing_required_primary, outside_radius. Context carries a one-line specific (e.g.
 /// 'score 0.18 below threshold 0.25').
 /// </summary>
 public sealed record DroppedEntry(
@@ -12,4 +12,7 @@ public sealed record DroppedEntry(
     string? Company,
     double Score,
     string Reason,
-    string? Context);
+    string? Context,
+    // Values Context interpolates, so the GUI can render the explanation in the user's language.
+    // Reason is already the message key. Optional and trailing for runs recorded before this.
+    IReadOnlyDictionary<string, object>? ContextArgs = null);

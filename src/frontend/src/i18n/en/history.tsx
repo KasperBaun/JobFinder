@@ -77,6 +77,7 @@ export const history = {
     beyond_top_n: 'outside top list',
     above_max_age: 'too old',
     missing_required_primary: 'no must-have skill',
+    outside_radius: 'too far away',
   } satisfies Record<DropReason, string>,
   colRating: 'Rating',
   colReason: 'Reason',

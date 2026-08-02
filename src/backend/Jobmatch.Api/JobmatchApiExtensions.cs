@@ -46,6 +46,9 @@ public static class JobmatchApiExtensions
         // Filesystem abstraction — physical by default; tests stage in-memory.
         services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();
 
+        // Injectable clock (MarksService stamps status changes with it; tests pin a fixed one).
+        services.AddSingleton(TimeProvider.System);
+
         // Domain services
         services.AddScoped<IWhoamiService, WhoamiService>();
         services.AddScoped<IMarksService, MarksService>();
@@ -99,6 +102,10 @@ public static class JobmatchApiExtensions
                     AllowRenegotiation = true,
                 },
             });
+
+        // Save-time DAWA geocoding for the radius filter (R-105). Short timeout on purpose:
+        // a slow or offline lookup degrades to a save without coordinates, never a failed save.
+        services.AddHttpClient<IGeocodingService, DawaGeocodingService>(c => c.Timeout = TimeSpan.FromSeconds(5));
 
         // Singleton so the in-flight download's live progress outlives the request that started it
         // (the SPA polls /api/llm/status to reconnect after navigation/reload).

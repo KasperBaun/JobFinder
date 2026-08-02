@@ -10,7 +10,7 @@ const COMPONENT_KEYS: ComponentKey[] = [
 
 export function BreakdownBar({ b }: { b: ScoreBreakdown }) {
   const t = useT('listing')
-  const positives = COMPONENT_KEYS.map(key => ({ key, label: t.component[key], value: Math.max(0, b[key as keyof ScoreBreakdown]) }))
+  const positives = COMPONENT_KEYS.map(key => ({ key, label: t.component[key], value: Math.max(0, b[key]) }))
   const totalPositive = positives.reduce((n, c) => n + c.value, 0)
   if (totalPositive === 0 && b.disqualifierPenalty === 0) {
     return <span className="muted">—</span>
@@ -48,10 +48,26 @@ export function BreakdownDetail({ entry }: { entry: ScoredEntry }) {
         <div key={key} className="bd-detail__row">
           <span className="bd-detail__label">{t.component[key]}</span>
           <span className="bd-detail__value mono tabular">
-            {dec(entry.breakdown[key as keyof ScoreBreakdown], 3)}
+            {dec(entry.breakdown[key], 3)}
           </span>
         </div>
       ))}
+      {(entry.breakdown.preferredCompanyBonus ?? 0) > 0 && (
+        <div className="bd-detail__row">
+          <span className="bd-detail__label" style={{ color: 'var(--c-good)' }}>{t.favoriteBonus}</span>
+          <span className="bd-detail__value mono tabular" style={{ color: 'var(--c-good)' }}>
+            {dec(entry.breakdown.preferredCompanyBonus ?? 0, 3)}
+          </span>
+        </div>
+      )}
+      {(entry.breakdown.nonEngineeringTitlePenalty ?? 0) !== 0 && (
+        <div className="bd-detail__row">
+          <span className="bd-detail__label" style={{ color: 'var(--c-bad)' }}>{t.titlePenalty}</span>
+          <span className="bd-detail__value mono tabular" style={{ color: 'var(--c-bad)' }}>
+            {dec(entry.breakdown.nonEngineeringTitlePenalty ?? 0, 3)}
+          </span>
+        </div>
+      )}
       {entry.breakdown.disqualifierPenalty !== 0 && (
         <div className="bd-detail__row">
           <span className="bd-detail__label" style={{ color: 'var(--c-bad)' }}>{t.disqualifierPenalty}</span>

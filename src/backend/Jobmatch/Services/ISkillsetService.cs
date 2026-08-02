@@ -19,11 +19,21 @@ public sealed record SkillsetUpdate(
     string? Country,
     string? Region,
     IReadOnlyList<string>? Metro,
-    IReadOnlyList<string>? PreferredCompanies = null);
+    IReadOnlyList<string>? PreferredCompanies = null,
+    string? Address = null,
+    double? RadiusKm = null,
+    // Server-computed by the geocoding step in SkillsetHandler — never client input.
+    double? Latitude = null,
+    double? Longitude = null,
+    string? ResolvedAddress = null);
 
 public interface ISkillsetService
 {
     Skillset Get();
+
+    /// <summary>Like <see cref="Get"/> but null instead of throwing when no profile exists yet.</summary>
+    Skillset? Find();
+
     Skillset Update(SkillsetUpdate input);
 }
 
@@ -37,6 +47,8 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
             throw new InvalidRequestException("No profile set up yet.");
         return SkillsetParser.Load(ctx.SkillsetPath);
     }
+
+    public Skillset? Find() => File.Exists(ctx.SkillsetPath) ? SkillsetParser.Load(ctx.SkillsetPath) : null;
 
     public Skillset Update(SkillsetUpdate input)
     {
@@ -76,6 +88,9 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
         var experienceYears = input.ExperienceYears ?? existing.ExperienceYears;
         if (experienceYears < 0) throw new ConfigException("experienceYears must be >= 0");
 
+        var radiusKm = input.RadiusKm ?? existing.RadiusKm;
+        if (radiusKm is < 0) throw new ConfigException("radiusKm must be >= 0");
+
         var remotePref = ParseEnum<RemotePreference>(input.RemotePreference, "remotePreference");
         var seniority = ParseEnum<Seniority>(input.Seniority, "seniority");
 
@@ -97,6 +112,11 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
             Region = NullIfBlank(input.Region),
             Metro = input.Metro is null ? existing.Metro : CleanList(input.Metro),
             PreferredCompanies = input.PreferredCompanies is null ? existing.PreferredCompanies : CleanList(input.PreferredCompanies),
+            Address = NullIfBlank(input.Address),
+            RadiusKm = radiusKm,
+            Latitude = input.Latitude,
+            Longitude = input.Longitude,
+            ResolvedAddress = NullIfBlank(input.ResolvedAddress),
         };
     }
 

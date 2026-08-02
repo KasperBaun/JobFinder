@@ -58,6 +58,51 @@ public sealed class ApplicationsEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task SetStatus_WithHistory_ResponseCarriesStatusChangedAt()
+    {
+        using var factory = Factory();
+        using var client = factory.CreateClient();
+        var dataDir = Path.Combine(_tempRoot, "data");
+        await CompleteSetup(client, dataDir);
+
+        const string runId = "20260701-100000-aaaaaa";
+        WriteHistory(dataDir, runId);
+
+        var before = DateTimeOffset.UtcNow;
+        var set = await client.PostAsJsonAsync(
+            Routes.Marks.SetStatus, new MarkStatusRequest(runId, "l1", "applied"));
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+
+        var list = await client.GetFromJsonAsync<ApplicationsResponse>(Routes.Applications.GetAll);
+        var entry = Assert.Single(list!.Applications);
+        Assert.Equal("applied", entry.Status);
+        Assert.NotNull(entry.StatusChangedAt);
+        Assert.InRange(entry.StatusChangedAt!.Value, before, DateTimeOffset.UtcNow);
+    }
+
+    private static void WriteHistory(string dataDir, string runId)
+    {
+        var detail = new Jobmatch.Search.RunDetail(
+            RunId: runId,
+            StartedAt: DateTimeOffset.UtcNow,
+            Providers: [],
+            FetchedCount: 1,
+            DedupedCount: 1,
+            RankedCount: 1,
+            ShortlistCount: 1,
+            TopScore: 0.8,
+            GoodMarks: 0,
+            Shortlist: [new Jobmatch.Search.ListingMatch(
+                "l1", "portal", "Role A", "Co A", "Copenhagen", "onsite", "https://x/l1", null, 0.8, "", [], [])],
+            Marks: new Dictionary<string, string>());
+        var historyDir = Path.Combine(dataDir, "history");
+        Directory.CreateDirectory(historyDir);
+        File.WriteAllText(
+            Path.Combine(historyDir, $"{runId}.json"),
+            System.Text.Json.JsonSerializer.Serialize(detail, Jobmatch.Json.JobmatchJsonOptions.Indented));
+    }
+
+    [Fact]
     public async Task SetStatus_InvalidValue_Returns400()
     {
         using var factory = Factory();

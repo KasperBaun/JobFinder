@@ -1,4 +1,5 @@
 import type { Messages } from '../en'
+import { n } from '../format'
 
 export const applications: Messages['applications'] = {
   eyebrow: '05 / ansøgninger',
@@ -20,6 +21,15 @@ export const applications: Messages['applications'] = {
   colSource: 'Jobkilde',
   colRating: 'Score',
   colStatus: 'Status',
+  colStatusSet: 'Status sat',
   colYourRating: 'Din vurdering',
   colFromSearch: 'Fra søgning',
+
+  tilesLabel: 'Ansøgninger pr. status',
+  filterAll: 'Alle',
+  filterNoMatch: 'Ingen ansøgninger med denne status.',
+  filterReset: 'Vis alle',
+
+  waiting: (days: number) => (days === 1 ? 'venter 1 dag' : `venter ${n(days)} dage`),
+  waitingTitle: 'Ansøgt uden svar endnu — overvej at følge op.',
 }
