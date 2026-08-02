@@ -15,7 +15,25 @@ public static partial class Ranker
 
         if (skillset.RemotePreference == RemotePreference.Any)
         {
-            return (1.0, locationMatch: null, remoteMatch);
+            // No remote-mode preference — which never meant "anywhere on the globe". The signal
+            // becomes location feasibility alone: fully remote listings are only checked against
+            // the regional restriction, an undisclosed location stays neutral, and a far-away
+            // office scores its tier so it can't tie with a listing in the user's city.
+            var (tier, tierMatch) = LocationTier(listing.Location, skillset, ranking.LocationTierWeights);
+            double anyScore;
+            if (tier is null)
+            {
+                anyScore = 1.0;
+            }
+            else if (listing.RemoteMode == RemoteMode.Remote)
+            {
+                anyScore = tier.Value >= ranking.LocationTierWeights.Region ? 1.0 : tier.Value;
+            }
+            else
+            {
+                anyScore = tier.Value;
+            }
+            return (anyScore, tierMatch, remoteMatch);
         }
 
         // R: how compatible the listing's remote mode is with the user's preference.

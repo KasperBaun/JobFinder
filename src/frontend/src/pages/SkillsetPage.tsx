@@ -1,49 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSetupStatus, getSkillset, updateSkillset } from '../api/client'
-import type { SkillsetResponse, SkillsetUpdateRequest } from '../api/types'
+import { AddressFields } from '../components/AddressFields'
 import { TagInput } from '../components/TagInput'
 import { SaveBar } from '../components/SaveBar'
 import { Toast } from '../components/Toast'
 import { CvImportModal } from '../components/CvImportModal'
 import { useT } from '../i18n'
-
-type Form = SkillsetUpdateRequest
+import { EMPTY_FORM, isDirty, toForm } from './skillsetForm'
+import type { Form } from './skillsetForm'
 
 const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote', 'any'] as const
 const SENIORITY_OPTIONS = ['junior', 'mid', 'senior', 'lead', 'any'] as const
-
-const EMPTY_FORM: Form = {
-  name: '', location: '', experienceYears: 0, targetRoles: [],
-  remotePreference: 'any', seniority: 'mid', primaryStack: [], secondaryStack: [],
-  domains: [], disqualifiers: [], languages: [], employmentTypes: [],
-  country: '', region: '', metro: [], preferredCompanies: [],
-}
-
-function toForm(s: SkillsetResponse): Form {
-  return {
-    name: s.name,
-    location: s.location,
-    experienceYears: s.experienceYears,
-    targetRoles: [...s.targetRoles],
-    remotePreference: s.remotePreference,
-    seniority: s.seniority,
-    primaryStack: [...s.primaryStack],
-    secondaryStack: [...s.secondaryStack],
-    domains: [...s.domains],
-    disqualifiers: [...s.disqualifiers],
-    languages: [...s.languages],
-    employmentTypes: [...s.employmentTypes],
-    country: s.country ?? '',
-    region: s.region ?? '',
-    metro: [...s.metro],
-    preferredCompanies: [...s.preferredCompanies],
-  }
-}
-
-function isDirty(a: Form, b: Form): boolean {
-  return JSON.stringify(a) !== JSON.stringify(b)
-}
 
 export function SkillsetPage() {
   const t = useT('skillset')
@@ -194,6 +162,12 @@ export function SkillsetPage() {
                     onChange={(v) => patch({ metro: v })}
                     placeholder={t.metroPlaceholder} ariaLabel={t.metro} />
                 </div>
+                <AddressFields
+                  address={form.address ?? ''}
+                  radiusKm={form.radiusKm ?? 0}
+                  saved={data}
+                  onPatch={patch}
+                />
               </div>
             </section>
 

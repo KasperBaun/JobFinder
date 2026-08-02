@@ -91,6 +91,40 @@ public sealed class LocalizedPayloadTests
     }
 
     [Fact]
+    public void Llm_Verdict_Fields_Round_Trip_And_Stay_Numeric()
+    {
+        var match = new ListingMatch(
+            Id: "1", Portal: "test", Title: "Senior .NET Engineer", Company: "TestCo", Location: "Copenhagen",
+            RemoteMode: "hybrid", Url: "https://example.com/1", PostedAt: null, Score: 0.87,
+            Reasoning: "Must-have skill match: C#. AI review: 0.82 — solid fit",
+            PrimaryStackHits: ["C#"], SecondaryStackHits: [],
+            LlmScore: 0.82, LlmReason: "solid fit");
+
+        var restored = RoundTrip(match);
+        var json = JsonSerializer.Serialize(restored, JobmatchJsonOptions.Default);
+
+        Assert.Equal(0.82, restored.LlmScore);
+        Assert.Equal("solid fit", restored.LlmReason);
+        Assert.Contains("\"llmScore\":0.82", json);
+    }
+
+    [Fact]
+    public void Match_Recorded_Before_The_Llm_Fields_Still_Loads_And_Serializes_Without_Them()
+    {
+        const string legacy = """
+            {"id":"1","portal":"test","title":"Senior .NET Engineer","remoteMode":"hybrid",
+             "url":"https://example.com/1","score":0.87,"reasoning":"Must-have skill match: C#.",
+             "primaryStackHits":["C#"],"secondaryStackHits":[]}
+            """;
+
+        var match = JsonSerializer.Deserialize<ListingMatch>(legacy, JobmatchJsonOptions.Default)!;
+
+        Assert.Null(match.LlmScore);
+        Assert.Null(match.LlmReason);
+        Assert.DoesNotContain("llmScore", JsonSerializer.Serialize(match, JobmatchJsonOptions.Default));
+    }
+
+    [Fact]
     public void Dropped_Entry_Recorded_Before_Context_Args_Still_Loads()
     {
         const string legacy = """

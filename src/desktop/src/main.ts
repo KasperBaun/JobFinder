@@ -2,6 +2,7 @@ import { app, ipcMain } from 'electron'
 import { startBackend, shutdownBackend, killChild, type BackendHandle } from './backend'
 import { createMainWindow } from './window'
 import { showErrorWindow } from './error-window'
+import { registerPrintToPdf } from './print'
 
 const APP_ID = 'dev.kasperbaun.jobfinder'
 
@@ -26,6 +27,9 @@ if (!app.requestSingleInstanceLock()) {
   // The SPA's "Close jobfinder" button routes here (see preload). `app.quit()` runs the same
   // graceful path as the native close: `before-quit` stops the backend, then `app.exit(0)`.
   ipcMain.on('jobfinder:quit', () => app.quit())
+
+  // The SPA's "Save as PDF" button (see preload / print.ts).
+  registerPrintToPdf()
 
   app.on('window-all-closed', () => {
     void shutdown()

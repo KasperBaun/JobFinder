@@ -1,6 +1,6 @@
 namespace Jobmatch.Services;
 
-public sealed partial class MarksService(UserContext ctx) : IMarksService
+public sealed partial class MarksService(UserContext ctx, TimeProvider? clock = null) : IMarksService
 {
     private const int MaxReasonLength = 500;
 
@@ -51,7 +51,22 @@ public sealed partial class MarksService(UserContext ctx) : IMarksService
             throw new InvalidRequestException(
                 $"status must be one of {string.Join(", ", ApplicationStatus.All)}, or null");
 
-        Update(runId, listingId, existing => existing with { Status = normalised });
+        Update(runId, listingId, existing => existing with
+        {
+            Status = normalised,
+            StatusChangedAt = StampStatusChange(existing, normalised),
+        });
+    }
+
+    // Re-selecting the same status keeps the original timestamp (unless a legacy
+    // entry never had one); a real change re-stamps; clearing drops it (R-107).
+    private DateTimeOffset? StampStatusChange(ListingMark existing, string? status)
+    {
+        if (status is null) return null;
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
+        return string.Equals(existing.Status, status, StringComparison.Ordinal)
+            ? existing.StatusChangedAt ?? now
+            : now;
     }
 
     public void RemoveRuns(IEnumerable<string> runIds)

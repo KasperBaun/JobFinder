@@ -138,4 +138,29 @@ public sealed class HistoryServiceMergeTests : IDisposable
         Assert.Empty(detail.Marks);
         Assert.Equal(0, detail.GoodMarks);
     }
+
+    [Fact]
+    public void GetByRunId_MergesMarkStatusAt()
+    {
+        var id = "20260605-190000-whenaa";
+        WriteLegacyHistory(id, DateTimeOffset.UtcNow);
+        var clock = new MarksServiceTests.FixedTimeProvider(DateTimeOffset.Parse("2026-07-01T10:00:00+00:00"));
+        new MarksService(_ctx, clock).SetStatus(id, "l1", "applied");
+
+        var detail = _history.GetByRunId(id);
+        Assert.NotNull(detail.MarkStatusAt);
+        Assert.Equal(clock.UtcNow, detail.MarkStatusAt!["l1"]);
+    }
+
+    [Fact]
+    public void GetByRunId_LegacyStatusWithoutTimestamp_LeavesMarkStatusAtNull()
+    {
+        var id = "20260605-200000-oldsaa";
+        WriteLegacyHistory(id, DateTimeOffset.UtcNow);
+        File.WriteAllText(_ctx.MarksPath, $$"""{ "{{id}}": { "l1": { "status": "applied" } } }""");
+
+        var detail = _history.GetByRunId(id);
+        Assert.Equal("applied", detail.MarkStatuses!["l1"]);
+        Assert.Null(detail.MarkStatusAt);
+    }
 }

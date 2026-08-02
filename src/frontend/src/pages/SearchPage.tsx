@@ -225,7 +225,12 @@ export function SearchPage() {
           )}
           <div className="listing-list">
             {runDetailQuery.data?.shortlist.map(m => (
-              <ListingCard key={m.id} match={m} runId={job.id} />
+              <ListingCard
+                key={m.id}
+                match={m}
+                runId={job.id}
+                breakdownEntry={runDetailQuery.data?.scored?.find(e => e.id === m.id)}
+              />
             ))}
           </div>
         </section>
