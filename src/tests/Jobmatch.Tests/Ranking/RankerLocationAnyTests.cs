@@ -58,7 +58,7 @@ public sealed class RankerLocationAnyTests
 
         Assert.Equal(Weights.LocationRemote, scored[0].Breakdown.LocationRemote, 3);
         Assert.Equal(true, scored[0].Reasoning.LocationMatch);
-        Assert.Contains(scored[0].Reasoning.NoteKeys, n => n.Key == "location");
+        Assert.Contains(scored[0].Reasoning.NoteKeys!, n => n.Key == "location");
     }
 
     [Fact]
