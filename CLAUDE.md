@@ -103,6 +103,37 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 - The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
 - API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
 
+## Releasing (dev → main)
+
+`main` is the release branch: **every push to it builds and publishes installers** via
+`.github/workflows/release.yml`. Feature branches land in `dev`; `dev` reaches `main` only
+through a pull request merged with a merge commit (`Merge pull request #N from KasperBaun/dev`).
+
+1. **Verify functional first** — `dotnet test src/Jobmatch.slnx -c Release`
+   (with `JOBFINDER_USER` set; the runner has no `git config user.email`),
+   `npm --prefix src/frontend run test`, and `npm --prefix src/frontend run build`
+   (`tsc -b` is what catches a missing Danish catalog key). CI reruns all three on
+   Windows *and* Linux, so a red suite here is a failed release there.
+2. **Housekeeping** — `todo.md` forward-looking only (closed items dropped, "In progress"
+   empty), one lean line per change in `CHANGELOG.md` under `## Recent` (the file has no
+   per-version headings — don't add any), and an `R-NNN` in `docs/requirements.md` for
+   every behaviour change. Task plan docs under `docs/tasks/` stay after shipping — they
+   are design rationale, like `T-007/`.
+3. **Version bump commit** on `dev` — `chore(release): bump to X.Y`, touching exactly four
+   files: `package.json`, `src/desktop/package.json`, `src/desktop/package-lock.json`
+   (CI runs `npm ci` there before `npm version`, so a stale lock fails the build), and the
+   `VERSION:` prefix in `.github/workflows/release.yml`. Use
+   `npm version X.Y.0 --no-git-tag-version` so package and lock stay in sync. Only the
+   minor is bumped by hand — the patch is `${{ github.run_number }}`.
+4. **PR `dev` → `main`**, titled like the release (`Release 0.4 — <headline>`), merged with
+   a merge commit.
+5. **The merge is the release.** CI tests both platforms, publishes the self-contained
+   backend, builds the NSIS `.exe` and the `.deb`, then wipes and re-uploads the assets on
+   the rolling **`latest`** prerelease tag. There are no per-version git tags, and `latest`
+   keeps its original creation date while its assets are replaced — check
+   `gh run list --workflow=release.yml`, not the release date, to confirm a build shipped.
+6. **Merge `main` back into `dev`** afterwards so the merge commit isn't orphaned.
+
 ## Localization
 
 The GUI ships English and Danish. Catalogs live in `src/frontend/src/i18n/en/` and
@@ -123,11 +154,21 @@ returns the namespace object, so call sites are property accesses, not string ke
 - **The language lives in `bootstrap.json`** (`BootstrapConfig.Language`, set via the
   setup request or `PUT /api/settings/language`), with a `localStorage` copy used only as
   a boot hint so reloads don't flash English.
-- **Backend prose is deliberately not localized yet** — run timeline entries, ranking
-  rationale, dropped-listing context, API error messages, `top-jobs.md` and LLM output
-  stay English and render as-is. Converting them to `key + args` so the frontend formats
-  them (which would also retranslate existing history) is in `todo.md`; don't
-  half-migrate it.
+- **Backend prose travels as `key + args`, never as finished sentences.** Timeline entries
+  (`Jobs/JobSearch.cs`, `Jobmatch.Api/Jobs/SearchJob.Events.cs`), match rationale
+  (`Ranking/Ranker.Notes.cs`) and drop reasons (`Search/SearchService.Ranking.cs`) emit a
+  stable key plus the values it interpolates; the frontend's `server` namespace owns the
+  wording. Each also keeps its English string (`Message`, `Notes`, `Context`) — that is
+  what logs, `top-jobs.md` and runs recorded before the keys show. **Keys are persisted in
+  run history, so they are additive only: never rename or repurpose one.** Add a key to
+  both `en/server.ts` and `da/server.ts` in the same change.
+- **The English wording exists twice on purpose** — `Ranker.Notes.cs` renders `top-jobs.md`
+  and the persisted prose, `i18n/en/server.ts` renders the UI. They cannot both be dropped,
+  so `src/tests/fixtures/reasoning-en.json` pins them: a C# test and a Vitest test assert
+  the *same* entries, and changing one implementation alone fails a test. Edit the fixture
+  and both sides together.
+- **Still English:** API error messages, `top-jobs.md`, the verification report, and
+  LLM-generated text.
 - Brand names (`utils/platform.ts` ATS labels) and wire formats (the longlist URL hash)
   are intentionally untranslated.
 

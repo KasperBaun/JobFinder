@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Shared with the frontend's Vitest suite; both assert the same English rendering. -->
+    <Content Include="..\fixtures\reasoning-en.json" Link="fixtures\reasoning-en.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\backend\Jobmatch\Jobmatch.csproj" />
     <ProjectReference Include="..\..\backend\Jobmatch.Api\Jobmatch.Api.csproj" />
   </ItemGroup>

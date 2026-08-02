@@ -1,6 +1,6 @@
 import type { JobSearchEvent } from '../api/types'
 import { formatRelative } from '../utils/time'
-import { useT } from '../i18n'
+import { serverText, useT } from '../i18n'
 
 type Props = { events: JobSearchEvent[] }
 
@@ -9,6 +9,7 @@ type Props = { events: JobSearchEvent[] }
 // show every source's count and status.
 export function ActivityLog({ events }: Props) {
   const t = useT('search')
+  const s = useT('server')
   if (events.length === 0) return null
   return (
     <details className="activity-log">
@@ -18,7 +19,7 @@ export function ActivityLog({ events }: Props) {
           {events.map((ev, i) => (
             <li key={i} className={`timeline__item timeline__item--${ev.level}`}>
               <span className="timeline__time tabular mono">{formatRelative(ev.timestamp)}</span>
-              <span className="timeline__msg">{ev.message}</span>
+              <span className="timeline__msg">{serverText(s.timeline, ev.messageKey, ev.args, ev.message)}</span>
             </li>
           ))}
         </ol>

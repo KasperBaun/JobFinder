@@ -14,7 +14,7 @@ namespace Jobmatch.Api.Jobs;
 /// for live SSE viewers. The rich result <c>RunDetail</c> is written by the pipeline on success.
 /// </summary>
 [AutomaticRetry(Attempts = 1)]
-public sealed class SearchJob(
+public sealed partial class SearchJob(
     ISearchService search,
     IJobSearchStore store,
     JobSearchBus bus,
@@ -65,75 +65,6 @@ public sealed class SearchJob(
             Persist(_job.MarkFailed(ex.Message, DateTimeOffset.UtcNow), publish: true);
             logger.LogError(ex, "Search run {Id} failed", id);
             throw;
-        }
-    }
-
-    private JobSearch Apply(JobSearch job, SearchProgressEvent evt)
-    {
-        var now = DateTimeOffset.UtcNow;
-        switch (evt)
-        {
-            case StartedEvent s:
-                return job.Log(JobSearchEventLevel.Info, JobSearchPhase.Fetching, $"Fetching listings from {s.Total} sources", now);
-
-            case ProviderRunningEvent:
-            case ProviderDoneEvent:
-            case ProviderFailedEvent:
-                return ApplyProvider(job, evt, now);
-
-            case DedupeEvent d:
-                return job
-                    .WithCounts(deduped: d.MergedCount)
-                    .Log(JobSearchEventLevel.Info, JobSearchPhase.Deduping, $"{d.MergedCount} unique jobs after removing duplicates", now, count: d.MergedCount);
-
-            case LlmJudgingEvent l:
-                return job.Log(JobSearchEventLevel.Info, JobSearchPhase.LlmJudging, $"AI reviewing top {l.Total} jobs…", now, count: l.Total);
-
-            case RankEvent r:
-                return job
-                    .WithCounts(ranked: r.RankedCount, shortlist: r.RankedCount, topScore: r.TopScore)
-                    .Log(JobSearchEventLevel.Info, JobSearchPhase.Ranking, $"{r.RankedCount} jobs rated · best {r.TopScore:0.00}", now, count: r.RankedCount);
-
-            case CompleteEvent c:
-                return job
-                    .WithCounts(shortlist: c.Shortlist.Count, topScore: c.Shortlist.Count > 0 ? c.Shortlist[0].Score : job.TopScore)
-                    .Log(JobSearchEventLevel.Info, JobSearchPhase.Writing, "Writing results", now, count: c.Shortlist.Count);
-
-            case ErrorEvent e:
-                throw new InvalidOperationException(e.Message);
-
-            default:
-                return job;
-        }
-    }
-
-    private static JobSearch ApplyProvider(JobSearch job, SearchProgressEvent evt, DateTimeOffset now)
-    {
-        switch (evt)
-        {
-            case ProviderRunningEvent p:
-                return job
-                    .WithProviders(Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Running, null, null)))
-                    .Log(JobSearchEventLevel.Info, JobSearchPhase.Fetching, $"Fetching {p.Provider} ({p.Index}/{p.Total})", now, p.Provider);
-
-            case ProviderDoneEvent p:
-            {
-                var providers = Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Ok, p.FetchedCount, null, p.DurationMs, p.HitPageCap, p.PossiblyCapped));
-                var withCounts = job.WithProviders(providers).WithCounts(fetched: SumOk(providers));
-                var capNote = p.HitPageCap ? " · hit page cap, may be more"
-                    : p.PossiblyCapped ? " · at configured limit, may be more"
-                    : "";
-                var level = p.HitPageCap || p.PossiblyCapped ? JobSearchEventLevel.Warn : JobSearchEventLevel.Info;
-                return withCounts.Log(level, JobSearchPhase.Fetching, $"{p.Provider}: {p.FetchedCount} jobs · {p.DurationMs / 1000.0:0}s{capNote}", now, p.Provider, p.FetchedCount, p.DurationMs);
-            }
-
-            case ProviderFailedEvent p:
-                return job
-                    .WithProviders(Upsert(job.Providers, new ProviderRunStatus(p.Provider, ProviderRunState.Failed, null, p.Error, p.DurationMs)))
-                    .Log(JobSearchEventLevel.Warn, JobSearchPhase.Fetching, $"{p.Provider} failed: {p.Error} · {p.DurationMs / 1000.0:0}s", now, p.Provider, durationMs: p.DurationMs);
-
-            default:
-                return job;
         }
     }
 

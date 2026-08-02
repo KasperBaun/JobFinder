@@ -6,6 +6,9 @@ export type WhoamiResponse = {
 
 export type ProviderType = 'api' | 'rss' | 'html' | 'manual' | 'teamtailor' | 'hrmanager'
 
+/** A backend message as a stable key plus the values it interpolates — rendered by the i18n catalog. */
+export type ReasoningNote = { key: string; args?: Record<string, unknown> }
+
 export type ProviderSummary = {
   id: number
   name: string
@@ -126,6 +129,12 @@ export type SkillsetResponse = {
   region?: string | null
   metro: string[]
   preferredCompanies: string[]
+  address?: string | null
+  radiusKm?: number | null
+  /** Server-computed at save time (DAWA geocoding) — never sent by the client. */
+  latitude?: number | null
+  longitude?: number | null
+  resolvedAddress?: string | null
 }
 
 export type SkillsetUpdateRequest = {
@@ -145,6 +154,8 @@ export type SkillsetUpdateRequest = {
   region?: string | null
   metro: string[]
   preferredCompanies: string[]
+  address?: string | null
+  radiusKm?: number | null
 }
 
 export type CvExtractionState = 'idle' | 'extracting' | 'completed' | 'failed'
@@ -192,10 +203,18 @@ export type ListingMatch = {
   url: string
   postedAt?: string
   score: number
+  /** English prose. Kept as the fallback for runs recorded before `reasoningNotes` existed. */
   reasoning: string
+  reasoningNotes?: ReasoningNote[]
+  /** The LLM judge's verdict (English by design). Absent when the judge didn't run; runs recorded
+   * before the fields existed carry it inside `reasoning` as "AI review: …". */
+  llmScore?: number
+  llmReason?: string
   primaryStackHits: string[]
   secondaryStackHits: string[]
   favoriteCompany?: boolean
+  /** Full fetched ad text. Absent on runs recorded before the field existed (T-009). */
+  description?: string
 }
 
 export type ProviderRunStatus = {
@@ -231,7 +250,10 @@ export type JobSearchEvent = {
   timestamp: string
   level: 'info' | 'warn' | 'error'
   phase: JobSearchPhase
+  /** English prose. Kept as the fallback for runs recorded before `messageKey` existed. */
   message: string
+  messageKey?: string
+  args?: Record<string, unknown>
   provider?: string
   count?: number
   durationMs?: number
@@ -297,6 +319,9 @@ export type ScoreBreakdown = {
   domain: number
   freshness: number
   disqualifierPenalty: number
+  /** Deltas the payload has always carried but the UI ignored; optional for legacy safety. */
+  nonEngineeringTitlePenalty?: number
+  preferredCompanyBonus?: number
 }
 
 export type RawListing = {
@@ -339,6 +364,7 @@ export type DropReason =
   | 'beyond_top_n'
   | 'above_max_age'
   | 'missing_required_primary'
+  | 'outside_radius'
 
 export type DroppedEntry = {
   id: string
@@ -346,7 +372,9 @@ export type DroppedEntry = {
   company?: string
   score: number
   reason: DropReason
+  /** English prose. Kept as the fallback for runs recorded before `contextArgs` existed. */
   context?: string
+  contextArgs?: Record<string, unknown>
 }
 
 export type ApplicationStatus = 'applied' | 'interview' | 'offer' | 'rejected' | 'no-response'
@@ -356,6 +384,8 @@ export type RunDetail = RunSummary & {
   marks: Record<string, 'good' | 'bad'>
   markReasons?: Record<string, string>
   markStatuses?: Record<string, ApplicationStatus>
+  /** ISO timestamp of the last status change per listing; absent for statuses set before R-107. */
+  markStatusAt?: Record<string, string>
   raw?: ProviderRaw[]
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
@@ -392,6 +422,8 @@ export type ApplicationEntry = {
   portal: string
   portalDisplayName?: string
   score: number
+  /** ISO timestamp of the last status change; absent for statuses set before R-107. */
+  statusChangedAt?: string
 }
 
 export type ApplicationsResponse = { applications: ApplicationEntry[] }

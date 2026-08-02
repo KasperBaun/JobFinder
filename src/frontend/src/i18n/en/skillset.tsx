@@ -44,6 +44,15 @@ export const skillset = {
   metro: 'Cities / areas',
   metroPlaceholder: 'optional — e.g. Copenhagen, Aarhus',
 
+  homeAddress: 'Home address',
+  homeAddressPlaceholder: 'optional — e.g. Rådhuspladsen 1, 1550 København V',
+  homeAddressHint: 'Danish addresses only. With a max distance set, jobs farther away are filtered out.',
+  radiusKm: 'Max distance (km)',
+  radiusKmHint: '0 = off',
+  addressResolved: (resolved: string) => `Address found: ${resolved}`,
+  addressNotResolved: 'Address not recognized — the distance filter is off.',
+  addressPending: 'The address is checked when you save.',
+
   rolesAndPreferences: 'Roles & preferences',
   seniorityLabel: 'Experience level',
   remoteLabel: 'Where you want to work',

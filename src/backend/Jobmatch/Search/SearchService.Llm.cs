@@ -39,7 +39,12 @@ public sealed partial class SearchService
                     blended.Add(m with
                     {
                         Score = newScore,
-                        Reasoning = m.Reasoning with { Notes = notes },
+                        Reasoning = m.Reasoning with
+                        {
+                            Notes = notes,
+                            LlmScore = v.Score,
+                            LlmReason = string.IsNullOrWhiteSpace(v.Reason) ? null : v.Reason,
+                        },
                     });
                 }
                 else

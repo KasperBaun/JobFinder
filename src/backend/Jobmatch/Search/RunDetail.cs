@@ -29,4 +29,5 @@ public sealed record RunDetail(
     JobSearchPhase? Phase = null,
     IReadOnlyList<JobSearchEvent>? Timeline = null,
     IReadOnlyDictionary<string, string>? MarkReasons = null,
-    IReadOnlyDictionary<string, string>? MarkStatuses = null);
+    IReadOnlyDictionary<string, string>? MarkStatuses = null,
+    IReadOnlyDictionary<string, DateTimeOffset>? MarkStatusAt = null);

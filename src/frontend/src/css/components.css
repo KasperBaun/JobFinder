@@ -384,6 +384,9 @@ a.btn--danger:hover {
 
 .badge--muted   { background: transparent; color: var(--c-text-subtle); border-color: var(--c-slate-200); }
 
+/* Awaiting-response marker on the Applications view (R-107). */
+.badge--waiting { background: var(--c-warn-bg); color: var(--c-warn); border-color: var(--c-warn-border); }
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -545,6 +548,9 @@ a.btn--danger:hover {
 }
 
 .field__hint { font-size: 0.8rem; color: var(--c-text-subtle); }
+.address-status { font-size: 0.8rem; color: var(--c-text-subtle); }
+.address-status--ok { color: var(--c-good); }
+.address-status--warn { color: var(--c-warn); }
 
 .field--row .field__label { min-width: 8rem; }
 
@@ -1297,6 +1303,109 @@ a.btn--danger:hover {
   line-height: 1.55;
 }
 
+.listing-card__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  margin: 0 0 var(--space-4);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.listing-card__fact-label {
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.listing-card__fact-value {
+  margin: 0;
+  color: var(--c-text-mid);
+}
+
+.listing-card__fact-value--muted {
+  color: var(--c-text-subtle);
+  font-style: italic;
+}
+
+.listing-card__fact-value--warn {
+  color: var(--c-warn);
+}
+
+.listing-card__fact-value--good {
+  color: var(--c-good);
+}
+
+/* A value with an explanatory tooltip — hint that hovering pays off. */
+.listing-card__fact-value--hinted {
+  text-decoration: underline dotted var(--c-text-subtle);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.listing-card__fact-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.pill--ghost {
+  color: var(--c-text-subtle);
+  background: transparent;
+  border: 1px dashed var(--c-border, var(--c-text-subtle));
+  opacity: 0.75;
+}
+
+/* The judge's verdict strip — a full-width, left-aligned "button" that toggles the 2-line clamp. */
+.listing-card__ai {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  width: 100%;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.listing-card__ai--expanded {
+  -webkit-line-clamp: unset;
+}
+
+.listing-card__ai--none {
+  cursor: default;
+  font-style: italic;
+  color: var(--c-text-subtle);
+}
+
+.listing-card__ai-tag {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--c-text-mid);
+}
+
+.listing-card__breakdown {
+  margin: 0 0 var(--space-4);
+  max-width: 26rem;
+}
+
+/* A .badge rendered as a <button> — keep the badge look, just make it press-able. */
+.badge--clickable {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: inherit;
+}
+
 .listing-card__pills {
   display: flex;
   flex-wrap: wrap;
@@ -1457,6 +1566,53 @@ a.btn--danger:hover {
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* ============================================================
+   applications view — stat tiles + status-set column (R-107)
+   ============================================================ */
+
+.app-stat-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.app-stat-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 0.32rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-slate-300);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+
+.app-stat-tile:hover { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+.app-stat-tile:focus { outline: none; border-color: var(--c-navy-400); }
+
+.app-stat-tile--active {
+  border-color: var(--c-navy-500);
+  background: var(--c-surface-alt);
+  color: var(--c-navy-700);
+}
+
+.app-stat-tile__count {
+  font-weight: 600;
+  color: var(--c-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.apps__status-set { white-space: nowrap; }
+.apps__status-set .badge--waiting { margin-left: var(--space-2); }
+
+.apps__no-match { padding: var(--space-4); }
 
 /* ============================================================
    progress bar (history list)
@@ -2528,6 +2684,7 @@ a.btn--danger:hover {
 .reason-badge--beyond_top_n             { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 .reason-badge--above_max_age            { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 .reason-badge--missing_required_primary { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
+.reason-badge--outside_radius           { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 
 /* ------------------------------------------------------------------------
    Search progress rows — linkify when complete (T-006h)
