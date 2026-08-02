@@ -91,6 +91,27 @@ public abstract partial class BaseAdapter
     private async Task<Listing> EnrichOneAsync(
         Listing listing, BodyFetchSession session, ConcurrentDictionary<string, int> skippedByHost, CancellationToken ct)
     {
+        // Workday: the list API collapses multi-site postings to a literal "2 Locations" and the
+        // public job page is a JS shell. The CXS detail JSON has every location and the clean
+        // description, for the same single fetch the page would have cost.
+        var cxsUrl = TryBuildWorkdayCxsUrl(listing.Url);
+        if (cxsUrl is not null)
+        {
+            var cxs = ParseWorkdayCxs(await TryFetchBodyHtmlAsync(cxsUrl, session, skippedByHost, ct, allowJson: true));
+            if (cxs is not null)
+            {
+                if (cxs.Locations.Count > 0 && IsMissingOrPlaceholderLocation(listing.Location))
+                {
+                    listing = listing with { Location = string.Join(" / ", cxs.Locations) };
+                }
+                if (!string.IsNullOrWhiteSpace(cxs.DescriptionHtml))
+                {
+                    return MergeBodyHtml(listing, cxs.DescriptionHtml);
+                }
+            }
+            // CXS unavailable — fall through to the ordinary page fetch.
+        }
+
         var previewHtml = await TryFetchBodyHtmlAsync(listing.Url, session, skippedByHost, ct);
         // For Jobindex/it-jobbank preview pages, the area span ('jix_robotjob--area')
         // carries the actual location; the original RSS feed item lacked one.
@@ -98,6 +119,17 @@ public abstract partial class BaseAdapter
         if (!string.IsNullOrWhiteSpace(fromPreview) && string.IsNullOrWhiteSpace(listing.Location))
         {
             listing = listing with { Location = fromPreview };
+        }
+
+        // Generic repair: most ATS pages embed a schema.org JobPosting whose jobLocation carries
+        // the real (primary) place — used only when the catalog value is missing or a placeholder.
+        if (IsMissingOrPlaceholderLocation(listing.Location))
+        {
+            var fromJsonLd = ExtractJsonLdLocation(previewHtml);
+            if (fromJsonLd is not null)
+            {
+                listing = listing with { Location = fromJsonLd };
+            }
         }
 
         var bodyHtml = previewHtml;
@@ -118,7 +150,8 @@ public abstract partial class BaseAdapter
     // failures are the expected kind here — logged as one line, no stack trace — and return null
     // so the caller keeps the catalog-only listing.
     private async Task<string?> TryFetchBodyHtmlAsync(
-        Uri url, BodyFetchSession session, ConcurrentDictionary<string, int> skippedByHost, CancellationToken ct)
+        Uri url, BodyFetchSession session, ConcurrentDictionary<string, int> skippedByHost, CancellationToken ct,
+        bool allowJson = false)
     {
         if (session.IsHostTripped(url.Host, MaxConsecutiveHostFailures))
         {
@@ -127,7 +160,7 @@ public abstract partial class BaseAdapter
         }
         try
         {
-            var html = await session.GetOrFetchAsync(url, u => FetchBodyHtmlWithTimeoutAsync(u, ct));
+            var html = await session.GetOrFetchAsync(url, u => FetchBodyHtmlWithTimeoutAsync(u, allowJson, ct));
             session.RecordSuccess(url.Host);
             return html;
         }
@@ -150,11 +183,11 @@ public abstract partial class BaseAdapter
         }
     }
 
-    private async Task<string?> FetchBodyHtmlWithTimeoutAsync(Uri url, CancellationToken ct)
+    private async Task<string?> FetchBodyHtmlWithTimeoutAsync(Uri url, bool allowJson, CancellationToken ct)
     {
         using var fetchCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         fetchCts.CancelAfter(EnrichFetchTimeout);
-        return await FetchBodyHtmlAsync(url, fetchCts.Token);
+        return await FetchBodyHtmlAsync(url, allowJson, fetchCts.Token);
     }
 
     private static readonly Regex JobindexAreaSpan = new(
@@ -188,12 +221,15 @@ public abstract partial class BaseAdapter
         return System.Net.WebUtility.HtmlDecode(match.Groups[1].Value);
     }
 
-    private async Task<string?> FetchBodyHtmlAsync(Uri url, CancellationToken ct)
+    private async Task<string?> FetchBodyHtmlAsync(Uri url, bool allowJson, CancellationToken ct)
     {
         using var response = await Http.GetAsync(url, ct);
         if (!response.IsSuccessStatusCode) return null;
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "text/html";
-        if (!contentType.Contains("html", StringComparison.OrdinalIgnoreCase)) return null;
+        // Listing pages must be HTML; only the Workday CXS detail fetch expects JSON.
+        var acceptable = contentType.Contains("html", StringComparison.OrdinalIgnoreCase)
+            || (allowJson && contentType.Contains("json", StringComparison.OrdinalIgnoreCase));
+        if (!acceptable) return null;
         return await response.Content.ReadAsStringAsync(ct);
     }
 

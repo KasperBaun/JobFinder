@@ -21,4 +21,11 @@ public sealed record ListingMatch(
     string? PortalDisplayName = null,
     bool FavoriteCompany = false,
     // Structured rationale; Reasoning stays populated as the English fallback for older runs.
-    IReadOnlyList<ReasoningNote>? ReasoningNotes = null);
+    IReadOnlyList<ReasoningNote>? ReasoningNotes = null,
+    // Full fetched ad text, persisted per run so a listing can be saved as PDF after the source
+    // pruned it. Null on runs recorded before the field existed.
+    string? Description = null,
+    // The LLM judge's verdict for the AI row on the card. Null when the judge didn't run and on
+    // runs recorded before the fields existed (those carry it inside Reasoning as "AI review: …").
+    double? LlmScore = null,
+    string? LlmReason = null);

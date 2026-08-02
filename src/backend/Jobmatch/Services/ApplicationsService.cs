@@ -27,14 +27,18 @@ public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : 
 
         foreach (var runId in allMarks.Keys.OrderByDescending(id => id, StringComparer.Ordinal))
         {
-            RunDetail? detail = null;
-            foreach (var (listingId, mark) in allMarks[runId])
+            var statused = allMarks[runId]
+                .Where(kvp => kvp.Value.Status is not null && !seen.Contains(kvp.Key))
+                .ToList();
+            if (statused.Count == 0) continue;
+
+            // A pruned run's file may be gone; skip it so it doesn't hide the rest,
+            // and leave its listings unseen so an older run can still resolve them (R-107).
+            var detail = LoadDetail(runId);
+            if (detail is null) continue;
+
+            foreach (var (listingId, mark) in statused)
             {
-                if (mark.Status is null || seen.Contains(listingId)) continue;
-
-                detail ??= LoadDetail(runId);
-                if (detail is null) break;
-
                 var entry = Resolve(detail, listingId, mark);
                 if (entry is null) continue;
                 seen.Add(listingId);
@@ -62,7 +66,8 @@ public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : 
         {
             return new ApplicationEntry(listingId, detail.RunId, detail.StartedAt, mark.Status!,
                 mark.Mark, mark.Reason, scored.Title, scored.Company, scored.Location,
-                scored.Url, scored.Portal, scored.PortalDisplayName, scored.Score);
+                scored.Url, scored.Portal, scored.PortalDisplayName, scored.Score,
+                mark.StatusChangedAt);
         }
 
         var match = detail.Shortlist.FirstOrDefault(m => string.Equals(m.Id, listingId, StringComparison.Ordinal));
@@ -70,7 +75,8 @@ public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : 
         {
             return new ApplicationEntry(listingId, detail.RunId, detail.StartedAt, mark.Status!,
                 mark.Mark, mark.Reason, match.Title, match.Company, match.Location,
-                match.Url, match.Portal, match.PortalDisplayName, match.Score);
+                match.Url, match.Portal, match.PortalDisplayName, match.Score,
+                mark.StatusChangedAt);
         }
 
         return null;
