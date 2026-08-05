@@ -4,6 +4,24 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
+- **Radius-filter residuals (R-105), each measured and deliberately left.** From the
+  2026-08-05 verification pass over a real 2 330-listing corpus; frequency in that
+  corpus in brackets. *(a)* A bare four-digit token in a string where nothing else
+  resolves is still read as a Danish postcode, so a foreign address whose town is
+  below the gazetteer's 100k floor can land in Denmark [1 listing, and it still
+  dropped] — requiring positive Danish evidence instead would lose real drops like
+  "2670 Greve Strand", so this needs a better signal, not a tighter rule.
+  *(b)* `Gazetteer.RemoteTokens` matches "global" as a substring of the whole
+  location, so "Global HQ, Aarhus" exempts itself from the filter [0] — the list
+  mirrors `Ranker.Location.cs:97`, so change both or neither. *(c)* Gazetteer long
+  tail: Vietnamese districts, Canadian street addresses, a typo'd "United States of
+  Americas", and "København C" (not a real postal district) resolve to nothing or to
+  the country [~10 listings, all fail-open]. *(d)* A fractional radius renders as
+  "max 0 km" because the drop args are ints; the GUI only produces whole numbers.
+  *(e)* `RemoteMode` is computed before body enrichment appends the full page text,
+  so classification sees a partial description [measured delta after R-110: 58 vs 60
+  listings].
+
 - **Localize `top-jobs.md` and the verification report.** Both are written server-side,
   so they need a C#-side message table rather than the frontend catalog. Only worth doing
   if users actually open the generated markdown.
