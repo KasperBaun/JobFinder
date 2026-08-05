@@ -119,21 +119,21 @@ public sealed partial class SearchService : ISearchService
         JsonReportWriter.WriteListings(deduped, _ctx.AllListingsPath);
 
         var scoredAll = Ranker.Score(deduped, prep.Skillset, prep.Ranking);
+        var radiusFilter = RadiusFilter.Create(prep.Skillset, _gazetteer ?? Gazetteer.LoadBundled());
 
-        // Optional LLM re-rank layer. Picks the top-N from the keyword ranker, asks the model to
-        // score each against the user's skillset + curated examples, then blends LLM and keyword
-        // scores. Falls back transparently to keyword-only when the model can't be loaded (file
-        // missing, Ollama not running, etc.). Sequential — gemma 3 4B on CPU does ~1-3 sec per call,
-        // so judging the default top 50 takes ~1-2 minutes; SSE stream stays open but silent.
+        // Optional LLM re-rank layer. Judges the top-N of the listings that survive the hard
+        // filters, scoring each against the user's skillset + curated examples, then blends LLM
+        // and keyword scores. Falls back transparently to keyword-only when the model can't be
+        // loaded (file missing, Ollama not running, etc.). Sequential — gemma 3 4B on CPU does
+        // ~1-3 sec per call, so the default top 50 takes ~1-2 minutes; SSE stays open but silent.
         if (prep.Ranking.Llm.Enabled)
         {
-            var examples = LoadExamples();
-            var llmTopN = prep.Ranking.Llm.TopN <= 0 ? scoredAll.Count : Math.Min(prep.Ranking.Llm.TopN, scoredAll.Count);
-            yield return new LlmJudgingEvent(llmTopN);
-            scoredAll = await JudgeAndBlend(scoredAll, prep.Skillset, examples, prep.Ranking.Llm, llmTopN, http, ct).ConfigureAwait(false);
+            var toJudge = SelectJudgeCandidates(scoredAll, prep.Ranking, radiusFilter, prep.Ranking.Llm.TopN);
+            yield return new LlmJudgingEvent(toJudge.Count);
+            scoredAll = await JudgeAndBlend(
+                scoredAll, toJudge, prep.Skillset, LoadExamples(), prep.Ranking.Llm, http, ct).ConfigureAwait(false);
         }
 
-        var radiusFilter = RadiusFilter.Create(prep.Skillset, _gazetteer ?? Gazetteer.LoadBundled());
         var (shortlist, dropped) = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN, radiusFilter);
         yield return new RankEvent(shortlist.Count, shortlist.Count > 0 ? shortlist[0].Score : 0.0);
 

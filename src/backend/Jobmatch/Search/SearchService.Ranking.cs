@@ -12,11 +12,27 @@ public sealed partial class SearchService
     /// cutoff — remote-exempt; unresolvable locations pass) → missing_required_primary →
     /// disqualifier → below_min_score. Returns null if the match should pass to
     /// shortlist consideration. beyond_top_n is decided after sorting, not here.
+    /// The first four are score-independent (<see cref="ClassifyScoreIndependentDrop"/>) and
+    /// are therefore also what decides which listings are worth an LLM verdict; the last two
+    /// read the post-judge score and can only be settled afterwards.
     /// The legacy Ranker.Rank/Filter path (tests only) deliberately has no radius filter.
     /// </summary>
     private sealed record DropClassification(string Reason, string Context, IReadOnlyDictionary<string, object> Args);
 
     private static DropClassification? ClassifyDrop(Match m, RankingConfig ranking, double minScore, RadiusFilter? radius)
+    {
+        if (ClassifyScoreIndependentDrop(m, ranking, radius) is DropClassification drop) return drop;
+
+        if (m.Score < minScore)
+        {
+            return new("below_min_score", $"score {m.Score:0.00} below threshold {minScore:0.00}",
+                new Dictionary<string, object> { ["score"] = m.Score, ["threshold"] = minScore });
+        }
+
+        return null;
+    }
+
+    private static DropClassification? ClassifyScoreIndependentDrop(Match m, RankingConfig ranking, RadiusFilter? radius)
     {
         if (ranking.MaxAgeDays is int maxAge && m.Listing.PostedAt is DateTimeOffset posted)
         {
@@ -51,12 +67,6 @@ public sealed partial class SearchService
         {
             return new("disqualifier", $"matched disqualifier: {string.Join(", ", m.Reasoning.DisqualifierHits)}",
                 new Dictionary<string, object> { ["hits"] = m.Reasoning.DisqualifierHits });
-        }
-
-        if (m.Score < minScore)
-        {
-            return new("below_min_score", $"score {m.Score:0.00} below threshold {minScore:0.00}",
-                new Dictionary<string, object> { ["score"] = m.Score, ["threshold"] = minScore });
         }
 
         return null;

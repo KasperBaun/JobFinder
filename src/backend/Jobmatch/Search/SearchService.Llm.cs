@@ -1,3 +1,4 @@
+using Jobmatch.Geo;
 using Jobmatch.Llm;
 using Jobmatch.Models;
 using Microsoft.Extensions.Logging;
@@ -7,21 +8,40 @@ namespace Jobmatch.Search;
 
 public sealed partial class SearchService
 {
+    /// <summary>
+    /// The judge budget (llm.top_n) buys verdicts only for listings that can still reach the
+    /// shortlist. Spending it on the raw keyword top-N wastes calls on listings the hard
+    /// filters discard moments later, which leaves genuine shortlist entries unjudged and
+    /// silently keyword-scored. Score-dependent drops are excluded — they are settled from the
+    /// blended score, so they cannot be known yet.
+    /// </summary>
+    internal static List<Match> SelectJudgeCandidates(
+        IReadOnlyList<Match> scored,
+        RankingConfig ranking,
+        RadiusFilter? radius,
+        int topN)
+    {
+        var eligible = scored
+            .Where(m => ClassifyScoreIndependentDrop(m, ranking, radius) is null)
+            .OrderByDescending(m => m.Score);
+        return topN <= 0 ? eligible.ToList() : eligible.Take(topN).ToList();
+    }
+
     private async Task<IReadOnlyList<Match>> JudgeAndBlend(
         IReadOnlyList<Match> scored,
+        IReadOnlyList<Match> toJudge,
         Skillset skillset,
         IReadOnlyList<ExampleListing> examples,
         LlmConfig llmConfig,
-        int topN,
         HttpClient http,
         CancellationToken ct)
     {
+        if (toJudge.Count == 0) return scored;
+
         var client = LlmClientFactory.Create(llmConfig, _ctx.RootDir, http, _loggerFactory);
         if (client is null) return scored;
         try
         {
-            var ordered = scored.OrderByDescending(m => m.Score).ToList();
-            var toJudge = ordered.Take(topN).ToList();
             var judge = new LlmJudge(client, _loggerFactory.CreateLogger<LlmJudge>());
             var verdicts = await judge.JudgeAsync(toJudge, skillset, examples, ct).ConfigureAwait(false);
 
