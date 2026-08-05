@@ -7828,7 +7828,7 @@ Finland	FI|Suomi	60.16952	24.93545	FI	country	5518050
 Fiji	FJ	-18.13683	178.42531	FJ	country	883483
 Falkland Islands	FK|Falklandsøerne	-51.69382	-57.85701	FK	country	2638
 Micronesia	FM|Mikronesien|Federated States of Micronesia	6.92477	158.16109	FM	country	112640
-Faroe Islands	FO|Føroyar|Færøerne|Tórshavn	62.00973	-6.77164	FO	country	48497
+Faroe Islands	FO|Føroyar|Færøerne	62.00973	-6.77164	FO	country	48497
 France	FR|Frankrig	48.85341	2.34880	FR	country	66987244
 Gabon	GA	0.39241	9.45356	GA	country	2119275
 United Kingdom	GB|Storbritannien|England|Great Britain|Britain|UK	51.50853	-0.12574	GB	country	66488991
@@ -7838,7 +7838,7 @@ French Guiana	GF|Fransk Guyana	4.93810	-52.33455	GF	country	195506
 Guernsey	GG	49.45981	-2.53527	GG	country	65228
 Ghana	GH	5.55602	-0.19690	GH	country	29767108
 Gibraltar	GI	36.14474	-5.35257	GI	country	33718
-Greenland	GL|Kalaallit Nunaat|Grønland|Nuuk	64.18347	-51.72157	GL	country	56025
+Greenland	GL|Kalaallit Nunaat|Grønland	64.18347	-51.72157	GL	country	56025
 Gambia	GM|The Gambia	13.45274	-16.57803	GM	country	2280102
 Guinea	GN	9.53795	-13.67729	GN	country	12414318
 Guadeloupe	GP	15.99714	-61.73214	GP	country	443000
@@ -8045,3 +8045,12 @@ Sarpsborg		59.28391	11.10962	NO	city	59038
 Fredrikstad		59.21810	10.92980	NO	city	83761
 Moss		59.43403	10.65771	NO	city	49668
 Halden		59.12478	11.38754	NO	city	21970
+#
+# Nuuk and Tórshavn were aliases on the Greenland and Faroe Islands country rows, which
+# made "Nuuk, Denmark" resolve to two countries — one of them the reader's own — and the
+# radius filter then waived it as an unstated home-country location, 3 493 km out. They
+# are cities, so they are rows. The coordinates are the ones the country rows already
+# carried: GeoNames uses each capital's position as the territory centroid. Population is
+# left 0 rather than guessed; both names are unique in the index, so nothing depends on it.
+Nuuk		64.18347	-51.72157	GL	city	0
+Tórshavn	Torshavn	62.00973	-6.77164	FO	city	0
