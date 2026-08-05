@@ -21,6 +21,10 @@ Current status of work on `jobfinder`.
   *(e)* `RemoteMode` is computed before body enrichment appends the full page text,
   so classification sees a partial description [measured delta after R-110: 58 vs 60
   listings].
+  *(f)* If the job-page fetch fails, a location recovered from a truncated cell degrades
+  to the single named site and is hard-dropped on information we know was partial
+  [0 of 50 failed on a live re-fetch]. Closing it properly means teaching the filter
+  about incompleteness rather than stripping the marker — deliberately not coupled.
 
 - **Localize `top-jobs.md` and the verification report.** Both are written server-side,
   so they need a C#-side message table rather than the frontend catalog. Only worth doing
