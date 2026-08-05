@@ -110,12 +110,21 @@ public abstract partial class BaseAdapter
 
     private static readonly Regex WordToken = new(@"[\p{L}\p{N}]+(?:'[\p{L}]+)?", PatternOptions);
 
-    private static bool IsClauseBreak(char c) => c is '.' or ';' or ':' or ',' or '!' or '?' or '\n' or '\r' or '(' or ')' or '|' or '•';
+    // A dash between words opens a new statement ("don't miss out - this is a 100% remote position"),
+    // so the negator on its left governs nothing on its right. A hyphen *inside* a word is not a
+    // break: "we do not offer full-time remote roles" must keep reaching its "not".
+    private static bool IsClauseBreak(string lower, int i)
+    {
+        var c = lower[i];
+        if (c is '.' or ';' or ':' or ',' or '!' or '?' or '\n' or '\r' or '(' or ')' or '|' or '•' or '–' or '—') return true;
+        return c is '-' && !(i > 0 && char.IsLetterOrDigit(lower[i - 1])
+            && i + 1 < lower.Length && char.IsLetterOrDigit(lower[i + 1]));
+    }
 
     private static bool PrecededByNegation(string lower, int start)
     {
         var clauseStart = start;
-        while (clauseStart > 0 && !IsClauseBreak(lower[clauseStart - 1])) clauseStart--;
+        while (clauseStart > 0 && !IsClauseBreak(lower, clauseStart - 1)) clauseStart--;
 
         var tokens = WordToken.Matches(lower[clauseStart..start]);
         var distance = 1;
@@ -128,9 +137,18 @@ public abstract partial class BaseAdapter
         return false;
     }
 
+    // What a trailing "no"/"ingen" must be talking about for the denial to be about this phrase.
+    // "100% remote, no relocation needed" and "fjernarbejde, ingen fast arbejdsplads" are offers.
+    private const string RemoteNoun =
+        @"(remote|remotely|fjernarbejde|distancearbejde|hjemmearbejde|hjemmefra|telecommut\w*"
+        + @"|home[-\s]office|work\s+from\s+home|option|options|mulighed|muligheder)";
+
     // "fully remote is not offered", "hjemmearbejde: ikke oplyst" — the denial trails the phrase.
+    // Unlike the backward scan a dash does not stop this one: a trailing dash clause is usually the
+    // elaboration that carries the denial ("hjemmearbejde – ikke muligt").
     private static readonly Regex TrailingNegation = new(
-        @"^[\s:,\-–—]*((is|are|was|were|er|bliver|vil|kan|tilbydes|udbydes)\s+)?(not|ikke|no|ingen)(?!\w)"
+        @"^[\s:,\-–—]*((is|are|was|were|er|bliver|vil|kan|tilbydes|udbydes)\s+)?(not|ikke)(?!\w)"
+        + @"|^[\s:,\-–—]*(no|ingen)\s+(\w+\s+){0,2}" + RemoteNoun + @"(?!\w)"
         + @"|(?<!\w)(not|ikke)\s+(offered|available|possible|permitted|allowed|disclosed|an\s+option|oplyst|muligt|mulig|mulighed)(?!\w)",
         PatternOptions);
 
