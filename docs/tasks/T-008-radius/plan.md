@@ -190,3 +190,44 @@ Draft R-105:
 Centroid precision ±city size at small radii; DAWA is DK-only; ambiguous world-city
 names (mitigated by whole-segment match, 100k population floor, home-country
 preference; the History drop view makes any mistake visible).
+
+## Amended 2026-08-05 — what shipping taught us
+
+This document is the original design. An end-to-end pass over a real 2 330-listing
+corpus found the resolution rules in **D2** and the semantics in **D3** too naive, and
+they were changed. Read `R-105` in `docs/requirements.md` for the current contract; the
+rationale is below and in the commit messages (`fix(geo): read a location as the sites
+it names`, `feat(geo): answer to the names people actually type`).
+
+- **D2's "take the minimum distance across every resolvable segment" was wrong.** A
+  country named beside a city is a qualifier, not a second site, so `"Aarhus, Denmark"`
+  measured 44 km to the Danish centroid and passed a 50 km filter (97 listings). Sites
+  are now tiered: postal/city → region → country, and only the finest tier present
+  counts. Postal and city rank *together*, because collapsing to a single most-specific
+  *type* would drop `"Copenhagen, Aarhus or Aalborg"` to whichever site happened to sit
+  in the postal layer.
+- **D2's "exact whole-segment lookup, never substring" was too strict.** Danish ads write
+  `"Silkeborg, Roskilde og mulighed for hjemmearbejde"`; the near site was invisible and
+  the listing was hard-dropped at 169 km. Segments that fail as a whole are now split on
+  `; & + |`, dashes and `og/eller/and/or/med` — whole-segment first, so `"Trinidad and
+  Tobago"` and `"Aix-en-Provence"` survive — with fragments under three characters
+  ignored so a split cannot surface the index's two-letter country aliases.
+- **D2's DK postal regex `\b(\d{4})\b` fired on foreign postcodes.** `"Philippines,
+  Pasig, 1600"` resolved to København V. The run must now stand as its own token (the
+  canonical `DK-2800` prefix aside) in a string where nothing foreign resolved.
+- **D3.1-3.3 needed a fourth rule.** A region or country *in the user's own country* is
+  stored as one centroid but covers ground the user may live on — a Copenhagen user had
+  Capital-Region jobs hidden as "~39 km away", and an Aarhus user lost every listing
+  labelled only `"Danmark"`. Those now pass through as unstated, like any location the
+  gazetteer cannot place. Foreign countries still filter normally.
+- **The gazetteer's ≥ 100k floor was fine, but its *names* were not.** The index answered
+  only to the exact GeoNames toponym: bare `"New York"`, `"USA"`, the Danish exonyms the
+  UI itself ships, and `"Frankfurt"` (stored as `Frankfurt am Main`) all failed. See the
+  curated block at the end of `gazetteer.tsv` for the 18 sub-floor rows added for the
+  Øresund and Schleswig-Holstein commuter band, which a regeneration must preserve.
+- **The remote exemption was the largest hole, and it was not in this feature at all.**
+  `RemoteMode` came from a substring test over the whole ad, so 179 listings that
+  explicitly *deny* remote work were exempt from the filter (R-110 fixed the inference).
+  A hard filter is only as good as the flag that bypasses it.
+
+Residual gaps, each measured, are listed in `todo.md` under the backlog.
