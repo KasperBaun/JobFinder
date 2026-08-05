@@ -8,8 +8,10 @@ Current status of work on `jobfinder`.
   2026-08-05 verification pass over a real 2 330-listing corpus; frequency in that
   corpus in brackets. *(a)* A bare four-digit token in a string where nothing else
   resolves is still read as a Danish postcode, so a foreign address whose town is
-  below the gazetteer's 100k floor can land in Denmark [1 listing, and it still
-  dropped] — requiring positive Danish evidence instead would lose real drops like
+  below the gazetteer's 100k floor can land in Denmark, and it fails **open** when the
+  number happens to be a Zealand postcode: the one corpus case (`USCUB01 - Curtis Bay -
+  7550 Perryman Court`) still dropped only because 7550 is Sørvad, while a house number
+  of 2750 would have read as Ballerup, 40 km from home [1 listing] — requiring positive Danish evidence instead would lose real drops like
   "2670 Greve Strand", so this needs a better signal, not a tighter rule.
   *(b)* `Gazetteer.RemoteTokens` matches "global" as a substring of the whole
   location, so "Global HQ, Aarhus" exempts itself from the filter [0] — the list
@@ -25,6 +27,11 @@ Current status of work on `jobfinder`.
   to the single named site and is hard-dropped on information we know was partial
   [0 of 50 failed on a live re-fetch]. Closing it properly means teaching the filter
   about incompleteness rather than stripping the marker — deliberately not coupled.
+  *(g)* The own-country area waiver covers **every** region of the home country, so a
+  "Region Midtjylland" job is kept for a Copenhagen user [2 listings]. Chosen because
+  the opposite error hides jobs in the region the user actually lives in. A
+  nearest-centroid (Voronoi) test would waive only the region containing the home and
+  restore the rest — worth doing if region-only locations ever become common.
 
 - **Localize `top-jobs.md` and the verification report.** Both are written server-side,
   so they need a C#-side message table rather than the frontend catalog. Only worth doing

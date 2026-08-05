@@ -26,8 +26,11 @@ public sealed partial class Gazetteer
     // "Roskilde og mulighed for hjemmearbejde", "Copenhagen | Aarhus"). Applied only after the
     // whole segment fails to resolve, so hyphenated and multi-word names — "Aix-en-Provence",
     // "Trinidad and Tobago" — survive intact.
+    // A hyphen only separates when it isn't holding a number together: cutting "23510-3300" or
+    // "2770-131" in half would hand each piece to the postal lookup free of the neighbour that
+    // marks it foreign, while "DK-2800" must stay whole for the same reason.
     private static readonly Regex ConjunctionRegex =
-        new(@"\s+(?:og|eller|and|or|med)\s+|\s*[;&+|–—-]\s*", RegexOptions.Compiled);
+        new(@"\s+(?:og|eller|and|or|med)\s+|\s*[;&+|–—]\s*|\s*(?<!\d)-(?!\d)\s*", RegexOptions.Compiled);
 
     // ATS location fields qualify the site in brackets — "Copenhagen (Primary)", "Aarhus [HQ]".
     // Tried only after the bracketed form itself misses, so a name that *contains* brackets
@@ -74,27 +77,26 @@ public sealed partial class Gazetteer
         var lower = location.ToLowerInvariant();
         if (RemoteTokens.Any(t => lower.Contains(t, StringComparison.Ordinal))) return [];
 
-        var segments = lower.Replace(" - ", ",").Split(SegmentSeparators);
-        var parsed = new List<(List<GeoPlace> Names, GazetteerEntry? Postal)>(segments.Length);
-        foreach (var segment in segments)
+        var parts = new List<(GeoPlace? Name, GazetteerEntry? Postal)>();
+        foreach (var segment in lower.Replace(" - ", ",").Split(SegmentSeparators))
         {
-            parsed.Add((ResolveNames(segment, homeCountryCode), MatchPostal(segment)));
+            CollectParts(segment, homeCountryCode, parts);
         }
 
-        // The postal layer is Danish-only, so a four-digit code is believable only while nothing
-        // foreign resolved anywhere in the string: "Philippines, Pasig, 1600" is Manila, and
-        // "Antwerpen 2000" is Belgium — not København V.
-        var foreignFound = parsed.Any(p => p.Names.Any(n => n.CountryCode != DanishCountryCode));
+        // The postal layer is Danish-only, so a four-digit code is believable only while no
+        // foreign *country* is named: "Philippines, Pasig, 1600" is Manila. A foreign city is not
+        // enough — "1050, London" names two sites, and discarding the Danish one would hide the
+        // half of the job the user could actually take.
+        var foreignCountry = parts.Any(p =>
+            p.Name is { Type: GeoPlaceType.Country } country && country.CountryCode != DanishCountryCode);
 
         var places = new List<GeoPlace>();
-        foreach (var (names, postal) in parsed)
+        foreach (var (name, postal) in parts)
         {
-            // Where both agree the segment is Danish, the code wins: it pins one district row,
+            // Where both describe the same Danish site the code wins: it pins one district row,
             // while the district *name* is shared by every postcode in that district.
-            if (postal is not null && !foreignFound)
-                Add(places, postal.ToPlace());
-            else
-                foreach (var name in names) Add(places, name);
+            if (postal is not null && !foreignCountry) Add(places, postal.ToPlace());
+            else if (name is not null) Add(places, name);
         }
         return places;
     }
@@ -104,25 +106,39 @@ public sealed partial class Gazetteer
         if (!places.Contains(place)) places.Add(place);
     }
 
-    // Postal digits are stripped before the name lookup so "Wien 1010" reads as Vienna; the code
-    // itself is read separately by MatchPostal.
-    private List<GeoPlace> ResolveNames(string segment, string? homeCountryCode)
+    // One segment can still name several sites ("8000 Aarhus C og 2750 Ballerup"), so each part
+    // carries its own name and its own postal code — reading only the segment's first code would
+    // let one site erase the other. Postal digits are stripped before the name lookup so
+    // "Wien 1010" reads as Vienna; the code itself is read separately by MatchPostal.
+    private void CollectParts(
+        string segment,
+        string? homeCountryCode,
+        List<(GeoPlace? Name, GazetteerEntry? Postal)> parts)
     {
-        var text = DkPostalRegex.Replace(segment, " ");
-        if (LookupName(text, homeCountryCode) is GeoPlace whole) return [whole];
-
-        var parts = ConjunctionRegex.Split(text);
-        if (parts.Length < 2) return [];
-        var found = new List<GeoPlace>();
-        foreach (var part in parts)
+        if (LookupName(DkPostalRegex.Replace(segment, " "), homeCountryCode) is GeoPlace whole)
         {
+            parts.Add((whole, MatchPostal(segment)));
+            return;
+        }
+
+        var fragments = ConjunctionRegex.Split(segment);
+        if (fragments.Length < 2)
+        {
+            parts.Add((null, MatchPostal(segment)));
+            return;
+        }
+        foreach (var fragment in fragments)
+        {
+            var text = DkPostalRegex.Replace(fragment, " ");
             // Fragments this short are the two-letter country codes the index also answers to:
             // splitting "Île-de-France" or "Gyeonggi-do" must not surface Germany or the
             // Dominican Republic. A whole segment may still be "DK" — only pieces are suspect.
-            if (NormalizeKey(part).Length < MinSplitPartLength) continue;
-            if (LookupName(part, homeCountryCode) is GeoPlace place) Add(found, place);
+            var name = NormalizeKey(text).Length >= MinSplitPartLength
+                ? LookupName(text, homeCountryCode)
+                : null;
+            var postal = MatchPostal(fragment);
+            if (name is not null || postal is not null) parts.Add((name, postal));
         }
-        return found;
     }
 
     private GeoPlace? LookupName(string text, string? homeCountryCode)
