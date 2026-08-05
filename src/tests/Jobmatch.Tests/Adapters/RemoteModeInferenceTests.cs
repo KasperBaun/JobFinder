@@ -53,6 +53,12 @@ public sealed class RemoteModeInferenceTests
     [InlineData("Der er ikke mulighed for hjemmearbejde i denne stilling.")]
     [InlineData("Ansættelsestype: Fastansættelse Hjemmearbejde: Ikke oplyst Ugentlig arbejdstid: Fuldtid")]
     [InlineData("Stillingen er i Esbjerg. Hjemmearbejde: Tilbydes ikke.")]
+    // A hyphen inside a word is not a clause break, so the negator still reaches the phrase.
+    [InlineData("We do not offer full-time remote positions.")]
+    [InlineData("Der er ingen mulighed for hjemmearbejde i denne stilling.")]
+    // A dash does not stop the *trailing* scan: a dash clause after the phrase carries the denial.
+    [InlineData("Hjemmearbejde – ikke muligt i denne stilling.")]
+    [InlineData("Fully remote work – not offered for this role.")]
     public void Negated_Remote_Phrase_Is_Not_Evidence(string description)
     {
         var mode = BaseAdapter.InferRemoteMode("Implementation Engineer", "Amsterdam", description);
@@ -69,6 +75,24 @@ public sealed class RemoteModeInferenceTests
     [InlineData("Work Location: Remote")]
     [InlineData("Der er tale om fjernarbejde med enkelte besøg på kontoret.")]
     public void Unambiguous_Remote_Phrase_In_Description_Is_Remote(string description)
+    {
+        Assert.Equal(RemoteMode.Remote, BaseAdapter.InferRemoteMode("Software Engineer", "Copenhagen", description));
+    }
+
+    [Theory]
+    // A negator only suppresses the phrase it plausibly governs: a dash starts a new statement, and
+    // a trailing "no"/"ingen" has to be denying remote work, not the perks next to it. Unknown here
+    // would be worse than a lost ranking nudge — the R-105 radius filter hard-drops a remote job
+    // whose office address is far away.
+    [InlineData("No commute — 100% remote.")]
+    [InlineData("Fully remote, no exceptions.")]
+    [InlineData("Vi tilbyder fjernarbejde, ingen fast arbejdsplads.")]
+    [InlineData("Don't miss out - this is a 100% remote position.")]
+    [InlineData("100% remote — no relocation needed.")]
+    [InlineData("No relocation package - the role is remote-only.")]
+    [InlineData("Work from anywhere — no visa sponsorship.")]
+    [InlineData("We can't sponsor visas - this is a remote-first company.")]
+    public void Negation_In_A_Neighbouring_Clause_Is_Not_A_Denial(string description)
     {
         Assert.Equal(RemoteMode.Remote, BaseAdapter.InferRemoteMode("Software Engineer", "Copenhagen", description));
     }
