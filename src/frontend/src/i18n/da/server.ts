@@ -65,6 +65,6 @@ export const server: Messages['server'] = {
     beyond_top_n: (a: ServerArgs) =>
       `nr. ${num(a, 'rank')} af ${num(a, 'total')} (de ${num(a, 'topN')} bedste blev taget)`,
     outside_radius: (a: ServerArgs) =>
-      `ligger ca. ${num(a, 'km')} km væk (${str(a, 'place')}), maks. ${num(a, 'maxKm')} km`,
+      `ligger ca. ${n(num(a, 'km'))} km væk (${str(a, 'place')}), maks. ${n(num(a, 'maxKm'))} km`,
   },
 }

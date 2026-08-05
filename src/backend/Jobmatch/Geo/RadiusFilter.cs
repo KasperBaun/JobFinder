@@ -8,9 +8,11 @@ public sealed record RadiusVerdict(int Km, int MaxKm, string Place);
 /// <summary>
 /// Hard spatial filter around the user's geocoded home address (R-105). Active only when
 /// the skillset carries coordinates and a positive radius — <see cref="Create"/> returns
-/// null otherwise. Fully remote listings are exempt; listings whose location is missing
-/// or unresolvable pass through undropped. Offline by construction: distances come from
-/// the bundled gazetteer, never a network call.
+/// null otherwise. Distance is measured to the nearest *site* the location names (see
+/// <see cref="Gazetteer.ResolveSites"/>), so a country mentioned alongside a city qualifies
+/// that city rather than competing with it. Fully remote listings are exempt; listings whose
+/// location is missing or unresolvable pass through undropped. Offline by construction:
+/// distances come from the bundled gazetteer, never a network call.
 /// </summary>
 public sealed class RadiusFilter
 {
@@ -44,8 +46,14 @@ public sealed class RadiusFilter
     {
         if (listing.RemoteMode == RemoteMode.Remote) return null;
 
-        var places = _gazetteer.ResolveAll(listing.Location, _homeCountryCode);
+        var places = _gazetteer.ResolveSites(listing.Location, _homeCountryCode);
         if (places.Count == 0) return null;
+
+        // "Region Hovedstaden" or a bare "Danmark" names an area the user may well live inside;
+        // its stored point is a centroid or the capital, so measuring it would hide a job that is
+        // next door. Own-country areas say which country, not where — treat them as unstated and
+        // fall through undropped, the same as any location the gazetteer can't place.
+        if (places.Any(IsHomeArea)) return null;
 
         var nearest = places[0];
         var minKm = double.MaxValue;
@@ -59,10 +67,16 @@ public sealed class RadiusFilter
             }
         }
 
+        // Rounded up, not to nearest: a site 44.4 km out of a 44 km radius must not report
+        // "~44 km away, max 44 km" and read like the filter contradicted itself.
         return minKm <= _radiusKm
             ? null
-            : new RadiusVerdict((int)Math.Round(minKm), (int)Math.Round(_radiusKm), nearest.Name);
+            : new RadiusVerdict((int)Math.Ceiling(minKm), (int)Math.Round(_radiusKm), nearest.Name);
     }
+
+    private bool IsHomeArea(GeoPlace place) =>
+        place.Type is GeoPlaceType.Region or GeoPlaceType.Country
+        && string.Equals(place.CountryCode, _homeCountryCode, StringComparison.OrdinalIgnoreCase);
 
     // Scopes ambiguous names ("Odense" in two countries) to the user's country. The
     // coordinates only ever come from the DK-only DAWA geocoder, so DK is the fallback

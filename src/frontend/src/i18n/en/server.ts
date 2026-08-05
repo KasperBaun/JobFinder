@@ -68,6 +68,6 @@ export const server = {
     beyond_top_n: (a: ServerArgs) =>
       `rank ${num(a, 'rank')} of ${num(a, 'total')} (top ${num(a, 'topN')} taken)`,
     outside_radius: (a: ServerArgs) =>
-      `located ~${num(a, 'km')} km away (${str(a, 'place')}), max ${num(a, 'maxKm')} km`,
+      `located ~${n(num(a, 'km'))} km away (${str(a, 'place')}), max ${n(num(a, 'maxKm'))} km`,
   } satisfies Record<string, ServerRenderer>,
 }
