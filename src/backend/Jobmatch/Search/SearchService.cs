@@ -118,20 +118,19 @@ public sealed partial class SearchService : ISearchService
         yield return new DedupeEvent(deduped.Count);
         JsonReportWriter.WriteListings(deduped, _ctx.AllListingsPath);
 
-        var scoredAll = Ranker.Score(deduped, prep.Skillset, prep.Ranking);
+        var scoredAll = Ranker.Score(deduped, prep.Skillset, prep.Ranking).ToList();
         var radiusFilter = RadiusFilter.Create(prep.Skillset, _gazetteer ?? Gazetteer.LoadBundled());
 
-        // Optional LLM re-rank layer. Judges the top-N of the listings that survive the hard
-        // filters, scoring each against the user's skillset + curated examples, then blends LLM
-        // and keyword scores. Falls back transparently to keyword-only when the model can't be
-        // loaded (file missing, Ollama not running, etc.). Sequential — gemma 3 4B on CPU does
-        // ~1-3 sec per call, so the default top 50 takes ~1-2 minutes; SSE stays open but silent.
+        // Optional LLM re-rank layer. Judges the listings that survive the hard filters against the
+        // user's skillset + curated examples, then blends LLM and keyword scores — repeating for
+        // whatever the reshuffle promoted onto the shortlist (see JudgePlanner). Falls back
+        // transparently to keyword-only when the model can't be loaded (file missing, Ollama not
+        // running, etc.). Sequential — gemma 3 4B on CPU does ~1-3 sec per call, so the default
+        // budget of 50 takes ~1-2 minutes; SSE stays open but silent between passes.
         if (prep.Ranking.Llm.Enabled)
         {
-            var toJudge = SelectJudgeCandidates(scoredAll, prep.Ranking, radiusFilter, prep.Ranking.Llm.TopN);
-            yield return new LlmJudgingEvent(toJudge.Count);
-            scoredAll = await JudgeAndBlend(
-                scoredAll, toJudge, prep.Skillset, LoadExamples(), prep.Ranking.Llm, http, ct).ConfigureAwait(false);
+            await foreach (var evt in JudgeUntilShortlistStable(scoredAll, prep, radiusFilter, http, ct).ConfigureAwait(false))
+                yield return evt;
         }
 
         var (shortlist, dropped) = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN, radiusFilter);

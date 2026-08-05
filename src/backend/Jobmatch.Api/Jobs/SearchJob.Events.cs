@@ -39,10 +39,7 @@ public sealed partial class SearchJob
                         messageKey: "deduped", args: new Dictionary<string, object> { ["count"] = d.MergedCount });
 
             case LlmJudgingEvent l:
-                return job.Log(
-                    JobSearchEventLevel.Info, JobSearchPhase.LlmJudging,
-                    $"AI reviewing top {l.Total} jobs…", now, count: l.Total,
-                    messageKey: "llmJudging", args: new Dictionary<string, object> { ["count"] = l.Total });
+                return FromLlmJudging(job, l, now);
 
             case RankEvent r:
                 return job
@@ -68,6 +65,15 @@ public sealed partial class SearchJob
                 return job;
         }
     }
+
+    // A follow-up pass judges what the previous pass's reshuffle pushed onto the shortlist, so
+    // "top N" would be wrong for it — separate key, and keys are additive only.
+    private static JobSearch FromLlmJudging(JobSearch job, LlmJudgingEvent l, DateTimeOffset now) => job.Log(
+        JobSearchEventLevel.Info, JobSearchPhase.LlmJudging,
+        l.Followup ? $"AI reviewing {l.Total} more jobs that moved into the top list…" : $"AI reviewing top {l.Total} jobs…",
+        now, count: l.Total,
+        messageKey: l.Followup ? "llmJudgingMore" : "llmJudging",
+        args: new Dictionary<string, object> { ["count"] = l.Total });
 
     private static JobSearch ApplyProvider(JobSearch job, SearchProgressEvent evt, DateTimeOffset now) => evt switch
     {
