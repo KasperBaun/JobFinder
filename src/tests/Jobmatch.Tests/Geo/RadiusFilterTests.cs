@@ -11,7 +11,11 @@ public sealed class RadiusFilterTests
         new GazetteerEntry("Copenhagen", ["København"], 55.6761, 12.5683, "DK", GeoPlaceType.City, 1_150_000),
         new GazetteerEntry("Aarhus", ["Århus"], 56.1567, 10.2108, "DK", GeoPlaceType.City, 285_000),
         new GazetteerEntry("Warsaw", ["Warszawa"], 52.2298, 21.0118, "PL", GeoPlaceType.City, 1_700_000),
+        new GazetteerEntry("Aalborg", ["Ålborg"], 57.0480, 9.9187, "DK", GeoPlaceType.City, 142_000),
+        new GazetteerEntry("Glostrup", [], 55.6666, 12.4038, "DK", GeoPlaceType.City, 23_000),
+        new GazetteerEntry("Region Nordjylland", ["Nordjylland"], 57.3072, 10.1128, "DK", GeoPlaceType.Region, 0),
         new GazetteerEntry("Denmark", ["DK", "Danmark"], 55.6761, 12.5683, "DK", GeoPlaceType.Country, 5_800_000),
+        new GazetteerEntry("Poland", ["PL", "Polska"], 52.2298, 21.0118, "PL", GeoPlaceType.Country, 37_900_000),
     ]);
 
     private static Skillset HomeInCopenhagen(double? radiusKm = 50, double? lat = 55.6761, double? lon = 12.5683) => new(
@@ -96,5 +100,69 @@ public sealed class RadiusFilterTests
         Assert.NotNull(verdict);
         Assert.Equal("Aarhus", verdict!.Place);
         Assert.InRange(verdict.Km, 154, 160);
+    }
+
+    [Fact]
+    public void Evaluate_TrailingCountry_Does_Not_Rescue_A_Far_City()
+    {
+        var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
+        var verdict = filter.Evaluate(L("Aarhus, Denmark"));
+        Assert.NotNull(verdict);
+        Assert.Equal("Aarhus", verdict!.Place);
+        Assert.InRange(verdict.Km, 154, 160);
+    }
+
+    [Theory]
+    [InlineData("Warsaw og Copenhagen")]
+    [InlineData("Aalborg & Glostrup")]
+    public void Evaluate_Conjunction_Finds_The_Near_Site(string location)
+    {
+        var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
+        Assert.Null(filter.Evaluate(L(location)));
+    }
+
+    [Theory]
+    [InlineData("Warsaw og Aalborg", "Aalborg")]
+    [InlineData("Warsaw & Aarhus", "Aarhus")]
+    public void Evaluate_Conjunction_Verdict_Names_The_Nearest_Site(string location, string expected)
+    {
+        var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
+        var verdict = filter.Evaluate(L(location));
+        Assert.NotNull(verdict);
+        Assert.Equal(expected, verdict!.Place);
+    }
+
+    // An area in the user's own country is stored as one centroid but covers ground the user may
+    // live on, so measuring it as a point would hide a job next door. It reads as "somewhere in
+    // Denmark" — no site — and passes like any location the gazetteer can't place.
+    [Theory]
+    [InlineData("Nordjylland, Danmark")]
+    [InlineData("Nordjylland")]
+    [InlineData("Danmark")]
+    [InlineData("Ikke angivet, Danmark")]
+    public void Evaluate_Area_In_The_Home_Country_Is_Not_A_Site(string location)
+    {
+        var filter = RadiusFilter.Create(HomeInCopenhagen(radiusKm: 5), TestGazetteer)!;
+        Assert.Null(filter.Evaluate(L(location)));
+    }
+
+    // The city named beside the home country is still a site — only the coarse match is waived.
+    [Fact]
+    public void Evaluate_HomeCountry_Waiver_Does_Not_Rescue_A_Named_City()
+    {
+        var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
+        var verdict = filter.Evaluate(L("Aarhus, Danmark"));
+        Assert.NotNull(verdict);
+        Assert.Equal("Aarhus", verdict!.Place);
+    }
+
+    [Fact]
+    public void Evaluate_CountryOnly_Location_Still_Drops()
+    {
+        var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
+        var verdict = filter.Evaluate(L("Poland"));
+        Assert.NotNull(verdict);
+        Assert.Equal("Poland", verdict!.Place);
+        Assert.InRange(verdict.Km, 660, 680);
     }
 }
