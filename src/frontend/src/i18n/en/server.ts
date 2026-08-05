@@ -34,6 +34,7 @@ export const server = {
 
     deduped: (a: ServerArgs) => `${n(num(a, 'count'))} unique jobs after removing duplicates`,
     llmJudging: (a: ServerArgs) => `AI reviewing top ${num(a, 'count')} jobs…`,
+    llmJudgingMore: (a: ServerArgs) => `AI reviewing ${num(a, 'count')} more jobs that moved into the top list…`,
     ranked: (a: ServerArgs) => `${n(num(a, 'count'))} jobs rated · best ${dec(num(a, 'topScore'), 2)}`,
     writing: () => 'Writing results',
   } satisfies Record<string, ServerRenderer>,
