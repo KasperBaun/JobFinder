@@ -1,0 +1,93 @@
+/** A backend message as a stable key plus the values it interpolates — rendered by the i18n catalog. */
+export type ReasoningNote = { key: string; args?: Record<string, unknown> }
+
+export type ListingMatch = {
+  id: string
+  portal: string
+  portalDisplayName?: string
+  title: string
+  company?: string
+  location?: string
+  remoteMode: string
+  url: string
+  postedAt?: string
+  score: number
+  /** English prose. Kept as the fallback for runs recorded before `reasoningNotes` existed. */
+  reasoning: string
+  reasoningNotes?: ReasoningNote[]
+  /** The LLM judge's verdict (English by design). Absent when the judge didn't run; runs recorded
+   * before the fields existed carry it inside `reasoning` as "AI review: …". */
+  llmScore?: number
+  llmReason?: string
+  primaryStackHits: string[]
+  secondaryStackHits: string[]
+  favoriteCompany?: boolean
+  /** Full fetched ad text. Absent on runs recorded before the field existed (T-009). */
+  description?: string
+}
+
+export type ScoreBreakdown = {
+  primaryStack: number
+  secondaryStack: number
+  seniority: number
+  locationRemote: number
+  domain: number
+  freshness: number
+  disqualifierPenalty: number
+  /** Deltas the payload has always carried but the UI ignored; optional for legacy safety. */
+  nonEngineeringTitlePenalty?: number
+  preferredCompanyBonus?: number
+}
+
+export type RawListing = {
+  id: string
+  title: string
+  company?: string
+  location?: string
+  url: string
+  postedAt?: string
+}
+
+export type ProviderRaw = {
+  provider: string
+  listings: RawListing[]
+}
+
+export type DedupeGroup = {
+  canonicalId: string
+  mergedFromIds: string[]
+}
+
+export type ScoredEntry = {
+  id: string
+  title: string
+  company?: string
+  location?: string
+  url: string
+  postedAt?: string
+  portal: string
+  portalDisplayName?: string
+  score: number
+  breakdown: ScoreBreakdown
+  primaryStackHits: string[]
+  secondaryStackHits: string[]
+}
+
+export type DropReason =
+  | 'disqualifier'
+  | 'below_min_score'
+  | 'beyond_top_n'
+  | 'above_max_age'
+  | 'missing_required_primary'
+  | 'outside_radius'
+
+export type DroppedEntry = {
+  id: string
+  title: string
+  company?: string
+  score: number
+  reason: DropReason
+  /** English prose. Kept as the fallback for runs recorded before `contextArgs` existed. */
+  context?: string
+  contextArgs?: Record<string, unknown>
+}
