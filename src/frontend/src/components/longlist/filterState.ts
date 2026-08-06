@@ -42,6 +42,17 @@ export function isDefault(f: LonglistFilters): boolean {
     && !f.shortlistOnly
 }
 
+// Dragging one rating thumb past the other pins it instead of inverting the window. An inverted
+// range (min > max) is not a filter anyone means: `filterRows` then matches nothing, and the table
+// empties with no indication that the range is the reason.
+export function withScoreMin(f: LonglistFilters, value: number): LonglistFilters {
+  return { ...f, scoreMin: Math.min(clamp01(value), f.scoreMax) }
+}
+
+export function withScoreMax(f: LonglistFilters, value: number): LonglistFilters {
+  return { ...f, scoreMax: Math.max(clamp01(value), f.scoreMin) }
+}
+
 export function filterRows(
   rows: readonly ScoredEntry[],
   f: LonglistFilters,

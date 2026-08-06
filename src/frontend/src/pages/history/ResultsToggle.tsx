@@ -1,5 +1,5 @@
 import type { RunDetail } from '../../api/types'
-import { useT } from '../../i18n'
+import { n, useT } from '../../i18n'
 import type { TabKey } from './hash'
 
 export function ResultsToggle({
@@ -23,7 +23,7 @@ export function ResultsToggle({
         className={`view-toggle__seg ${active === 'shortlist' ? 'view-toggle__seg--active' : ''}`}
         onClick={() => onChange('shortlist')}
       >
-        {t.tabTopJobs} <span className="view-toggle__count">{data.shortlist.length}</span>
+        {t.tabTopJobs} <span className="view-toggle__count">{n(data.shortlist.length)}</span>
       </button>
       <button
         type="button"
@@ -34,7 +34,7 @@ export function ResultsToggle({
         disabled={!longlistAvailable}
         title={longlistAvailable ? t.tabAllRatedTitle : t.notRecorded}
       >
-        {t.tabAllRated} {longlistCount !== undefined && <span className="view-toggle__count">{longlistCount}</span>}
+        {t.tabAllRated} {longlistCount !== undefined && <span className="view-toggle__count">{n(longlistCount)}</span>}
       </button>
     </div>
   )

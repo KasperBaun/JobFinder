@@ -1,4 +1,4 @@
-import { useT } from '../../i18n'
+import { n, useT } from '../../i18n'
 import { countTone, FILTER_KEYS, type FilterCounts, type FilterKey } from './filters'
 
 interface Props {
@@ -36,7 +36,7 @@ export function ProviderToolbar({ query, onQueryChange, filter, onFilterChange, 
               <span
                 className={`provider-toolbar__count${tone ? ` provider-toolbar__count--${tone}` : ''}`}
               >
-                {counts[key]}
+                {n(counts[key])}
               </span>
             </button>
           )

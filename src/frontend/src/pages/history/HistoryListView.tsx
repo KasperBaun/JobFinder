@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { deleteHistoryRuns, getHistory } from '../../api/client'
 import { Toast } from '../../components/Toast'
 import { formatAbsolute, formatRelative } from '../../utils/time'
-import { dec, useT } from '../../i18n'
+import { dec, n, useT } from '../../i18n'
 import { isTerminalState } from '../../api/types'
 import { StateBadge } from './StateBadge'
 
@@ -186,12 +186,12 @@ export function HistoryListView() {
                         <span className="subtle"> / </span>
                         <span style={{ color: failed ? 'var(--c-bad)' : 'var(--c-text-subtle)' }}>{failed}</span>
                       </td>
-                      <td className="tabular">{run.fetchedCount}</td>
-                      <td className="tabular">{run.shortlistCount}</td>
+                      <td className="tabular">{n(run.fetchedCount)}</td>
+                      <td className="tabular">{n(run.shortlistCount)}</td>
                       <td className="tabular mono">{dec(run.topScore, 2)}</td>
                       <td>
                         <div className="marks-cell">
-                          <span>{run.goodMarks} / {run.shortlistCount}</span>
+                          <span>{n(run.goodMarks)} / {n(run.shortlistCount)}</span>
                           <div className="progress-bar" aria-hidden="true">
                             <div
                               className="progress-bar__fill"
