@@ -42,12 +42,13 @@ export function SearchPage() {
   // Collapse the steps once, the moment a run finishes, so the top-jobs list is right there. Keyed on
   // the run id so it fires once per run and never fights the user if they re-open the steps afterward.
   const collapsedFor = useRef<string | null>(null)
+  const jobId = job?.id
   useEffect(() => {
-    if (succeeded && job && collapsedFor.current !== job.id) {
-      collapsedFor.current = job.id
+    if (succeeded && jobId && collapsedFor.current !== jobId) {
+      collapsedFor.current = jobId
       setStepsOpen(false)
     }
-  }, [succeeded, job?.id])
+  }, [succeeded, jobId])
 
   const runDetailQuery = useQuery({
     queryKey: ['run', job?.id],
