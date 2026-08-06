@@ -32,6 +32,7 @@ export const server: Messages['server'] = {
 
     deduped: (a: ServerArgs) => `${n(num(a, 'count'))} unikke job efter dubletter er fjernet`,
     llmJudging: (a: ServerArgs) => `AI gennemgår de ${num(a, 'count')} bedste job…`,
+    llmJudgingMore: (a: ServerArgs) => `AI gennemgår ${num(a, 'count')} job mere, der er rykket ind på toplisten…`,
     ranked: (a: ServerArgs) => `${n(num(a, 'count'))} job vurderet · højeste ${dec(num(a, 'topScore'), 2)}`,
     writing: () => 'Skriver resultater',
   },
@@ -65,6 +66,6 @@ export const server: Messages['server'] = {
     beyond_top_n: (a: ServerArgs) =>
       `nr. ${num(a, 'rank')} af ${num(a, 'total')} (de ${num(a, 'topN')} bedste blev taget)`,
     outside_radius: (a: ServerArgs) =>
-      `ligger ca. ${num(a, 'km')} km væk (${str(a, 'place')}), maks. ${num(a, 'maxKm')} km`,
+      `ligger ca. ${n(num(a, 'km'))} km væk (${str(a, 'place')}), maks. ${n(num(a, 'maxKm'))} km`,
   },
 }

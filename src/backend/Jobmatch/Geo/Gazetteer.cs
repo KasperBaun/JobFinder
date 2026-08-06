@@ -5,9 +5,10 @@ namespace Jobmatch.Geo;
 /// <summary>
 /// Offline place index backing the radius filter (R-105): Danish postal codes, cities,
 /// regions, world cities ≥ 100k population and country centroids, loaded from the
-/// bundled <c>geo/gazetteer.tsv</c> (GeoNames CC-BY 4.0 + DAWA). Lookup is exact
-/// whole-segment only — never substring — with Danish/plain ASCII folding so "Århus"
-/// finds "Aarhus". Resolution logic lives in Gazetteer.Resolve.cs.
+/// bundled <c>geo/gazetteer.tsv</c> (GeoNames CC-BY 4.0 + DAWA). A lookup matches a whole
+/// segment — or, where one segment lists several sites, a whole conjunction-separated part of
+/// it — never an arbitrary substring, with Danish/plain ASCII folding so "Århus" finds
+/// "Aarhus". Resolution logic lives in Gazetteer.Resolve.cs.
 /// </summary>
 public sealed partial class Gazetteer
 {

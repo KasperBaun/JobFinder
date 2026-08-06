@@ -1,20 +1,40 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
+using AngleSharp.Html.Parser;
 
 namespace Jobmatch.Adapters;
 
-// Location repair during body enrichment. Some catalogs ship placeholder location strings —
-// Workday's list API literally says "2 Locations" for a multi-site posting — which the ranking
-// pipeline can neither score nor radius-filter. Both repairs run on data enrichment fetches
-// anyway: Workday's CXS detail JSON (every location + the clean description) and the schema.org
-// JobPosting JSON-LD block most ATS pages embed (primary location only).
+// Location repair during body enrichment. Some catalogs ship location strings that are known to
+// be incomplete — Workday's list API literally says "2 Locations" for a multi-site posting, and
+// a SuccessFactors list cell shows the first site plus a "+2 more…" affordance — which the
+// ranking pipeline can neither score nor radius-filter honestly. Every repair runs on data an
+// enrichment fetch pulls anyway: Workday's CXS detail JSON (every location + the clean
+// description), the schema.org JobPosting JSON-LD block most ATS pages embed (primary location
+// only), and the same posting marked up as inline microdata (every location).
 public abstract partial class BaseAdapter
 {
     private static readonly Regex PlaceholderLocation = new(
         @"^\s*\d+\s+locations?\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    // "Helsinki, FI, 00500 +1 more…" — the cell says outright that it names one of several sites.
+    private static readonly Regex TruncationAffordance = new(
+        @"\s*\+\s*\d+\s+more\s*(…|\.{3})?\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     internal static bool IsMissingOrPlaceholderLocation(string? location) =>
-        string.IsNullOrWhiteSpace(location) || PlaceholderLocation.IsMatch(location);
+        string.IsNullOrWhiteSpace(location)
+        || PlaceholderLocation.IsMatch(location)
+        || TruncationAffordance.IsMatch(location);
+
+    // The affordance is scraper chrome, not a place. Stripped after enrichment has had its chance
+    // to recover the missing sites, so what is stored is either the full list or the one site the
+    // list page did name.
+    internal static string? StripTruncationAffordance(string? location)
+    {
+        if (location is null) return null;
+        var stripped = TruncationAffordance.Replace(location, string.Empty).Trim();
+        return stripped.Length == 0 ? null : stripped;
+    }
 
     private static readonly Regex WorkdayJobUrl = new(
         @"^https://[a-z0-9-]+\.wd\d+\.myworkdayjobs\.com/(?:[a-z]{2,3}(?:-[A-Za-z0-9]{2,4})?/)?(?<site>[^/]+)(?<path>/job/.+)$",
@@ -105,6 +125,43 @@ public abstract partial class BaseAdapter
             AddDistinct(places, PlaceText(jobLocation));
         }
         return places.Count == 0 ? null : string.Join(" / ", places);
+    }
+
+    // The microdata sibling of ExtractJsonLdLocation. SuccessFactors career pages carry no JSON-LD;
+    // they mark the posting up inline, with one address per site under itemprop="jobLocation" —
+    // the only place the complete site list appears for a posting whose list cell was truncated.
+    internal static string? ExtractMicrodataLocation(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html)
+            || !html.Contains("jobLocation", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+        var document = new HtmlParser().ParseDocument(html);
+        var scopes = document.QuerySelectorAll("[itemprop='jobLocation'] [itemprop='address']");
+        if (scopes.Length == 0) scopes = document.QuerySelectorAll("[itemprop='jobLocation']");
+
+        var places = new List<string>();
+        foreach (var scope in scopes) AddDistinct(places, MicrodataPlaceText(scope));
+        return places.Count == 0 ? null : string.Join(" / ", places);
+    }
+
+    private static string? MicrodataPlaceText(IElement scope)
+    {
+        var locality = MicrodataValue(scope, "addressLocality");
+        var country = MicrodataValue(scope, "addressCountry");
+        if (locality is not null) return country is null ? locality : $"{locality}, {country}";
+        return MicrodataValue(scope, "streetAddress") ?? country;
+    }
+
+    // A microdata value sits in the content attribute when the carrier is a <meta>, in the text
+    // otherwise.
+    private static string? MicrodataValue(IElement scope, string property)
+    {
+        var element = scope.QuerySelector($"[itemprop='{property}']");
+        if (element is null) return null;
+        var text = (element.GetAttribute("content") ?? element.TextContent).Trim();
+        return text.Length == 0 ? null : text;
     }
 
     private static string? PlaceText(JsonElement place)
