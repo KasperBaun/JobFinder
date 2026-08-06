@@ -53,7 +53,7 @@ public abstract partial class BaseAdapter
         return new Uri($"https://{listingUrl.Host}/wday/cxs/{tenant}/{site}{match.Groups["path"].Value}");
     }
 
-    internal sealed record WorkdayPosting(string? DescriptionHtml, IReadOnlyList<string> Locations);
+    internal sealed record WorkdayPosting(string? DescriptionHtml, IReadOnlyList<string> Locations, string? RemoteType);
 
     internal static WorkdayPosting? ParseWorkdayCxs(string? json)
     {
@@ -74,7 +74,8 @@ public abstract partial class BaseAdapter
                     if (item.ValueKind == JsonValueKind.String) AddDistinct(locations, item.GetString());
                 }
             }
-            return new WorkdayPosting(StringOrNull(info, "jobDescription"), locations);
+            return new WorkdayPosting(
+                StringOrNull(info, "jobDescription"), locations, StringOrNull(info, "remoteType"));
         }
         catch (JsonException)
         {

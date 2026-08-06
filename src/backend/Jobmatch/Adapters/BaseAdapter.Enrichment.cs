@@ -91,26 +91,9 @@ public abstract partial class BaseAdapter
     private async Task<Listing> EnrichOneAsync(
         Listing listing, BodyFetchSession session, ConcurrentDictionary<string, int> skippedByHost, CancellationToken ct)
     {
-        // Workday: the list API collapses multi-site postings to a literal "2 Locations" and the
-        // public job page is a JS shell. The CXS detail JSON has every location and the clean
-        // description, for the same single fetch the page would have cost.
-        var cxsUrl = TryBuildWorkdayCxsUrl(listing.Url);
-        if (cxsUrl is not null)
-        {
-            var cxs = ParseWorkdayCxs(await TryFetchBodyHtmlAsync(cxsUrl, session, skippedByHost, ct, allowJson: true));
-            if (cxs is not null)
-            {
-                if (cxs.Locations.Count > 0 && IsMissingOrPlaceholderLocation(listing.Location))
-                {
-                    listing = listing with { Location = string.Join(" / ", cxs.Locations) };
-                }
-                if (!string.IsNullOrWhiteSpace(cxs.DescriptionHtml))
-                {
-                    return MergeBodyHtml(listing, cxs.DescriptionHtml);
-                }
-            }
-            // CXS unavailable — fall through to the ordinary page fetch.
-        }
+        var (fromCxs, cxsDescriptionHtml) = await ApplyWorkdayCxsAsync(listing, session, skippedByHost, ct);
+        if (cxsDescriptionHtml is not null) return MergeBodyHtml(fromCxs, cxsDescriptionHtml);
+        listing = fromCxs;
 
         var previewHtml = await TryFetchBodyHtmlAsync(listing.Url, session, skippedByHost, ct);
         // For Jobindex/it-jobbank preview pages, the area span ('jix_robotjob--area')
@@ -144,6 +127,32 @@ public abstract partial class BaseAdapter
             }
         }
         return MergeBodyHtml(listing, bodyHtml);
+    }
+
+    // Workday: the list API collapses multi-site postings to a literal "2 Locations", carries no
+    // work-arrangement field at all, and the public job page is a JS shell. The CXS detail JSON has
+    // every location, the tenant's remoteType when it configures one, and the clean description —
+    // for the same single fetch the page would have cost. A stated arrangement outranks whatever
+    // InferRemoteMode read off the ad. Returns the listing plus the description HTML to merge, or a
+    // null description when CXS is unavailable and the ordinary page fetch should take over.
+    private async Task<(Listing Listing, string? DescriptionHtml)> ApplyWorkdayCxsAsync(
+        Listing listing, BodyFetchSession session, ConcurrentDictionary<string, int> skippedByHost, CancellationToken ct)
+    {
+        var cxsUrl = TryBuildWorkdayCxsUrl(listing.Url);
+        if (cxsUrl is null) return (listing, null);
+
+        var cxs = ParseWorkdayCxs(await TryFetchBodyHtmlAsync(cxsUrl, session, skippedByHost, ct, allowJson: true));
+        if (cxs is null) return (listing, null);
+
+        if (cxs.Locations.Count > 0 && IsMissingOrPlaceholderLocation(listing.Location))
+        {
+            listing = listing with { Location = string.Join(" / ", cxs.Locations) };
+        }
+        if (MapWorkplaceToken(cxs.RemoteType) is { } stated)
+        {
+            listing = listing with { RemoteMode = stated };
+        }
+        return (listing, string.IsNullOrWhiteSpace(cxs.DescriptionHtml) ? null : cxs.DescriptionHtml);
     }
 
     // Guarded fetch: consults the session's per-host breaker, serves repeats from its run-wide
