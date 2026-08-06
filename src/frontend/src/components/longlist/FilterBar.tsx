@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ScoredEntry } from '../../api/types'
 import { activeLocale } from '../../i18n/active'
-import { collator, dec, useT } from '../../i18n'
+import { collator, n, useT } from '../../i18n'
 import { DEFAULT_FILTERS, isDefault as filtersIsDefault, type LonglistFilters } from './filterState'
+import { ScoreRange } from './ScoreRange'
 
 interface Props {
   scored: readonly ScoredEntry[]
@@ -10,9 +11,15 @@ interface Props {
   onChange: (next: LonglistFilters) => void
 }
 
+const VISIBLE_SOURCES = 8
+
 export function FilterBar({ scored, filters, onChange }: Props) {
   const t = useT('history')
+  const [showAllSources, setShowAllSources] = useState(false)
 
+  // Busiest source first, not alphabetical: a real run has ~50 sources whose long tail is mostly
+  // single-digit, and only the leading handful is shown until asked. Alphabetical order would make
+  // that truncation arbitrary — it put SimCorp's 259 listings between Saxo Bank and Solita.
   const portals = useMemo(() => {
     const counts = new Map<string, { label: string; count: number }>()
     for (const e of scored) {
@@ -23,7 +30,7 @@ export function FilterBar({ scored, filters, onChange }: Props) {
     const text = collator(activeLocale())
     return [...counts]
       .map(([slug, v]) => ({ slug, ...v }))
-      .sort((a, b) => text.compare(a.label, b.label))
+      .sort((a, b) => b.count - a.count || text.compare(a.label, b.label))
   }, [scored])
 
   const stackHits = useMemo(() => {
@@ -35,6 +42,12 @@ export function FilterBar({ scored, filters, onChange }: Props) {
     }
     return [...counts].sort(([, a], [, b]) => b - a)
   }, [scored])
+
+  // A selected source stays visible even when it falls outside the leading slice — otherwise
+  // collapsing hides an active filter and the row count has no visible explanation.
+  const visiblePortals = showAllSources
+    ? portals
+    : portals.filter((p, i) => i < VISIBLE_SOURCES || filters.portals.includes(p.slug))
 
   const togglePortal = (p: string) =>
     onChange({
@@ -64,11 +77,16 @@ export function FilterBar({ scored, filters, onChange }: Props) {
 
       {portals.length > 0 && (
         <ChipGroup label={t.filterSource}>
-          {portals.map(({ slug, label, count }) => (
+          {visiblePortals.map(({ slug, label, count }) => (
             <Chip key={slug} active={filters.portals.includes(slug)} onClick={() => togglePortal(slug)}>
-              {label} <span className="chip__count">{count}</span>
+              {label} <span className="chip__count">{n(count)}</span>
             </Chip>
           ))}
+          {portals.length > VISIBLE_SOURCES && (
+            <button type="button" className="link-button" onClick={() => setShowAllSources(!showAllSources)}>
+              {showAllSources ? t.filterShowFewerSources : t.filterShowAllSources(portals.length)}
+            </button>
+          )}
         </ChipGroup>
       )}
 
@@ -80,25 +98,13 @@ export function FilterBar({ scored, filters, onChange }: Props) {
         ))}
       </PillGroup>
 
-      <div className="longlist__score">
-        <label className="muted small">{t.ratingRange(dec(filters.scoreMin, 2), dec(filters.scoreMax, 2))}</label>
-        <input
-          type="range" min={0} max={1} step={0.01}
-          value={filters.scoreMin}
-          onChange={(e) => onChange({ ...filters, scoreMin: clamp01(parseFloat(e.target.value)) })}
-        />
-        <input
-          type="range" min={0} max={1} step={0.01}
-          value={filters.scoreMax}
-          onChange={(e) => onChange({ ...filters, scoreMax: clamp01(parseFloat(e.target.value)) })}
-        />
-      </div>
+      <ScoreRange filters={filters} onChange={onChange} />
 
       {stackHits.length > 0 && (
         <ChipGroup label={t.filterSkillMatch}>
           {stackHits.map(([s, count]) => (
             <Chip key={s} active={filters.stackHits.includes(s)} onClick={() => toggleStack(s)}>
-              {s} <span className="chip__count">{count}</span>
+              {s} <span className="chip__count">{n(count)}</span>
             </Chip>
           ))}
         </ChipGroup>
@@ -163,5 +169,3 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
     </button>
   )
 }
-
-function clamp01(v: number) { return Math.max(0, Math.min(1, v)) }

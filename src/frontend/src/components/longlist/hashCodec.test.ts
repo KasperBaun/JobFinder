@@ -4,6 +4,8 @@ import {
   decodeFromHash,
   encodeToHash,
   isDefault,
+  withScoreMax,
+  withScoreMin,
   type LonglistFilters,
   type LonglistState,
 } from './filterState'
@@ -43,6 +45,41 @@ describe('isDefault', () => {
     ]
     for (const over of cases) {
       expect(isDefault({ ...DEFAULT_FILTERS, ...over })).toBe(false)
+    }
+  })
+})
+
+describe('rating window', () => {
+  it('pins the minimum at the maximum instead of inverting the range', () => {
+    const f = { ...DEFAULT_FILTERS, scoreMin: 0.2, scoreMax: 0.6 }
+    expect(withScoreMin(f, 0.9).scoreMin).toBe(0.6)
+    expect(withScoreMin(f, 0.9).scoreMax).toBe(0.6)
+  })
+
+  it('pins the maximum at the minimum instead of inverting the range', () => {
+    const f = { ...DEFAULT_FILTERS, scoreMin: 0.4, scoreMax: 0.8 }
+    expect(withScoreMax(f, 0.1).scoreMax).toBe(0.4)
+    expect(withScoreMax(f, 0.1).scoreMin).toBe(0.4)
+  })
+
+  it('moves a thumb freely inside the window', () => {
+    const f = { ...DEFAULT_FILTERS, scoreMin: 0.2, scoreMax: 0.8 }
+    expect(withScoreMin(f, 0.5).scoreMin).toBe(0.5)
+    expect(withScoreMax(f, 0.5).scoreMax).toBe(0.5)
+  })
+
+  it('clamps to 0..1', () => {
+    expect(withScoreMin(DEFAULT_FILTERS, -2).scoreMin).toBe(0)
+    expect(withScoreMax(DEFAULT_FILTERS, 9).scoreMax).toBe(1)
+  })
+
+  it('never produces a window that matches nothing', () => {
+    let f = DEFAULT_FILTERS
+    for (const v of [0.9, 0.1, 1, 0, 0.5, 0.5]) {
+      f = withScoreMin(f, v)
+      expect(f.scoreMin).toBeLessThanOrEqual(f.scoreMax)
+      f = withScoreMax(f, v)
+      expect(f.scoreMin).toBeLessThanOrEqual(f.scoreMax)
     }
   })
 })

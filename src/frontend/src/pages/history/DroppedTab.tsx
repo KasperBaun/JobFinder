@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { DropReason, DroppedEntry, RunDetail } from '../../api/types'
-import { dec, serverText, useT } from '../../i18n'
+import { dec, n, serverText, useT } from '../../i18n'
 
 export function DroppedTab({ data }: { data: RunDetail }) {
   const t = useT('history')
@@ -27,7 +27,7 @@ export function DroppedTab({ data }: { data: RunDetail }) {
           className={`chip ${filter === 'all' ? 'chip--active' : ''}`}
           onClick={() => setFilter('all')}
         >
-          {t.dropFilterAll} <span className="tab__count">{data.dropped.length}</span>
+          {t.dropFilterAll} <span className="tab__count">{n(data.dropped.length)}</span>
         </button>
         {(Object.keys(t.dropReason) as DropReason[]).map(r => (
           counts[r] ? (
@@ -37,7 +37,7 @@ export function DroppedTab({ data }: { data: RunDetail }) {
               className={`chip ${filter === r ? 'chip--active' : ''}`}
               onClick={() => setFilter(r)}
             >
-              {t.dropReason[r]} <span className="tab__count">{counts[r]}</span>
+              {t.dropReason[r]} <span className="tab__count">{n(counts[r])}</span>
             </button>
           ) : null
         ))}

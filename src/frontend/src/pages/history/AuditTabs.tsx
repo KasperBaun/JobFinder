@@ -1,5 +1,5 @@
 import type { RunDetail } from '../../api/types'
-import { useT } from '../../i18n'
+import { n, useT } from '../../i18n'
 import type { TabKey } from './hash'
 
 export function AuditTabs({
@@ -30,7 +30,7 @@ export function AuditTabs({
           title={tab.available ? '' : t.notRecorded}
         >
           {tab.label}
-          {tab.count !== undefined && <span className="audit-tab__count">{tab.count}</span>}
+          {tab.count !== undefined && <span className="audit-tab__count">{n(tab.count)}</span>}
         </button>
       ))}
     </nav>

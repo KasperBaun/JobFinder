@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { RunDetail } from '../../api/types'
 import { formatRelative, formatStepDuration } from '../../utils/time'
-import { useT } from '../../i18n'
+import { n, useT } from '../../i18n'
 
 export function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusProvider?: string }) {
   const t = useT('history')
@@ -54,7 +54,7 @@ export function RawFetchTab({ data, focusProvider }: { data: RunDetail; focusPro
               {durationMs != null && (
                 <span className="raw-group__dur mono">{formatStepDuration(durationMs)}</span>
               )}
-              <span className="raw-group__count">{group.listings.length}</span>
+              <span className="raw-group__count">{n(group.listings.length)}</span>
             </button>
             {isOpen && group.listings.length > 0 && (
               <div className="table-wrap">

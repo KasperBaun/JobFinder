@@ -2849,10 +2849,81 @@ button.pill--active:hover:not(:disabled) {
   color: var(--c-text-muted);
 }
 
-.longlist__score input[type="range"] {
-  width: 100px;
-  accent-color: var(--c-action);
+/* Two native ranges stacked on one track. The inputs themselves are inert so the shared track stays
+   visible and a click lands on whichever thumb is under the pointer; only the thumbs take events. */
+.range-dual {
+  position: relative;
+  width: 150px;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
 }
+
+.range-dual__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--c-slate-300);
+}
+
+.range-dual__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--c-action);
+  border-radius: 999px;
+}
+
+.range-dual__input {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.range-dual__input::-webkit-slider-runnable-track { background: transparent; height: 4px; }
+.range-dual__input::-moz-range-track { background: transparent; height: 4px; }
+
+.range-dual__input::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 2px solid var(--c-action);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+
+.range-dual__input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 2px solid var(--c-action);
+  cursor: pointer;
+}
+
+.range-dual__input:focus-visible { outline: none; }
+.range-dual__input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--c-action); outline-offset: 2px; }
+.range-dual__input:focus-visible::-moz-range-thumb { outline: 2px solid var(--c-action); outline-offset: 2px; }
+
+/* Stacking order decides which thumb wins when the two values meet and the thumbs overlap. Default
+   puts the maximum on top (so a pair pinned at 0.00 can be opened upward); the modifier flips it
+   for a pair pinned at the top, where only the minimum has anywhere to go. */
+.range-dual__input--min { z-index: 1; }
+.range-dual__input--max { z-index: 2; }
+.range-dual--min-on-top .range-dual__input--min { z-index: 3; }
 
 .longlist__toggle {
   display: inline-flex;
@@ -2870,7 +2941,10 @@ button.pill--active:hover:not(:disabled) {
 }
 
 /* Replaces the old .longlist__strip, which stated the sort in words but was never actually on
-   screen: below the fold at page top, and painted over by the sticky filter bar once you scrolled. */
+   screen: below the fold at page top, and painted over by the sticky filter bar once you scrolled.
+   Styled as the table's own toolbar — top corners, no shadow, sharing the card's border — rather
+   than a floating card. As its own card it was the heaviest element in the control stack, which
+   inverted the hierarchy: sort is chrome, the table is the content. */
 .longlist__sortbar {
   position: sticky;
   top: var(--h-top-nav);
@@ -2881,11 +2955,17 @@ button.pill--active:hover:not(:disabled) {
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-2) var(--space-4);
-  margin-bottom: var(--space-3);
+  margin-bottom: 0;
   background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-1);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* The toolbar and the table are one card, so the table gives up the edge they share. */
+.longlist .table-wrap {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .longlist__sortbar-count {
@@ -2913,7 +2993,7 @@ button.pill--active:hover:not(:disabled) {
 
 .select--inline {
   width: auto;
-  min-width: 9rem;
+  min-width: 7rem;
   padding: 0.3rem 2rem 0.3rem 0.6rem;
   font-size: 0.85rem;
 }
