@@ -27,6 +27,10 @@ Current status of work on `jobfinder`.
   to the single named site and is hard-dropped on information we know was partial
   [0 of 50 failed on a live re-fetch]. Closing it properly means teaching the filter
   about incompleteness rather than stripping the marker — deliberately not coupled.
+  *(h)* HR-Manager ships no structured work arrangement — verified across four customers
+  and twelve ad pages on 2026-08-06 — so its listings stay inference-only (R-110). One
+  customer puts "Up to 40% remote" in the free-text WorkHours field; parsing that is the
+  substring test R-110 removed.
   *(g)* The own-country area waiver covers **every** region of the home country, so a
   "Region Midtjylland" job is kept for a Copenhagen user [2 listings]. Chosen because
   the opposite error hides jobs in the region the user actually lives in. A
@@ -54,15 +58,6 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
-- **Source-specific remote-mode extraction (`ApiAdapter` /
-  `HrManagerAdapter`).** 5 of the current top-10 still tag `Unknown` —
-  the frontend hides the badge but the data is recoverable from source.
-  SmartRecruiters' JSON `customField` array commonly carries "Workplace
-  policy / Hybrid"; HR-Manager's JSON-LD often has `workLocation` /
-  `employmentType`; Workday's CXS detail JSON (which enrichment now
-  fetches for locations/description) has a `remoteType` field ready to
-  map. Per-adapter: pull the structured value first, fall through to
-  `BaseAdapter.InferRemoteMode` only when those fields are silent.
 - **"New since last run" flag.** Mark listings in results/longlist that never appeared in any
   prior history run (compare canonical dedupe keys against `history/*.json`); badge + filter in
   `LonglistTable`. *(Concept from MadsLorentzen/ai-job-search `seen_jobs.json` cross-run dedupe.)*
