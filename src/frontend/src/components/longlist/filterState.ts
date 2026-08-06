@@ -100,6 +100,9 @@ export function decodeFromHash(params: URLSearchParams): LonglistState {
   const posted = params.get('posted'); if (posted && ['24h','7d','14d','30d'].includes(posted)) f.posted = posted as LonglistFilters['posted']
   const score = params.get('score')
   if (score) {
+    // Splits on every hyphen, unlike decodeSort, which splits on the last. Harmless only because
+    // encodeToHash always writes two non-negative toFixed(2) values, so there is exactly one: a
+    // hand-edited "-0.2-0.8" parses as ['', '0.2', '0.8'] and silently clamps instead of failing.
     const [lo, hi] = score.split('-').map(Number)
     if (Number.isFinite(lo)) f.scoreMin = clamp01(lo)
     if (Number.isFinite(hi)) f.scoreMax = clamp01(hi)
