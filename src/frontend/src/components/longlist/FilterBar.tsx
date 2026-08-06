@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { ScoredEntry } from '../../api/types'
 import { activeLocale } from '../../i18n/active'
-import { collator, n, useT } from '../../i18n'
+import { collator, dec, useT } from '../../i18n'
 import { DEFAULT_FILTERS, isDefault as filtersIsDefault, type LonglistFilters } from './filterState'
+import { FilterPopover } from './FilterPopover'
 import { ScoreRange } from './ScoreRange'
+import { SourceFilter } from './SourceFilter'
 
 interface Props {
   scored: readonly ScoredEntry[]
@@ -11,16 +13,20 @@ interface Props {
   onChange: (next: LonglistFilters) => void
 }
 
-const VISIBLE_SOURCES = 8
+const POSTED_KEYS = ['any', '24h', '7d', '14d', '30d'] as const
+const MARK_KEYS = ['all', 'good', 'bad', 'unmarked'] as const
+
+/** Which group's panel is open; only one at a time. */
+type OpenGroup = 'source' | 'posted' | 'score' | 'stack' | 'mark' | null
 
 export function FilterBar({ scored, filters, onChange }: Props) {
   const t = useT('history')
-  const [showAllSources, setShowAllSources] = useState(false)
+  const [open, setOpen] = useState<OpenGroup>(null)
+  const toggleOpen = (group: Exclude<OpenGroup, null>) => (next: boolean) => setOpen(next ? group : null)
 
-  // Busiest source first, not alphabetical: a real run has ~50 sources whose long tail is mostly
-  // single-digit, and only the leading handful is shown until asked. Alphabetical order would make
-  // that truncation arbitrary — it put SimCorp's 259 listings between Saxo Bank and Solita.
-  const portals = useMemo(() => {
+  // Busiest source first: the long tail of a real run is mostly single-digit, and the panel is
+  // scrollable, so leading with the sources that actually carry listings is what makes it scannable.
+  const sources = useMemo(() => {
     const counts = new Map<string, { label: string; count: number }>()
     for (const e of scored) {
       const current = counts.get(e.portal)
@@ -43,12 +49,6 @@ export function FilterBar({ scored, filters, onChange }: Props) {
     return [...counts].sort(([, a], [, b]) => b - a)
   }, [scored])
 
-  // A selected source stays visible even when it falls outside the leading slice — otherwise
-  // collapsing hides an active filter and the row count has no visible explanation.
-  const visiblePortals = showAllSources
-    ? portals
-    : portals.filter((p, i) => i < VISIBLE_SOURCES || filters.portals.includes(p.slug))
-
   const togglePortal = (p: string) =>
     onChange({
       ...filters,
@@ -64,6 +64,11 @@ export function FilterBar({ scored, filters, onChange }: Props) {
         : [...filters.stackHits, s],
     })
 
+  const markLabel: Record<(typeof MARK_KEYS)[number], string> = {
+    all: t.markAll, good: t.markGood, bad: t.markBad, unmarked: t.markUnmarked,
+  }
+  const scoreFiltered = filters.scoreMin > 0 || filters.scoreMax < 1
+
   return (
     <div className="longlist__filter-bar">
       <input
@@ -75,89 +80,93 @@ export function FilterBar({ scored, filters, onChange }: Props) {
         onKeyDown={(e) => { if (e.key === 'Escape') onChange({ ...filters, q: '' }) }}
       />
 
-      {portals.length > 0 && (
-        <ChipGroup label={t.filterSource}>
-          {visiblePortals.map(({ slug, label, count }) => (
-            <Chip key={slug} active={filters.portals.includes(slug)} onClick={() => togglePortal(slug)}>
-              {label} <span className="chip__count">{n(count)}</span>
-            </Chip>
-          ))}
-          {portals.length > VISIBLE_SOURCES && (
-            <button type="button" className="link-button" onClick={() => setShowAllSources(!showAllSources)}>
-              {showAllSources ? t.filterShowFewerSources : t.filterShowAllSources(portals.length)}
-            </button>
-          )}
-        </ChipGroup>
+      {sources.length > 0 && (
+        <FilterPopover
+          label={t.filterSource}
+          count={filters.portals.length}
+          open={open === 'source'}
+          onOpenChange={toggleOpen('source')}
+          onClear={() => onChange({ ...filters, portals: [] })}
+        >
+          <SourceFilter sources={sources} selected={filters.portals} onToggle={togglePortal} />
+        </FilterPopover>
       )}
 
-      <PillGroup label={t.filterPosted}>
-        {(['any', '24h', '7d', '14d', '30d'] as const).map((k) => (
-          <Pill key={k} active={filters.posted === k} onClick={() => onChange({ ...filters, posted: k })}>
-            {k === 'any' ? t.filterPostedAny : k}
-          </Pill>
-        ))}
-      </PillGroup>
+      <FilterPopover
+        label={t.filterPosted}
+        summary={filters.posted === 'any' ? undefined : filters.posted}
+        open={open === 'posted'}
+        onOpenChange={toggleOpen('posted')}
+        onClear={() => onChange({ ...filters, posted: 'any' })}
+      >
+        <div className="filter-pop__row">
+          {POSTED_KEYS.map((k) => (
+            <Pill key={k} active={filters.posted === k} onClick={() => onChange({ ...filters, posted: k })}>
+              {k === 'any' ? t.filterPostedAny : k}
+            </Pill>
+          ))}
+        </div>
+      </FilterPopover>
 
-      <ScoreRange filters={filters} onChange={onChange} />
+      <FilterPopover
+        label={t.filterScore}
+        summary={scoreFiltered ? `${dec(filters.scoreMin, 2)}–${dec(filters.scoreMax, 2)}` : undefined}
+        open={open === 'score'}
+        onOpenChange={toggleOpen('score')}
+        onClear={() => onChange({ ...filters, scoreMin: 0, scoreMax: 1 })}
+      >
+        <ScoreRange filters={filters} onChange={onChange} />
+      </FilterPopover>
 
       {stackHits.length > 0 && (
-        <ChipGroup label={t.filterSkillMatch}>
-          {stackHits.map(([s, count]) => (
-            <Chip key={s} active={filters.stackHits.includes(s)} onClick={() => toggleStack(s)}>
-              {s} <span className="chip__count">{n(count)}</span>
-            </Chip>
-          ))}
-        </ChipGroup>
+        <FilterPopover
+          label={t.filterSkillMatch}
+          count={filters.stackHits.length}
+          open={open === 'stack'}
+          onOpenChange={toggleOpen('stack')}
+          onClear={() => onChange({ ...filters, stackHits: [] })}
+        >
+          <div className="filter-pop__row">
+            {stackHits.map(([s]) => (
+              <Pill key={s} active={filters.stackHits.includes(s)} onClick={() => toggleStack(s)}>
+                {s}
+              </Pill>
+            ))}
+          </div>
+        </FilterPopover>
       )}
 
-      <PillGroup label={t.filterYourRating}>
-        {(['all', 'good', 'bad', 'unmarked'] as const).map((k) => (
-          <Pill key={k} active={filters.mark === k} onClick={() => onChange({ ...filters, mark: k })}>
-            {k === 'all' ? t.markAll : k === 'good' ? t.markGood : k === 'bad' ? t.markBad : t.markUnmarked}
-          </Pill>
-        ))}
-      </PillGroup>
+      <FilterPopover
+        label={t.filterYourRating}
+        summary={filters.mark === 'all' ? undefined : markLabel[filters.mark]}
+        open={open === 'mark'}
+        onOpenChange={toggleOpen('mark')}
+        onClear={() => onChange({ ...filters, mark: 'all' })}
+      >
+        <div className="filter-pop__row">
+          {MARK_KEYS.map((k) => (
+            <Pill key={k} active={filters.mark === k} onClick={() => onChange({ ...filters, mark: k })}>
+              {markLabel[k]}
+            </Pill>
+          ))}
+        </div>
+      </FilterPopover>
 
-      <label className="longlist__toggle">
-        <input
-          type="checkbox"
-          checked={filters.shortlistOnly}
-          onChange={(e) => onChange({ ...filters, shortlistOnly: e.target.checked })}
-        />
-        <span>{t.topJobsOnly}</span>
-      </label>
+      {/* One click, so it stays a direct toggle rather than hiding behind a panel. */}
+      <button
+        type="button"
+        className={`chip${filters.shortlistOnly ? ' chip--active' : ''}`}
+        aria-pressed={filters.shortlistOnly}
+        onClick={() => onChange({ ...filters, shortlistOnly: !filters.shortlistOnly })}
+      >
+        {t.topJobsOnly}
+      </button>
 
       {!filtersIsDefault(filters) && (
         <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
           {t.resetFilters}
         </button>
       )}
-    </div>
-  )
-}
-
-function ChipGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="longlist__chips" role="group" aria-label={label}>
-      <span className="muted small">{label}:</span>
-      {children}
-    </div>
-  )
-}
-
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button type="button" className={`chip ${active ? 'chip--active' : ''}`} aria-pressed={active} onClick={onClick}>
-      {children}
-    </button>
-  )
-}
-
-function PillGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="longlist__pills" role="group" aria-label={label}>
-      <span className="muted small">{label}:</span>
-      {children}
     </div>
   )
 }

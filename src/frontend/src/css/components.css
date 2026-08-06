@@ -2815,9 +2815,9 @@ button.pill--active:hover:not(:disabled) {
   padding: var(--space-5) 0 var(--space-8);
 }
 
-/* Deliberately not sticky. On a real run this bar is ~490px tall — 50 source chips over ten wrapped
-   rows — so pinning it ate half the viewport and painted over the summary line below it. What needs
-   pinning while you scroll 2 000 rows is what the table is ordered by, which .longlist__sortbar does. */
+/* One row of triggers. Expanded inline these groups ran to ~215px — and before the source list was
+   capped, ~490px — which pushed the listings off the first screen entirely. Deliberately not sticky:
+   what needs pinning while you scroll 2 000 rows is the sort, which .longlist__sortbar does. */
 .longlist__filter-bar {
   background: var(--c-bg);
   border-bottom: 1px solid var(--c-slate-200);
@@ -2825,12 +2825,14 @@ button.pill--active:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
 
 .longlist__search {
-  min-width: 240px;
+  flex: 0 1 280px;
+  min-width: 200px;
+  margin-right: auto;
 }
 
 .longlist__chips,
@@ -2839,6 +2841,101 @@ button.pill--active:hover:not(:disabled) {
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+
+/* ---- collapsed filter groups ---- */
+
+.filter-pop {
+  position: relative;
+  display: inline-flex;
+}
+
+.filter-pop__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.filter-pop__summary {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.filter-pop__caret {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+/* Above the sort bar (z-index 3), which it opens across, but below the top nav. */
+.filter-pop__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-width: min(340px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-3);
+}
+
+/* Set by FilterPopover when opening leftward would run off screen. */
+.filter-pop__panel--end {
+  left: auto;
+  right: 0;
+}
+
+.filter-pop__list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-pop__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-pop__option:hover { background: var(--c-action-soft); }
+
+.filter-pop__option input[type="checkbox"] {
+  accent-color: var(--c-action);
+  cursor: pointer;
+  flex: none;
+}
+
+.filter-pop__option-count {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--c-text-subtle);
+}
+
+.filter-pop__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter-pop__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--c-slate-200);
 }
 
 .longlist__score {
