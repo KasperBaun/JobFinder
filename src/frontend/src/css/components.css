@@ -398,6 +398,34 @@ a.btn--danger:hover {
   border: 1px solid var(--c-slate-200);
 }
 
+/* Most pills are display-only <span>s; only the longlist filter bar renders them as buttons, so the
+   interactive affordances are scoped to that form rather than added to .pill wholesale. */
+button.pill {
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+button.pill:hover:not(:disabled) {
+  border-color: var(--c-navy-400);
+  color: var(--c-navy-700);
+}
+
+/* The filter bar marks the selected pill with .pill--active, which was never defined anywhere — so
+   all five "posted" pills and all four "your rating" pills looked identical whichever was chosen.
+   Mirrors .chip--active, including the rule that keeps the label legible on its own dark fill. */
+.pill--active {
+  background: var(--c-navy-800);
+  color: #fff;
+  border-color: var(--c-navy-800);
+  font-weight: 500;
+}
+
+button.pill--active:hover:not(:disabled) {
+  background: var(--c-navy-900);
+  border-color: var(--c-navy-900);
+  color: #fff;
+}
+
 .pill--primary {
   background: var(--c-action-soft);
   color: var(--c-navy-700);
@@ -880,6 +908,14 @@ a.btn--danger:hover {
   color: #fff;
   background: var(--c-navy-900);
   border-color: var(--c-navy-900);
+}
+
+/* Referenced by the longlist's source and skill-match chips and never defined. */
+.chip__count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  opacity: 0.65;
+  margin-left: 0.15rem;
 }
 
 .hint-card {
@@ -2779,10 +2815,10 @@ a.btn--danger:hover {
   padding: var(--space-5) 0 var(--space-8);
 }
 
+/* Deliberately not sticky. On a real run this bar is ~490px tall — 50 source chips over ten wrapped
+   rows — so pinning it ate half the viewport and painted over the summary line below it. What needs
+   pinning while you scroll 2 000 rows is what the table is ordered by, which .longlist__sortbar does. */
 .longlist__filter-bar {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   background: var(--c-bg);
   border-bottom: 1px solid var(--c-slate-200);
   padding: var(--space-3) 0;
@@ -2790,7 +2826,7 @@ a.btn--danger:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .longlist__search {
@@ -2833,12 +2869,76 @@ a.btn--danger:hover {
   cursor: pointer;
 }
 
-.longlist__strip {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  color: var(--c-text-subtle);
+/* Replaces the old .longlist__strip, which stated the sort in words but was never actually on
+   screen: below the fold at page top, and painted over by the sticky filter bar once you scrolled. */
+.longlist__sortbar {
+  position: sticky;
+  top: var(--h-top-nav);
+  z-index: 3;
+  min-height: var(--h-longlist-sortbar);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
   margin-bottom: var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+}
+
+.longlist__sortbar-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+  margin-right: auto;
+}
+
+.longlist__sortbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.longlist__sortbar-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-text-subtle);
+}
+
+.select--inline {
+  width: auto;
+  min-width: 9rem;
+  padding: 0.3rem 2rem 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.sort-dir {
+  appearance: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-300);
+  border-radius: var(--radius-sm);
+  color: var(--c-text);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.sort-dir:hover {
+  background: var(--c-action-soft);
+  border-color: var(--c-navy-400);
+  color: var(--c-action);
 }
 
 .longlist__table {
@@ -2866,6 +2966,35 @@ a.btn--danger:hover {
   letter-spacing: 0.16em;
   border-bottom: 1px solid var(--c-slate-200);
 }
+
+/* Sticky has to sit on <thead>, not on <th>: browsers ignore it on cells under
+   border-collapse: collapse, and switching to `separate` doesn't rescue it. It also only engages
+   when the nearest scrollport is the document — .table-wrap's overflow-x makes the wrapper a
+   scrollport whose vertical scrollHeight equals its clientHeight, pinning the header to a box that
+   never moves — hence handing scrolling back to the document here.
+   The eight columns don't compress below 1178px, so this only holds while the page is wide enough
+   to contain them; see the narrow-window fallback below. */
+.longlist .table-wrap { overflow: visible; }
+
+.longlist__table thead {
+  position: sticky;
+  top: calc(var(--h-top-nav) + var(--h-longlist-sortbar));
+  z-index: 2;
+}
+
+/* Narrower than the table's 1178px plus .page--wide's 2 × 24px padding, give horizontal scrolling
+   back to the card. Letting the document scroll sideways instead would drag the sticky nav and sort
+   bar out of view with it. Sticky headers are what gives way, because a header pinned inside a box
+   that can't scroll vertically does nothing anyway. */
+@media (max-width: 1227px) {
+  .longlist .table-wrap { overflow-x: auto; overflow-y: hidden; }
+  .longlist__table thead { position: static; }
+}
+
+/* The wrapper no longer clips horizontally, so the table has to fit .page--wide's 1180px content
+   box. The breakdown bar's default 200px made Rating the widest column at 272px while Title got 189;
+   at 80px the eight columns measure 1178px of min-content and stop overflowing the page entirely. */
+.longlist__table .bd-bar { width: 80px; }
 
 .longlist__table tbody tr:last-child td { border-bottom: none; }
 .longlist__table tbody tr { transition: background var(--transition); }
@@ -2902,14 +3031,64 @@ a.btn--danger:hover {
    ============================================================ */
 
 .sortable {
-  cursor: pointer;
   user-select: none;
   white-space: nowrap;
 }
 
-.sortable--active {
-  color: var(--c-text);
+/* The <button> inside is the click target and carries the padding, so the cell gives up its own —
+   otherwise the hover tint and the active underline stop short of the cell edges. Both table
+   variants set th padding at a higher specificity than .sortable, so both are named here. */
+.table th.sortable,
+.longlist__table th.sortable { padding: 0; }
+
+/* A real focusable control, not a <th onClick>: that was reachable by mouse only. */
+.sort-header {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  padding: 0.55rem var(--space-4);
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background var(--transition), color var(--transition);
+}
+
+.sort-header:hover {
+  background: var(--c-action-soft);
+  color: var(--c-action);
+}
+
+/* Ghost caret until the column is the active one — it advertises that the header is a control
+   before the first click, which nothing in the old header did. */
+.sort-header__glyph {
+  font-family: var(--font-mono);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.sort-header:hover .sort-header__glyph,
+.sort-header:focus-visible .sort-header__glyph { opacity: 0.45; }
+
+/* The active state has to survive 0.64rem uppercase mono at 0.16em tracking, where the old
+   font-weight bump was invisible: a filled underline and a tinted cell instead. */
+.sortable--active .sort-header,
+.sortable--active .sort-header:hover {
+  color: var(--c-navy-900);
   font-weight: 600;
+  background: var(--c-action-soft);
+  box-shadow: inset 0 -2px 0 var(--c-action);
+}
+
+.sortable--active .sort-header__glyph {
+  opacity: 1;
+  color: var(--c-action);
 }
 
 /* ============================================================

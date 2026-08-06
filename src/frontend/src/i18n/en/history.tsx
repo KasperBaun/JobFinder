@@ -1,4 +1,6 @@
+import type { SortKey } from '../../components/longlist/sortState'
 import type { DropReason } from '../../api/types'
+import { n } from '../format'
 
 export const history = {
   eyebrow: '04 / history',
@@ -83,8 +85,15 @@ export const history = {
   colReason: 'Reason',
   colWhy: 'Why',
 
-  longlistStrip: (shown: number, total: number, sortedBy: string, dir: string) =>
-    `${shown} of ${total} · sorted by ${sortedBy} ${dir}`,
+  sortBarAria: 'Result count and sorting',
+  sortCount: (shown: number, total: number) =>
+    shown === total ? `${n(total)} jobs` : `${n(shown)} of ${n(total)} jobs`,
+  sortByLabel: 'sort by',
+  sortDirAsc: 'ascending',
+  sortDirDesc: 'descending',
+  sortDirToggleAria: (dir: string) => `Sort direction: ${dir}. Click to reverse.`,
+  resetSort: 'Reset sort',
+  longlistTableAria: 'All rated jobs',
   sortKey: {
     title: 'title',
     company: 'company',
@@ -92,7 +101,8 @@ export const history = {
     location: 'location',
     posted: 'posted',
     score: 'rating',
-  },
+    mark: 'your rating',
+  } satisfies Record<SortKey, string>,
   colSource: 'Source',
   colYourRating: 'Your rating',
   expand: 'expand',
