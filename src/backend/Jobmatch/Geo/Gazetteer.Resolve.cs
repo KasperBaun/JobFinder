@@ -5,13 +5,37 @@ namespace Jobmatch.Geo;
 
 public sealed partial class Gazetteer
 {
+    private const string DanishCountryCode = "DK";
+
+    private const int MinSplitPartLength = 3;
+
     // Mirrors the remote/worldwide handling in Ranker.Location.cs: such listings are not
     // place-bound, so they fall through the radius filter unresolved (never dropped).
     private static readonly string[] RemoteTokens = ["worldwide", "anywhere", "global", "remote"];
 
-    private static readonly Regex DkPostalRegex = new(@"\b(\d{4})\b", RegexOptions.Compiled);
+    // The postal layer is Danish-only, so a four-digit run counts only where it stands as its own
+    // token: inside "23510-3300" or "2770-131" it is part of a foreign postcode, and in "H2020" it
+    // is part of a name. The `DK-` prefix of the canonical Danish form ("DK-2800 Kgs. Lyngby") is
+    // the one hyphen that must still pass, hence the narrower `\d-` lookbehind.
+    private static readonly Regex DkPostalRegex =
+        new(@"(?<![\p{L}\d])(?<!\d-)(\d{4})(?![\p{L}\d-])", RegexOptions.Compiled);
 
     private static readonly char[] SegmentSeparators = [',', '/', '·'];
+
+    // Danish and English ads list several sites in one breath ("Glostrup & København",
+    // "Roskilde og mulighed for hjemmearbejde", "Copenhagen | Aarhus"). Applied only after the
+    // whole segment fails to resolve, so hyphenated and multi-word names — "Aix-en-Provence",
+    // "Trinidad and Tobago" — survive intact.
+    // A hyphen only separates when it isn't holding a number together: cutting "23510-3300" or
+    // "2770-131" in half would hand each piece to the postal lookup free of the neighbour that
+    // marks it foreign, while "DK-2800" must stay whole for the same reason.
+    private static readonly Regex ConjunctionRegex =
+        new(@"\s+(?:og|eller|and|or|med)\s+|\s*[;&+|–—]\s*|\s*(?<!\d)-(?!\d)\s*", RegexOptions.Compiled);
+
+    // ATS location fields qualify the site in brackets — "Copenhagen (Primary)", "Aarhus [HQ]".
+    // Tried only after the bracketed form itself misses, so a name that *contains* brackets
+    // ("Halle (Saale)") still matches on its own terms.
+    private static readonly Regex BracketedQualifierRegex = new(@"[(\[][^)\]]*[)\]]", RegexOptions.Compiled);
 
     /// <summary>Best single match for a location string: most specific type wins across
     /// segments; within a bucket the home country wins, then the highest population.</summary>
@@ -27,37 +51,130 @@ public sealed partial class Gazetteer
         return best;
     }
 
-    /// <summary>Every place the location's segments resolve to — multi-site listings
-    /// ("Copenhagen or Aarhus") yield one entry per resolvable segment.</summary>
+    /// <summary>The places a listing could actually sit at, at the finest granularity the string
+    /// offers: a precise match (postal code or city) outranks a region, which outranks a country
+    /// — "Aarhus, Denmark" is one site in Jutland, not a choice between Aarhus and Copenhagen.
+    /// Postal and city rank together so a multi-site string ("Copenhagen, Aarhus or Aalborg")
+    /// keeps every site even when they resolve through different layers.</summary>
+    public IReadOnlyList<GeoPlace> ResolveSites(string? location, string? homeCountryCode)
+    {
+        var places = ResolveAll(location, homeCountryCode);
+        if (places.Count < 2) return places;
+        var precise = places
+            .Where(p => p.Type is GeoPlaceType.Postal or GeoPlaceType.City)
+            .ToList();
+        if (precise.Count > 0) return precise;
+        var regions = places.Where(p => p.Type is GeoPlaceType.Region).ToList();
+        return regions.Count > 0 ? regions : places;
+    }
+
+    /// <summary>Every place the location resolves to — a multi-site listing ("Copenhagen or
+    /// Aarhus") yields one entry per site, whether the sites are separated by punctuation or
+    /// by a conjunction inside one segment.</summary>
     public IReadOnlyList<GeoPlace> ResolveAll(string? location, string? homeCountryCode)
     {
         if (string.IsNullOrWhiteSpace(location)) return [];
         var lower = location.ToLowerInvariant();
         if (RemoteTokens.Any(t => lower.Contains(t, StringComparison.Ordinal))) return [];
 
-        var places = new List<GeoPlace>();
+        var parts = new List<(GeoPlace? Name, GazetteerEntry? Postal)>();
         foreach (var segment in lower.Replace(" - ", ",").Split(SegmentSeparators))
         {
-            var place = ResolveSegment(segment, homeCountryCode);
-            if (place is not null && !places.Contains(place)) places.Add(place);
+            CollectParts(segment, homeCountryCode, parts);
+        }
+
+        // The postal layer is Danish-only, so a four-digit code is believable only while no
+        // foreign *country* is named: "Philippines, Pasig, 1600" is Manila. A foreign city is not
+        // enough — "1050, London" names two sites, and discarding the Danish one would hide the
+        // half of the job the user could actually take.
+        var foreignCountry = parts.Any(p =>
+            p.Name is { Type: GeoPlaceType.Country } country && country.CountryCode != DanishCountryCode);
+
+        var places = new List<GeoPlace>();
+        foreach (var (name, postal) in parts)
+        {
+            // Where both describe the same Danish site the code wins: it pins one district row,
+            // while the district *name* is shared by every postcode in that district.
+            if (postal is not null && !foreignCountry) Add(places, postal.ToPlace());
+            else if (name is not null) Add(places, name);
         }
         return places;
     }
 
-    private GeoPlace? ResolveSegment(string segment, string? homeCountryCode)
+    private static void Add(List<GeoPlace> places, GeoPlace place)
     {
-        var postal = DkPostalRegex.Match(segment);
-        if (postal.Success && _byPostal.TryGetValue(postal.Value, out var postalEntry))
-            return postalEntry.ToPlace();
+        if (!places.Contains(place)) places.Add(place);
+    }
 
-        var exact = NormalizeKey(segment);
-        if (exact.Length == 0) return null;
-        foreach (var key in (string[])[exact, FoldDanish(exact), FoldPlain(exact)])
+    // One segment can still name several sites ("8000 Aarhus C og 2750 Ballerup"), so each part
+    // carries its own name and its own postal code — reading only the segment's first code would
+    // let one site erase the other. Postal digits are stripped before the name lookup so
+    // "Wien 1010" reads as Vienna; the code itself is read separately by MatchPostal.
+    private void CollectParts(
+        string segment,
+        string? homeCountryCode,
+        List<(GeoPlace? Name, GazetteerEntry? Postal)> parts)
+    {
+        if (LookupName(DkPostalRegex.Replace(segment, " "), homeCountryCode) is GeoPlace whole)
         {
-            if (_byName.TryGetValue(key, out var bucket))
-                return Pick(bucket, homeCountryCode).ToPlace();
+            parts.Add((whole, MatchPostal(segment)));
+            return;
+        }
+
+        var fragments = ConjunctionRegex.Split(segment);
+        if (fragments.Length < 2)
+        {
+            parts.Add((null, MatchPostal(segment)));
+            return;
+        }
+        foreach (var fragment in fragments)
+        {
+            var text = DkPostalRegex.Replace(fragment, " ");
+            // Fragments this short are the two-letter country codes the index also answers to:
+            // splitting "Île-de-France" or "Gyeonggi-do" must not surface Germany or the
+            // Dominican Republic. A whole segment may still be "DK" — only pieces are suspect.
+            var name = NormalizeKey(text).Length >= MinSplitPartLength
+                ? LookupName(text, homeCountryCode)
+                : null;
+            var postal = MatchPostal(fragment);
+            if (name is not null || postal is not null) parts.Add((name, postal));
+        }
+    }
+
+    private GeoPlace? LookupName(string text, string? homeCountryCode)
+    {
+        // Bracket handling runs before normalisation: NormalizeKey trims edge punctuation, which
+        // would eat the closing bracket of "København (hovedkontor)" and hide the qualifier.
+        foreach (var candidate in BracketCandidates(text))
+        {
+            var normalized = NormalizeKey(candidate);
+            if (normalized.Length == 0) continue;
+            foreach (var key in (string[])[normalized, FoldDanish(normalized), FoldPlain(normalized)])
+            {
+                if (_byName.TryGetValue(key, out var bucket))
+                    return Pick(bucket, homeCountryCode).ToPlace();
+            }
         }
         return null;
+    }
+
+    // "Copenhagen (Primary)" means Copenhagen; "[Copenhagen]" also means Copenhagen. The bracketed
+    // form is tried first so a name that carries brackets ("Halle (Saale)") still wins on its own.
+    private static string[] BracketCandidates(string raw)
+    {
+        if (raw.IndexOfAny(['(', '[']) < 0) return [raw];
+        return
+        [
+            raw,
+            BracketedQualifierRegex.Replace(raw, " "),
+            raw.Replace("(", " ").Replace(")", " ").Replace("[", " ").Replace("]", " "),
+        ];
+    }
+
+    private GazetteerEntry? MatchPostal(string segment)
+    {
+        var match = DkPostalRegex.Match(segment);
+        return match.Success && _byPostal.TryGetValue(match.Value, out var entry) ? entry : null;
     }
 
     // Buckets are pre-sorted by (specificity, population desc); prefer a home-country
@@ -75,11 +192,23 @@ public sealed partial class Gazetteer
         return best;
     }
 
+    // Any run of whitespace collapses to one space — scraped fields carry non-breaking spaces
+    // between the words of a name as readily as plain ones.
     private static string NormalizeKey(string raw)
     {
-        var trimmed = raw.Trim().ToLowerInvariant();
-        return string.Join(' ', trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var cleaned = string.Concat(raw.ToLowerInvariant().Where(c => !IsZeroWidth(c)));
+        var collapsed = string.Join(' ', cleaned.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        // Edge punctuation is decoration, never part of a name: "Copenhagen:" is Copenhagen.
+        var start = 0;
+        var end = collapsed.Length - 1;
+        while (start <= end && !char.IsLetterOrDigit(collapsed[start])) start++;
+        while (end >= start && !char.IsLetterOrDigit(collapsed[end])) end--;
+        return collapsed[start..(end + 1)];
     }
+
+    // Zero-width joiners and BOMs ride along in scraped location fields and are not whitespace,
+    // so nothing else strips them.
+    private static bool IsZeroWidth(char c) => c is '\u200B' or '\u200C' or '\u200D' or '\uFEFF';
 
     // Danish-convention folding: å→aa, æ→ae, ø→oe — makes "århus" and "aarhus" meet.
     private static string FoldDanish(string s) => StripDiacritics(s

@@ -34,6 +34,7 @@ export const server = {
 
     deduped: (a: ServerArgs) => `${n(num(a, 'count'))} unique jobs after removing duplicates`,
     llmJudging: (a: ServerArgs) => `AI reviewing top ${num(a, 'count')} jobs…`,
+    llmJudgingMore: (a: ServerArgs) => `AI reviewing ${num(a, 'count')} more jobs that moved into the top list…`,
     ranked: (a: ServerArgs) => `${n(num(a, 'count'))} jobs rated · best ${dec(num(a, 'topScore'), 2)}`,
     writing: () => 'Writing results',
   } satisfies Record<string, ServerRenderer>,
@@ -68,6 +69,6 @@ export const server = {
     beyond_top_n: (a: ServerArgs) =>
       `rank ${num(a, 'rank')} of ${num(a, 'total')} (top ${num(a, 'topN')} taken)`,
     outside_radius: (a: ServerArgs) =>
-      `located ~${num(a, 'km')} km away (${str(a, 'place')}), max ${num(a, 'maxKm')} km`,
+      `located ~${n(num(a, 'km'))} km away (${str(a, 'place')}), max ${n(num(a, 'maxKm'))} km`,
   } satisfies Record<string, ServerRenderer>,
 }

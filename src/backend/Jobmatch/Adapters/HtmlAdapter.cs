@@ -27,9 +27,25 @@ public sealed class HtmlAdapter(PortalConfig config, HttpClient http, ILogger lo
         // repeats page 1) don't loop. Enrichment runs once on the merged set.
         var results = await FetchPagesAsync(FetchListPageAsync, ct);
 
-        return Config.EnrichBody && results.Count > 0
-            ? await EnrichBodiesAsync(results, ct)
-            : results;
+        if (Config.EnrichBody && results.Count > 0)
+        {
+            results = await EnrichBodiesAsync(results, ct);
+        }
+        return StripLocationChrome(results);
+    }
+
+    // A truncated list cell ("Helsinki, FI, 00500 +1 more…") is the incompleteness signal body
+    // enrichment reads, so the affordance survives until enrichment is done with it — then it goes,
+    // whether the sites were recovered or not.
+    private static IReadOnlyList<Listing> StripLocationChrome(IReadOnlyList<Listing> listings)
+    {
+        var cleaned = new Listing[listings.Count];
+        for (var i = 0; i < listings.Count; i++)
+        {
+            var listing = listings[i];
+            cleaned[i] = listing with { Location = StripTruncationAffordance(listing.Location) };
+        }
+        return cleaned;
     }
 
     private async Task<IReadOnlyList<Listing>> FetchListPageAsync(

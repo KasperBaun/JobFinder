@@ -779,8 +779,8 @@
       "pagination": { "param": "startrow", "start": 0, "step": 100, "size": 100, "maxPages": 5 },
       "staticFields": { "company": "Nordea" },
       "rateLimitRps": 1.0,
-      "notes": "Nordea's SuccessFactors career site — the search page server-renders 100 openings per page (global; Copenhagen roles rank up via location). robots.txt permits the search and job pages. Body enrichment fetches each server-rendered job page for the full description. Verified 2026-06-12.",
-      "notesDa": "Nordeas SuccessFactors-karriereside — søgesiden serverrenderer 100 opslag pr. side (globalt; København rangerer op via stedvurderingen). robots.txt tillader søge- og jobsiderne. Fulde beskrivelser henter hver serverrenderet jobside for hele beskrivelsen. Verificeret 12-06-2026."
+      "notes": "Nordea's SuccessFactors career site — the search page server-renders 100 openings per page (global; Copenhagen roles rank up via location). robots.txt permits the search and job pages. Body enrichment fetches each server-rendered job page for the full description. The list cell truncates a multi-site posting to its first site plus a '+N more…' affordance, so the same fetch also reads the job page's schema.org microdata for every site (the affordance itself is stripped). Verified 2026-08-05.",
+      "notesDa": "Nordeas SuccessFactors-karriereside — søgesiden serverrenderer 100 opslag pr. side (globalt; København rangerer op via stedvurderingen). robots.txt tillader søge- og jobsiderne. Fulde beskrivelser henter hver serverrenderet jobside for hele beskrivelsen. Listecellen afkorter et opslag med flere arbejdssteder til det første sted plus en '+N more…'-markør, så samme hentning også læser jobsidens schema.org-microdata for alle stederne (markøren fjernes). Verificeret 05-08-2026."
     },
     {
       "id": 42,

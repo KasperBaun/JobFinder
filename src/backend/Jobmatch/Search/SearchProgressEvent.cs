@@ -30,7 +30,9 @@ public sealed record DedupeEvent(int MergedCount) : SearchProgressEvent;
 
 public sealed record RankEvent(int RankedCount, double TopScore) : SearchProgressEvent;
 
-public sealed record LlmJudgingEvent(int Total) : SearchProgressEvent;
+/// <summary>A judging pass is starting. <paramref name="Followup"/> marks the passes that top up the
+/// shortlist after blending reordered it, so the timeline can say "N more" instead of "top N".</summary>
+public sealed record LlmJudgingEvent(int Total, bool Followup = false) : SearchProgressEvent;
 
 public sealed record CompleteEvent(string RunId, IReadOnlyList<ListingMatch> Shortlist) : SearchProgressEvent;
 

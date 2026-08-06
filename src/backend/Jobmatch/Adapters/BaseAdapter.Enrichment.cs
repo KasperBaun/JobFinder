@@ -122,13 +122,14 @@ public abstract partial class BaseAdapter
         }
 
         // Generic repair: most ATS pages embed a schema.org JobPosting whose jobLocation carries
-        // the real (primary) place — used only when the catalog value is missing or a placeholder.
+        // the real place(s), as a JSON-LD block or as inline microdata — used only when the
+        // catalog value is missing, a placeholder, or truncated to the first of several sites.
         if (IsMissingOrPlaceholderLocation(listing.Location))
         {
-            var fromJsonLd = ExtractJsonLdLocation(previewHtml);
-            if (fromJsonLd is not null)
+            var fromSchemaOrg = ExtractJsonLdLocation(previewHtml) ?? ExtractMicrodataLocation(previewHtml);
+            if (fromSchemaOrg is not null)
             {
-                listing = listing with { Location = fromJsonLd };
+                listing = listing with { Location = fromSchemaOrg };
             }
         }
 
