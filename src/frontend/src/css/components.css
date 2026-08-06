@@ -2948,12 +2948,24 @@ button.pill--active:hover:not(:disabled) {
   color: var(--c-text);
 }
 
+/* Eight columns have to fit .page--wide's 1132px content box, and horizontal cell padding is the
+   cheapest 128px on the table: at var(--space-4) the columns measured 1178px and the rows spilled
+   47px past the card's own right border. --space-3 brings the table to 1130px, inside the card, and
+   pays for a wider rating breakdown bar than the alternative of shrinking that instead. */
 .longlist__table th,
 .longlist__table td {
   text-align: left;
-  padding: 0.55rem var(--space-4);
+  padding: 0.55rem var(--space-3);
   border-bottom: 1px solid var(--c-slate-200);
   vertical-align: middle;
+}
+
+/* Consumed by .sort-header, whose padding has to match the host table's cells rather than the
+   longlist's — .table (Applications) pads 0.85rem/--space-5, which the fallback in .sort-header
+   keeps, and this overrides for the denser longlist. */
+.longlist__table {
+  --sort-header-pad-y: 0.55rem;
+  --sort-header-pad-x: var(--space-3);
 }
 
 .longlist__table th {
@@ -2972,7 +2984,7 @@ button.pill--active:hover:not(:disabled) {
    when the nearest scrollport is the document — .table-wrap's overflow-x makes the wrapper a
    scrollport whose vertical scrollHeight equals its clientHeight, pinning the header to a box that
    never moves — hence handing scrolling back to the document here.
-   The eight columns don't compress below 1178px, so this only holds while the page is wide enough
+   The eight columns don't compress below 1130px, so this only holds while the page is wide enough
    to contain them; see the narrow-window fallback below. */
 .longlist .table-wrap { overflow: visible; }
 
@@ -2982,19 +2994,19 @@ button.pill--active:hover:not(:disabled) {
   z-index: 2;
 }
 
-/* Narrower than the table's 1178px plus .page--wide's 2 × 24px padding, give horizontal scrolling
+/* Narrower than the table's 1130px plus .page--wide's 2 × 24px padding, give horizontal scrolling
    back to the card. Letting the document scroll sideways instead would drag the sticky nav and sort
    bar out of view with it. Sticky headers are what gives way, because a header pinned inside a box
    that can't scroll vertically does nothing anyway. */
-@media (max-width: 1227px) {
+@media (max-width: 1178px) {
   .longlist .table-wrap { overflow-x: auto; overflow-y: hidden; }
   .longlist__table thead { position: static; }
 }
 
-/* The wrapper no longer clips horizontally, so the table has to fit .page--wide's 1180px content
-   box. The breakdown bar's default 200px made Rating the widest column at 272px while Title got 189;
-   at 80px the eight columns measure 1178px of min-content and stop overflowing the page entirely. */
-.longlist__table .bd-bar { width: 80px; }
+/* The breakdown bar's default 200px made Rating the widest column in the table at 272px while Title,
+   the column that identifies the row, got 189. 96px is the widest that still fits alongside the
+   tightened cell padding above. */
+.longlist__table .bd-bar { width: 96px; }
 
 .longlist__table tbody tr:last-child td { border-bottom: none; }
 .longlist__table tbody tr { transition: background var(--transition); }
@@ -3047,7 +3059,10 @@ button.pill--active:hover:not(:disabled) {
   background: transparent;
   border: 0;
   width: 100%;
-  padding: 0.55rem var(--space-4);
+  /* The cell gave up its padding to this button, so the button has to reproduce the host table's
+     exactly or the sorted column's label sits out of line with its neighbours. The fallbacks are
+     .table's own values; .longlist__table overrides them. */
+  padding: var(--sort-header-pad-y, 0.85rem) var(--sort-header-pad-x, var(--space-5));
   font: inherit;
   color: inherit;
   letter-spacing: inherit;

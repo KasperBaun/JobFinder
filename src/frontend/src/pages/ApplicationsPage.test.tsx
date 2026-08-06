@@ -110,4 +110,22 @@ describe('ApplicationsPage', () => {
     expect(header).not.toHaveAttribute('aria-sort')
     expect(bodyTitles()).toEqual(['Offer Co', 'Interview Co', 'Stale Applied', 'Fresh Applied'])
   })
+
+  it('sorts from the keyboard alone', async () => {
+    // The header used to be a <th onClick>, reachable by mouse only.
+    renderPage()
+    await screen.findByText('Stale Applied')
+    const header = screen.getByRole('columnheader', { name: /status set/i })
+    const control = within(header).getByRole('button')
+
+    control.focus()
+    expect(control).toHaveFocus()
+
+    await userEvent.keyboard('{Enter}')
+    expect(header).toHaveAttribute('aria-sort', 'descending')
+    expect(bodyTitles()).toEqual(['Interview Co', 'Fresh Applied', 'Stale Applied', 'Offer Co'])
+
+    await userEvent.keyboard(' ')
+    expect(header).toHaveAttribute('aria-sort', 'ascending')
+  })
 })
