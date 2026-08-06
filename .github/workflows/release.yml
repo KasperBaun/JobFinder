@@ -59,6 +59,7 @@ jobs:
       - name: Test frontend
         run: |
           npm --prefix src/frontend ci
+          npm --prefix src/frontend run lint
           npm --prefix src/frontend run test
 
       - name: Publish backend (self-contained win-x64, GUI bundled)
@@ -114,6 +115,7 @@ jobs:
       - name: Test frontend
         run: |
           npm --prefix src/frontend ci
+          npm --prefix src/frontend run lint
           npm --prefix src/frontend run test
 
       - name: Publish backend (self-contained linux-x64, GUI bundled)

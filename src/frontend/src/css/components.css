@@ -519,7 +519,7 @@ button.pill--active:hover:not(:disabled) {
   margin-bottom: var(--space-4);
   background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
 }
 .selection-bar__count {
   font-family: var(--font-mono);
@@ -1874,7 +1874,7 @@ button.pill--active:hover:not(:disabled) {
   color: var(--c-warn);
   background: var(--c-warn-bg);
   border: 1px solid var(--c-warn-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   padding: var(--space-2) var(--space-3);
 }
 
