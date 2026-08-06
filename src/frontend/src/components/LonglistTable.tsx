@@ -1,87 +1,73 @@
-import { useMemo, useState } from 'react'
-import type { ApplicationStatus, RunDetail, ScoredEntry } from '../api/types'
-import {
-  DEFAULT_FILTERS,
-  isDefault as filtersIsDefault,
-  type LonglistFilters,
-  type SortKey,
-} from './longlist/filterState'
-import { BreakdownBar, BreakdownDetail } from './BreakdownBar'
-import { MarkButton } from './MarkButton'
-import { StatusSelect } from './StatusSelect'
-import { formatRelative } from '../utils/time'
-import { activeLocale } from '../i18n/active'
-import { collator, dec } from '../i18n/format'
+import { useMemo } from 'react'
+import type { RunDetail, ScoredEntry } from '../api/types'
+import { DEFAULT_FILTERS, filterRows, type LonglistFilters } from './longlist/filterState'
+import { FilterBar } from './longlist/FilterBar'
+import { LonglistRow } from './longlist/LonglistRow'
+import { SortBar } from './longlist/SortBar'
+import { SortableHeader } from './longlist/SortableHeader'
+import { sortRows } from './longlist/sortRows'
+import { toggleSort, type LonglistSort, type SortKey } from './longlist/sortState'
 import { useT } from '../i18n'
 
 interface Props {
   data: RunDetail
   filters: LonglistFilters
-  onChange: (next: LonglistFilters) => void
+  sort: LonglistSort
+  onFiltersChange: (next: LonglistFilters) => void
+  onSortChange: (next: LonglistSort) => void
   shortlistIds: Set<string>
 }
 
-export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) {
+export function LonglistTable(props: Props) {
   const t = useT('history')
-  if (!data.scored) return <div className="muted">{t.noRatingsRecorded}</div>
+  // The guard has to sit in front of a component that owns no hooks: `scored` is absent on legacy
+  // runs and arrives mid-poll on a running one, and returning early past a hook list changes its
+  // length between renders.
+  if (!props.data.scored) return <div className="muted">{t.noRatingsRecorded}</div>
+  return <LonglistBody {...props} scored={props.data.scored} />
+}
 
-  const portalCounts = useMemo(() => countBy(data.scored ?? [], (e) => e.portal), [data.scored])
-  const portalDisplayNames = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const e of data.scored ?? []) {
-      if (!m.has(e.portal)) m.set(e.portal, e.portalDisplayName ?? e.portal)
-    }
-    return m
-  }, [data.scored])
-  const stackCounts = useMemo(() => countStackHits(data.scored ?? []), [data.scored])
+function LonglistBody({
+  data, scored, filters, sort, onFiltersChange, onSortChange, shortlistIds,
+}: Props & { scored: ScoredEntry[] }) {
+  const t = useT('history')
 
+  // Filtering and sorting are memoised apart, so changing only the sort skips a full filter pass
+  // over every listing in the run.
   const filtered = useMemo(
-    () => applyFilters(data.scored ?? [], filters, data.marks, shortlistIds),
-    [data.scored, filters, data.marks, shortlistIds],
+    () => filterRows(scored, filters, data.marks, shortlistIds),
+    [scored, filters, data.marks, shortlistIds],
   )
+  const rows = useMemo(() => sortRows(filtered, sort, data.marks), [filtered, sort, data.marks])
 
-  const setSort = (key: SortKey) => {
-    if (filters.sort.key === key) {
-      onChange({ ...filters, sort: { key, dir: filters.sort.dir === 'asc' ? 'desc' : 'asc' } })
-    } else {
-      onChange({ ...filters, sort: { key, dir: key === 'score' ? 'desc' : 'asc' } })
-    }
-  }
+  const dirFor = (key: SortKey) => (sort.key === key ? sort.dir : undefined)
+  const header = (key: SortKey, label: string) => (
+    <SortableHeader dir={dirFor(key)} onActivate={() => onSortChange(toggleSort(sort, key))}>
+      {label}
+    </SortableHeader>
+  )
 
   return (
     <section className="longlist">
-      <FilterBar
-        filters={filters}
-        onChange={onChange}
-        portalCounts={portalCounts}
-        portalDisplayNames={portalDisplayNames}
-        stackCounts={stackCounts}
-      />
-      <div className="longlist__strip muted">
-        {t.longlistStrip(
-          filtered.length,
-          data.scored.length,
-          t.sortKey[filters.sort.key],
-          filters.sort.dir === 'desc' ? '↓' : '↑',
-        )}
-      </div>
+      <FilterBar scored={scored} filters={filters} onChange={onFiltersChange} />
+      <SortBar sort={sort} onChange={onSortChange} shown={rows.length} total={scored.length} />
       <div className="table-wrap">
-        <table className="table longlist__table">
+        <table className="table longlist__table" aria-label={t.longlistTableAria}>
           <thead>
             <tr>
-              <SortableHeader sortKey="title" filters={filters} onClick={setSort}>{t.colTitle}</SortableHeader>
-              <SortableHeader sortKey="company" filters={filters} onClick={setSort}>{t.colCompany}</SortableHeader>
-              <SortableHeader sortKey="portal" filters={filters} onClick={setSort}>{t.colSource}</SortableHeader>
-              <SortableHeader sortKey="location" filters={filters} onClick={setSort}>{t.colLocation}</SortableHeader>
-              <SortableHeader sortKey="posted" filters={filters} onClick={setSort}>{t.colPosted}</SortableHeader>
-              <SortableHeader sortKey="score" filters={filters} onClick={setSort}>{t.colRating}</SortableHeader>
-              <th>{t.colYourRating}</th>
-              <th aria-label={t.expand}></th>
+              {header('title', t.colTitle)}
+              {header('company', t.colCompany)}
+              {header('portal', t.colSource)}
+              {header('location', t.colLocation)}
+              {header('posted', t.colPosted)}
+              {header('score', t.colRating)}
+              {header('mark', t.colYourRating)}
+              <th scope="col" aria-label={t.expand}></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((s) => (
-              <Row
+            {rows.map((s) => (
+              <LonglistRow
                 key={s.id}
                 entry={s}
                 runId={data.runId}
@@ -92,10 +78,10 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && (
+        {rows.length === 0 && (
           <div className="muted longlist__empty">
             {t.noJobsMatchFilters}{' '}
-            <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
+            <button type="button" className="link-button" onClick={() => onFiltersChange(DEFAULT_FILTERS)}>
               {t.reset}
             </button>
           </div>
@@ -103,313 +89,4 @@ export function LonglistTable({ data, filters, onChange, shortlistIds }: Props) 
       </div>
     </section>
   )
-}
-
-function SortableHeader({
-  sortKey,
-  filters,
-  onClick,
-  children,
-}: {
-  sortKey: SortKey
-  filters: LonglistFilters
-  onClick: (key: SortKey) => void
-  children: React.ReactNode
-}) {
-  const active = filters.sort.key === sortKey
-  return (
-    <th
-      className={`sortable ${active ? 'sortable--active' : ''}`}
-      onClick={() => onClick(sortKey)}
-      style={{ cursor: 'pointer', userSelect: 'none' }}
-    >
-      {children}
-      {active && <span aria-hidden> {filters.sort.dir === 'desc' ? '↓' : '↑'}</span>}
-    </th>
-  )
-}
-
-function FilterBar({
-  filters, onChange, portalCounts, portalDisplayNames, stackCounts,
-}: {
-  filters: LonglistFilters
-  onChange: (next: LonglistFilters) => void
-  portalCounts: Map<string, number>
-  portalDisplayNames: Map<string, string>
-  stackCounts: Map<string, number>
-}) {
-  const t = useT('history')
-  const togglePortal = (p: string) =>
-    onChange({
-      ...filters,
-      portals: filters.portals.includes(p)
-        ? filters.portals.filter((x) => x !== p)
-        : [...filters.portals, p],
-    })
-  const toggleStack = (s: string) =>
-    onChange({
-      ...filters,
-      stackHits: filters.stackHits.includes(s)
-        ? filters.stackHits.filter((x) => x !== s)
-        : [...filters.stackHits, s],
-    })
-
-  const isDefault = filtersIsDefault(filters)
-
-  return (
-    <div className="longlist__filter-bar">
-      <input
-        className="input longlist__search"
-        type="search"
-        placeholder={t.searchTitleOrCompany}
-        value={filters.q}
-        onChange={(e) => onChange({ ...filters, q: e.target.value })}
-        onKeyDown={(e) => { if (e.key === 'Escape') onChange({ ...filters, q: '' }) }}
-      />
-
-      {portalCounts.size > 0 && (
-        <ChipGroup label={t.filterSource}>
-          {[...portalCounts]
-            .map(([p, n]) => ({ slug: p, label: portalDisplayNames.get(p) ?? p, count: n }))
-            .sort((a, b) => collator(activeLocale()).compare(a.label, b.label))
-            .map(({ slug, label, count }) => (
-              <Chip key={slug} active={filters.portals.includes(slug)} onClick={() => togglePortal(slug)}>
-                {label} <span className="chip__count">{count}</span>
-              </Chip>
-            ))}
-        </ChipGroup>
-      )}
-
-      <PillGroup label={t.filterPosted}>
-        {(['any', '24h', '7d', '14d', '30d'] as const).map((k) => (
-          <Pill key={k} active={filters.posted === k} onClick={() => onChange({ ...filters, posted: k })}>
-            {k === 'any' ? t.filterPostedAny : k}
-          </Pill>
-        ))}
-      </PillGroup>
-
-      <div className="longlist__score">
-        <label className="muted small">{t.ratingRange(dec(filters.scoreMin, 2), dec(filters.scoreMax, 2))}</label>
-        <input
-          type="range" min={0} max={1} step={0.01}
-          value={filters.scoreMin}
-          onChange={(e) => onChange({ ...filters, scoreMin: clamp01(parseFloat(e.target.value)) })}
-        />
-        <input
-          type="range" min={0} max={1} step={0.01}
-          value={filters.scoreMax}
-          onChange={(e) => onChange({ ...filters, scoreMax: clamp01(parseFloat(e.target.value)) })}
-        />
-      </div>
-
-      {stackCounts.size > 0 && (
-        <ChipGroup label={t.filterSkillMatch}>
-          {[...stackCounts].sort(([, a], [, b]) => b - a).map(([s, n]) => (
-            <Chip key={s} active={filters.stackHits.includes(s)} onClick={() => toggleStack(s)}>
-              {s} <span className="chip__count">{n}</span>
-            </Chip>
-          ))}
-        </ChipGroup>
-      )}
-
-      <PillGroup label={t.filterYourRating}>
-        {(['all', 'good', 'bad', 'unmarked'] as const).map((k) => (
-          <Pill key={k} active={filters.mark === k} onClick={() => onChange({ ...filters, mark: k })}>
-            {k === 'all' ? t.markAll : k === 'good' ? t.markGood : k === 'bad' ? t.markBad : t.markUnmarked}
-          </Pill>
-        ))}
-      </PillGroup>
-
-      <label className="longlist__toggle">
-        <input
-          type="checkbox"
-          checked={filters.shortlistOnly}
-          onChange={(e) => onChange({ ...filters, shortlistOnly: e.target.checked })}
-        />
-        <span>{t.topJobsOnly}</span>
-      </label>
-
-      {!isDefault && (
-        <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
-          {t.resetFilters}
-        </button>
-      )}
-    </div>
-  )
-}
-
-function ChipGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="longlist__chips" aria-label={label}>
-      <span className="muted small">{label}:</span>
-      {children}
-    </div>
-  )
-}
-
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      className={`chip ${active ? 'chip--active' : ''}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  )
-}
-
-function PillGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="longlist__pills" aria-label={label}>
-      <span className="muted small">{label}:</span>
-      {children}
-    </div>
-  )
-}
-
-function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      className={`pill ${active ? 'pill--active' : ''}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Row({ entry, runId, mark, markReason, markStatus }: {
-  entry: ScoredEntry
-  runId: string
-  mark?: 'good' | 'bad'
-  markReason?: string
-  markStatus?: ApplicationStatus
-}) {
-  const t = useT('history')
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <tr>
-        <td><a href={entry.url} target="_blank" rel="noreferrer">{entry.title}</a></td>
-        <td>{entry.company ?? <span className="muted">—</span>}</td>
-        <td><span className="badge badge--muted">{entry.portalDisplayName ?? entry.portal}</span></td>
-        <td>{entry.location ?? <span className="muted">—</span>}</td>
-        <td className="tabular mono">
-          {entry.postedAt ? formatRelative(entry.postedAt) : <span className="muted">—</span>}
-        </td>
-        <td className="tabular mono">
-          <div className="longlist__score-cell">
-            <span>{dec(entry.score, 2)}</span>
-            <BreakdownBar b={entry.breakdown} />
-          </div>
-        </td>
-        <td>
-          <div className="longlist__mark-cell">
-            <MarkButton runId={runId} listingId={entry.id} current={mark} reason={markReason} compact />
-            <StatusSelect runId={runId} listingId={entry.id} current={markStatus} compact />
-          </div>
-        </td>
-        <td>
-          <button type="button" className="link-button" onClick={() => setOpen(!open)} aria-label={open ? t.collapse : t.expand}>
-            {open ? '▾' : '▸'}
-          </button>
-        </td>
-      </tr>
-      {open && (
-        <tr className="longlist__expanded">
-          <td colSpan={8}>
-            <BreakdownDetail entry={entry} />
-          </td>
-        </tr>
-      )}
-    </>
-  )
-}
-
-function clamp01(v: number) { return Math.max(0, Math.min(1, v)) }
-
-function applyFilters(
-  rows: readonly ScoredEntry[],
-  f: LonglistFilters,
-  marks: Record<string, 'good' | 'bad'>,
-  shortlistIds: Set<string>,
-): ScoredEntry[] {
-  const q = f.q.trim().toLowerCase()
-  const portals = new Set(f.portals)
-  const stack = new Set(f.stackHits.map((s) => s.toLowerCase()))
-  const cutoff = postedCutoff(f.posted)
-
-  const filtered = rows.filter((r) => {
-    if (q && !(`${r.title} ${r.company ?? ''}`.toLowerCase().includes(q))) return false
-    if (portals.size && !portals.has(r.portal)) return false
-    if (cutoff && (!r.postedAt || new Date(r.postedAt).getTime() < cutoff)) return false
-    if (r.score < f.scoreMin || r.score > f.scoreMax) return false
-    if (stack.size) {
-      const hits = [...r.primaryStackHits, ...r.secondaryStackHits].map((s) => s.toLowerCase())
-      if (!hits.some((h) => stack.has(h))) return false
-    }
-    if (f.mark !== 'all') {
-      const m = marks[r.id]
-      if (f.mark === 'unmarked' ? m !== undefined : m !== f.mark) return false
-    }
-    if (f.shortlistOnly && !shortlistIds.has(r.id)) return false
-    return true
-  })
-
-  const cmp = sortComparator(f.sort.key, f.sort.dir)
-  return [...filtered].sort(cmp)
-}
-
-function postedCutoff(p: LonglistFilters['posted']): number | null {
-  if (p === 'any') return null
-  const days = p === '24h' ? 1 : p === '7d' ? 7 : p === '14d' ? 14 : 30
-  return Date.now() - days * 86_400_000
-}
-
-function sortComparator(key: SortKey, dir: 'asc' | 'desc') {
-  const sign = dir === 'asc' ? 1 : -1
-  // One collator for the whole sort rather than a fresh one per localeCompare call, and Danish
-  // collation so æ/ø/å land after z instead of wherever the host OS decides.
-  const text = collator(activeLocale())
-  return (a: ScoredEntry, b: ScoredEntry) => {
-    let v = 0
-    switch (key) {
-      case 'title':    v = text.compare(a.title, b.title); break
-      case 'company':  v = text.compare(a.company ?? '', b.company ?? ''); break
-      case 'portal':   v = text.compare(a.portalDisplayName ?? a.portal, b.portalDisplayName ?? b.portal); break
-      case 'location': v = text.compare(a.location ?? '', b.location ?? ''); break
-      // ISO-8601 timestamps, not human text — collating them is wrong, and under numeric collation
-      // "2026-07-09" would sort before "2026-07-8".
-      case 'posted':   v = compareIso(a.postedAt, b.postedAt); break
-      case 'score':    v = a.score - b.score; break
-    }
-    return sign * v
-  }
-}
-
-function compareIso(a: string | undefined, b: string | undefined): number {
-  const l = a ?? ''
-  const r = b ?? ''
-  return l < r ? -1 : l > r ? 1 : 0
-}
-
-function countBy<T, K extends string>(rows: readonly T[], key: (row: T) => K): Map<K, number> {
-  const m = new Map<K, number>()
-  for (const r of rows) {
-    const k = key(r)
-    m.set(k, (m.get(k) ?? 0) + 1)
-  }
-  return m
-}
-
-function countStackHits(rows: readonly ScoredEntry[]): Map<string, number> {
-  const m = new Map<string, number>()
-  for (const r of rows) {
-    for (const h of [...r.primaryStackHits, ...r.secondaryStackHits]) {
-      m.set(h, (m.get(h) ?? 0) + 1)
-    }
-  }
-  return m
 }

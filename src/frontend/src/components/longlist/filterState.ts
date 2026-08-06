@@ -1,4 +1,6 @@
-export type SortKey = 'title' | 'company' | 'portal' | 'location' | 'posted' | 'score'
+import type { ScoredEntry } from '../../api/types'
+import type { Marks } from './sortRows'
+import { decodeSort, encodeSort, type LonglistSort } from './sortState'
 
 export type LonglistFilters = {
   q: string
@@ -9,7 +11,12 @@ export type LonglistFilters = {
   stackHits: string[]          // empty = all (OR semantics across selected)
   mark: 'all' | 'good' | 'bad' | 'unmarked'
   shortlistOnly: boolean
-  sort: { key: SortKey; dir: 'asc' | 'desc' }
+}
+
+/** Which rows to show, and in what order. Two independent axes — resetting one leaves the other. */
+export type LonglistState = {
+  filters: LonglistFilters
+  sort: LonglistSort
 }
 
 export const DEFAULT_FILTERS: LonglistFilters = {
@@ -21,9 +28,10 @@ export const DEFAULT_FILTERS: LonglistFilters = {
   stackHits: [],
   mark: 'all',
   shortlistOnly: false,
-  sort: { key: 'score', dir: 'desc' },
 }
 
+// Sort is deliberately not part of this. It used to be, which made the "Reset filters" link appear
+// when only the sort had changed — and clicking it silently threw the sort away.
 export function isDefault(f: LonglistFilters): boolean {
   return f.q === ''
     && f.portals.length === 0
@@ -32,10 +40,45 @@ export function isDefault(f: LonglistFilters): boolean {
     && f.stackHits.length === 0
     && f.mark === 'all'
     && !f.shortlistOnly
-    && f.sort.key === 'score' && f.sort.dir === 'desc'
 }
 
-export function encodeToHash(f: LonglistFilters): URLSearchParams {
+export function filterRows(
+  rows: readonly ScoredEntry[],
+  f: LonglistFilters,
+  marks: Marks,
+  shortlistIds: ReadonlySet<string>,
+): ScoredEntry[] {
+  const q = f.q.trim().toLowerCase()
+  const portals = new Set(f.portals)
+  const stack = new Set(f.stackHits.map((s) => s.toLowerCase()))
+  const cutoff = postedCutoff(f.posted)
+
+  return rows.filter((r) => {
+    if (q && !(`${r.title} ${r.company ?? ''}`.toLowerCase().includes(q))) return false
+    if (portals.size && !portals.has(r.portal)) return false
+    if (cutoff && (!r.postedAt || new Date(r.postedAt).getTime() < cutoff)) return false
+    if (r.score < f.scoreMin || r.score > f.scoreMax) return false
+    if (stack.size) {
+      const hits = [...r.primaryStackHits, ...r.secondaryStackHits].map((s) => s.toLowerCase())
+      if (!hits.some((h) => stack.has(h))) return false
+    }
+    if (f.mark !== 'all') {
+      const m = marks[r.id]
+      if (f.mark === 'unmarked' ? m !== undefined : m !== f.mark) return false
+    }
+    if (f.shortlistOnly && !shortlistIds.has(r.id)) return false
+    return true
+  })
+}
+
+function postedCutoff(p: LonglistFilters['posted']): number | null {
+  if (p === 'any') return null
+  const days = p === '24h' ? 1 : p === '7d' ? 7 : p === '14d' ? 14 : 30
+  return Date.now() - days * 86_400_000
+}
+
+export function encodeToHash(s: LonglistState): URLSearchParams {
+  const f = s.filters
   const p = new URLSearchParams()
   p.set('tab', 'longlist')
   if (f.q) p.set('q', f.q)
@@ -45,11 +88,12 @@ export function encodeToHash(f: LonglistFilters): URLSearchParams {
   if (f.stackHits.length) p.set('stack', f.stackHits.join(','))
   if (f.mark !== 'all') p.set('mark', f.mark)
   if (f.shortlistOnly) p.set('shortlist', 'true')
-  if (f.sort.key !== 'score' || f.sort.dir !== 'desc') p.set('sort', `${f.sort.key}-${f.sort.dir}`)
+  const sort = encodeSort(s.sort)
+  if (sort) p.set('sort', sort)
   return p
 }
 
-export function decodeFromHash(params: URLSearchParams): LonglistFilters {
+export function decodeFromHash(params: URLSearchParams): LonglistState {
   const f = { ...DEFAULT_FILTERS }
   f.q = params.get('q') ?? ''
   const portal = params.get('portal'); if (portal) f.portals = portal.split(',').filter(Boolean)
@@ -64,14 +108,7 @@ export function decodeFromHash(params: URLSearchParams): LonglistFilters {
   const mark = params.get('mark')
   if (mark && ['good','bad','unmarked'].includes(mark)) f.mark = mark as LonglistFilters['mark']
   if (params.get('shortlist') === 'true') f.shortlistOnly = true
-  const sort = params.get('sort')
-  if (sort) {
-    const [key, dir] = sort.split('-')
-    if (['title','company','portal','location','posted','score'].includes(key) && (dir === 'asc' || dir === 'desc')) {
-      f.sort = { key: key as SortKey, dir }
-    }
-  }
-  return f
+  return { filters: f, sort: decodeSort(params.get('sort')) }
 }
 
 function clamp01(v: number) { return Math.max(0, Math.min(1, v)) }

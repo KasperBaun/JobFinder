@@ -1,4 +1,5 @@
 import type { Messages } from '../en'
+import { n } from '../format'
 
 export const history: Messages['history'] = {
   eyebrow: '04 / historik',
@@ -83,8 +84,15 @@ export const history: Messages['history'] = {
   colReason: 'Årsag',
   colWhy: 'Hvorfor',
 
-  longlistStrip: (shown, total, sortedBy, dir) =>
-    `${shown} af ${total} · sorteret efter ${sortedBy} ${dir}`,
+  sortBarAria: 'Antal resultater og sortering',
+  sortCount: (shown, total) =>
+    shown === total ? `${n(total)} job` : `${n(shown)} af ${n(total)} job`,
+  sortByLabel: 'sortér efter',
+  sortDirAsc: 'stigende',
+  sortDirDesc: 'faldende',
+  sortDirToggleAria: dir => `Sorteringsretning: ${dir}. Klik for at vende om.`,
+  resetSort: 'Nulstil sortering',
+  longlistTableAria: 'Alle vurderede job',
   sortKey: {
     title: 'titel',
     company: 'virksomhed',
@@ -92,6 +100,7 @@ export const history: Messages['history'] = {
     location: 'sted',
     posted: 'opslagsdato',
     score: 'score',
+    mark: 'din vurdering',
   },
   colSource: 'Jobkilde',
   colYourRating: 'Din vurdering',
