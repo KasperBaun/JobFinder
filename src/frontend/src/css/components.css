@@ -2935,10 +2935,35 @@ button.pill--active:hover:not(:disabled) {
 }
 
 .longlist__score {
+  width: 236px;
+  max-width: 100%;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-  font-size: 0.85rem;
+}
+
+/* The run's score distribution behind the window: in-window bins take the accent, the rest stay
+   recessive. A control aid, not a chart — no axes, no labels, hidden from assistive tech. */
+.score-hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 44px;
+}
+.score-hist__bar {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px 2px 0 0;
+  background: var(--c-slate-200);
+}
+.score-hist__bar--in { background: var(--c-navy-400); }
+
+.score-ends {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
   color: var(--c-text-muted);
 }
 
@@ -2946,7 +2971,7 @@ button.pill--active:hover:not(:disabled) {
    visible and a click lands on whichever thumb is under the pointer; only the thumbs take events. */
 .range-dual {
   position: relative;
-  width: 150px;
+  width: 100%;
   height: 1.25rem;
   display: flex;
   align-items: center;
