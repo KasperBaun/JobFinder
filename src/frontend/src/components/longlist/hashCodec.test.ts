@@ -41,7 +41,6 @@ describe('isDefault', () => {
       { scoreMax: 0.8 },
       { stackHits: ['.NET'] },
       { mark: 'good' },
-      { shortlistOnly: true },
     ]
     for (const over of cases) {
       expect(isDefault({ ...DEFAULT_FILTERS, ...over })).toBe(false)
@@ -116,7 +115,6 @@ describe('decodeFromHash', () => {
         scoreMax: 0.75,
         stackHits: ['.NET'],
         mark: 'good',
-        shortlistOnly: true,
       },
       sort: { key: 'location', dir: 'desc' },
     }
@@ -160,5 +158,9 @@ describe('decodeFromHash', () => {
 
   it('ignores unknown values for enum-shaped filters', () => {
     expect(decode('tab=longlist&posted=forever&mark=maybe').filters).toEqual(DEFAULT_FILTERS)
+  })
+
+  it('ignores the retired shortlist param from an old bookmark', () => {
+    expect(decode('tab=longlist&shortlist=true').filters).toEqual(DEFAULT_FILTERS)
   })
 })

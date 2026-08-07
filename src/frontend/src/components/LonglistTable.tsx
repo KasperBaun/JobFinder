@@ -14,7 +14,6 @@ interface Props {
   sort: LonglistSort
   onFiltersChange: (next: LonglistFilters) => void
   onSortChange: (next: LonglistSort) => void
-  shortlistIds: Set<string>
 }
 
 export function LonglistTable(props: Props) {
@@ -27,15 +26,15 @@ export function LonglistTable(props: Props) {
 }
 
 function LonglistBody({
-  data, scored, filters, sort, onFiltersChange, onSortChange, shortlistIds,
+  data, scored, filters, sort, onFiltersChange, onSortChange,
 }: Props & { scored: ScoredEntry[] }) {
   const t = useT('history')
 
   // Filtering and sorting are memoised apart, so changing only the sort skips a full filter pass
   // over every listing in the run.
   const filtered = useMemo(
-    () => filterRows(scored, filters, data.marks, shortlistIds),
-    [scored, filters, data.marks, shortlistIds],
+    () => filterRows(scored, filters, data.marks),
+    [scored, filters, data.marks],
   )
   const rows = useMemo(() => sortRows(filtered, sort, data.marks), [filtered, sort, data.marks])
 

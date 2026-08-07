@@ -45,7 +45,6 @@ export const history: Messages['history'] = {
   tabAllRated: 'Alle vurderede',
   tabAllRatedTitle: 'Alle vurderede job — også dem uden for toppen',
   notRecorded: 'Ikke gemt for denne søgning.',
-  showLabel: 'vis',
   tabRaw: 'alle hentede',
   tabDedupe: 'dubletter',
   tabDropped: 'fjernede',
@@ -125,5 +124,4 @@ export const history: Messages['history'] = {
   markBad: 'dårlig',
   markUnmarked: 'ikke vurderet',
   ratingRange: (min, max) => `score ${min}–${max}`,
-  topJobsOnly: 'kun topjob',
 }

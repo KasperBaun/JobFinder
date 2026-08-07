@@ -70,7 +70,6 @@ export function renderLonglist({
           sort={sort}
           onFiltersChange={onFiltersChange}
           onSortChange={onSortChange}
-          shortlistIds={new Set(data.shortlist.map((m) => m.id))}
         />
       </QueryClientProvider>
     </I18nProvider>,

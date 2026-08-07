@@ -152,16 +152,6 @@ export function FilterBar({ scored, filters, onChange }: Props) {
         </div>
       </FilterPopover>
 
-      {/* One click, so it stays a direct toggle rather than hiding behind a panel. */}
-      <button
-        type="button"
-        className={`chip${filters.shortlistOnly ? ' chip--active' : ''}`}
-        aria-pressed={filters.shortlistOnly}
-        onClick={() => onChange({ ...filters, shortlistOnly: !filters.shortlistOnly })}
-      >
-        {t.topJobsOnly}
-      </button>
-
       {!filtersIsDefault(filters) && (
         <button type="button" className="link-button" onClick={() => onChange(DEFAULT_FILTERS)}>
           {t.resetFilters}
