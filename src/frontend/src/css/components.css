@@ -3095,10 +3095,30 @@ button.pill--active:hover:not(:disabled) {
   margin-right: auto;
 }
 
+/* Auto margins on both neighbours split the bar's free space evenly, which is what centres the
+   pager between the count and the sort controls. */
+.longlist__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.longlist__pager .select--inline { min-width: 4.5rem; }
+
+.longlist__pager-status {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
 .longlist__sortbar-group {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  margin-left: auto;
 }
 
 .longlist__sortbar-label {

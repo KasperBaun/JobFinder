@@ -7,7 +7,7 @@ import type { Locale } from '../../i18n'
 import { LonglistTable } from '../LonglistTable'
 import { FilterBar } from './FilterBar'
 import { SearchField } from './SearchField'
-import { DEFAULT_FILTERS, type LonglistFilters } from './filterState'
+import { DEFAULT_FILTERS, DEFAULT_PAGE_SIZE, type LonglistFilters } from './filterState'
 import { DEFAULT_SORT, type LonglistSort } from './sortState'
 
 // Shared by the sorting and filtering suites; imported only by tests, so it never reaches the bundle.
@@ -48,15 +48,21 @@ export function renderLonglist({
   data = runDetail(),
   filters = DEFAULT_FILTERS,
   sort = DEFAULT_SORT,
+  page = 1,
+  size = DEFAULT_PAGE_SIZE,
   locale = 'en' as Locale,
 }: {
   data?: RunDetail
   filters?: LonglistFilters
   sort?: LonglistSort
+  page?: number
+  size?: number
   locale?: Locale
 } = {}) {
   const onFiltersChange = vi.fn()
   const onSortChange = vi.fn()
+  const onPageChange = vi.fn()
+  const onSizeChange = vi.fn()
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   // SearchField and FilterBar sit beside the table rather than inside it, exactly as
   // RunDetailView composes them — both live on the run toolbar, the table below — so the
@@ -70,13 +76,17 @@ export function renderLonglist({
           data={data}
           filters={filters}
           sort={sort}
+          page={page}
+          size={size}
           onFiltersChange={onFiltersChange}
           onSortChange={onSortChange}
+          onPageChange={onPageChange}
+          onSizeChange={onSizeChange}
         />
       </QueryClientProvider>
     </I18nProvider>,
   )
-  return { onFiltersChange, onSortChange }
+  return { onFiltersChange, onSortChange, onPageChange, onSizeChange }
 }
 
 /** Row titles in render order — the actual proof that a sort took effect. */

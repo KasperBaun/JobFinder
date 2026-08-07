@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { useT } from '../../i18n'
+import { Pager } from './Pager'
 import {
   DEFAULT_SORT,
   flipDir,
@@ -14,6 +15,11 @@ interface Props {
   onChange: (next: LonglistSort) => void
   shown: number
   total: number
+  page: number
+  pageCount: number
+  size: number
+  onPageChange: (page: number) => void
+  onSizeChange: (size: number) => void
 }
 
 /**
@@ -21,7 +27,7 @@ interface Props {
  * headers sort too, but they only ever show a glyph, they scroll sideways out of reach, and nothing
  * about a column title advertises that it is clickable.
  */
-export function SortBar({ sort, onChange, shown, total }: Props) {
+export function SortBar({ sort, onChange, shown, total, page, pageCount, size, onPageChange, onSizeChange }: Props) {
   const t = useT('history')
   const selectId = useId()
   const dirWord = sort.dir === 'desc' ? t.sortDirDesc : t.sortDirAsc
@@ -29,6 +35,8 @@ export function SortBar({ sort, onChange, shown, total }: Props) {
   return (
     <div className="longlist__sortbar" role="group" aria-label={t.sortBarAria}>
       <span className="longlist__sortbar-count">{t.sortCount(shown, total)}</span>
+
+      <Pager page={page} pageCount={pageCount} size={size} onPageChange={onPageChange} onSizeChange={onSizeChange} />
 
       <div className="longlist__sortbar-group">
         <label className="longlist__sortbar-label" htmlFor={selectId}>{t.sortByLabel}</label>
