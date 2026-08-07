@@ -91,6 +91,10 @@ export const history = {
   sortDirDesc: 'descending',
   sortDirToggleAria: (dir: string) => `Sort direction: ${dir}. Click to reverse.`,
   resetSort: 'Reset sort',
+  perPage: 'per page',
+  pageOf: (page: string, count: string) => `page ${page} of ${count}`,
+  prevPageAria: 'Previous page',
+  nextPageAria: 'Next page',
   longlistTableAria: 'All rated jobs',
   sortKey: {
     title: 'title',

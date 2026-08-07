@@ -90,6 +90,10 @@ export const history: Messages['history'] = {
   sortDirDesc: 'faldende',
   sortDirToggleAria: dir => `Sorteringsretning: ${dir}. Klik for at vende om.`,
   resetSort: 'Nulstil sortering',
+  perPage: 'pr. side',
+  pageOf: (page, count) => `side ${page} af ${count}`,
+  prevPageAria: 'Forrige side',
+  nextPageAria: 'Næste side',
   longlistTableAria: 'Alle vurderede job',
   sortKey: {
     title: 'titel',

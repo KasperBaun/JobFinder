@@ -149,6 +149,58 @@ describe('LonglistTable', () => {
     })
   })
 
+  describe('pagination', () => {
+    // Score strictly descending, so the page order equals the index order and slices are provable.
+    const many = (count: number) =>
+      runDetail({
+        scored: Array.from({ length: count }, (_, i) =>
+          scored({ id: `x${i}`, title: `Job ${String(i).padStart(3, '0')}`, score: 1 - i * 0.0001 }),
+        ),
+      })
+
+    it('renders only the current page of rows', () => {
+      renderLonglist({ data: many(120), size: 50 })
+      expect(bodyTitles()).toHaveLength(50)
+      expect(screen.getByText('page 1 of 3')).toBeInTheDocument()
+    })
+
+    it('shows the requested page, not the first', () => {
+      renderLonglist({ data: many(120), size: 50, page: 2 })
+      const titles = bodyTitles()
+      expect(titles).toHaveLength(50)
+      expect(titles[0]).toBe('Job 050')
+    })
+
+    it('clamps a page beyond the end to the last page instead of an empty table', () => {
+      renderLonglist({ data: many(120), size: 50, page: 99 })
+      expect(bodyTitles()).toHaveLength(20)
+      expect(screen.getByText('page 3 of 3')).toBeInTheDocument()
+    })
+
+    it('steps one page in either direction', async () => {
+      const { onPageChange } = renderLonglist({ data: many(120), size: 50, page: 2 })
+      await userEvent.click(screen.getByRole('button', { name: /next page/i }))
+      expect(onPageChange).toHaveBeenCalledWith(3)
+      await userEvent.click(screen.getByRole('button', { name: /previous page/i }))
+      expect(onPageChange).toHaveBeenCalledWith(1)
+    })
+
+    it('disables stepping past either end', () => {
+      renderLonglist({ data: many(120), size: 50 })
+      expect(screen.getByRole('button', { name: /previous page/i })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /next page/i })).toBeEnabled()
+    })
+
+    it('offers the fixed page sizes and reports a choice', async () => {
+      const { onSizeChange } = renderLonglist({ data: many(120) })
+      const select = screen.getByLabelText(/per page/i)
+      expect(within(select).getAllByRole('option').map((o) => o.getAttribute('value')))
+        .toEqual(['50', '100', '150', '200', '250', '300'])
+      await userEvent.selectOptions(select, '150')
+      expect(onSizeChange).toHaveBeenCalledWith(150)
+    })
+  })
+
   describe('sort and filters are independent', () => {
     it('does not offer to reset the filters when only the sort has moved', () => {
       renderLonglist({ sort: { key: 'title', dir: 'asc' } })

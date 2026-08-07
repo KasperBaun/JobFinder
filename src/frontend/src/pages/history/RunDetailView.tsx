@@ -5,6 +5,7 @@ import { getRun } from '../../api/client'
 import { RunSummaryCard } from '../../components/RunSummaryCard'
 import { FilterBar } from '../../components/longlist/FilterBar'
 import { SearchField } from '../../components/longlist/SearchField'
+import { withFilters } from '../../components/longlist/filterState'
 import { useLonglistState } from '../../components/longlist/useLonglistState'
 import { isTerminalState } from '../../api/types'
 import { useT } from '../../i18n'
@@ -65,7 +66,7 @@ export function RunDetailView({ runId }: { runId: string }) {
                 {tab === 'longlist' && data.scored && (
                   <SearchField
                     filters={llState.filters}
-                    onChange={(filters) => setLlState({ ...llState, filters })}
+                    onChange={(filters) => setLlState(withFilters(llState, filters))}
                   />
                 )}
                 <ViewMenu active={tab} onChange={setTab} data={data} />
@@ -73,7 +74,7 @@ export function RunDetailView({ runId }: { runId: string }) {
                   <FilterBar
                     scored={data.scored}
                     filters={llState.filters}
-                    onChange={(filters) => setLlState({ ...llState, filters })}
+                    onChange={(filters) => setLlState(withFilters(llState, filters))}
                   />
                 )}
               </div>

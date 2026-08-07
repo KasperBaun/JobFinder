@@ -12,8 +12,12 @@ interface Props {
   data: RunDetail
   filters: LonglistFilters
   sort: LonglistSort
+  page: number
+  size: number
   onFiltersChange: (next: LonglistFilters) => void
   onSortChange: (next: LonglistSort) => void
+  onPageChange: (page: number) => void
+  onSizeChange: (size: number) => void
 }
 
 export function LonglistTable(props: Props) {
@@ -26,7 +30,7 @@ export function LonglistTable(props: Props) {
 }
 
 function LonglistBody({
-  data, scored, filters, sort, onFiltersChange, onSortChange,
+  data, scored, filters, sort, page, size, onFiltersChange, onSortChange, onPageChange, onSizeChange,
 }: Props & { scored: ScoredEntry[] }) {
   const t = useT('history')
 
@@ -37,6 +41,12 @@ function LonglistBody({
     [scored, filters, data.marks],
   )
   const rows = useMemo(() => sortRows(filtered, sort, data.marks), [filtered, sort, data.marks])
+
+  // Clamped rather than navigated: a stale `page=99` in the hash (bookmark, or filters tightened
+  // elsewhere) renders the last page that exists without rewriting the URL underneath the user.
+  const pageCount = Math.max(1, Math.ceil(rows.length / size))
+  const current = Math.min(page, pageCount)
+  const paged = useMemo(() => rows.slice((current - 1) * size, current * size), [rows, current, size])
 
   const dirFor = (key: SortKey) => (sort.key === key ? sort.dir : undefined)
   const header = (key: SortKey, label: string) => (
@@ -49,7 +59,17 @@ function LonglistBody({
   // as the view switcher, and reaches this table through the shared hash state.
   return (
     <section className="longlist">
-      <SortBar sort={sort} onChange={onSortChange} shown={rows.length} total={scored.length} />
+      <SortBar
+        sort={sort}
+        onChange={onSortChange}
+        shown={rows.length}
+        total={scored.length}
+        page={current}
+        pageCount={pageCount}
+        size={size}
+        onPageChange={onPageChange}
+        onSizeChange={onSizeChange}
+      />
       <div className="table-wrap">
         <table className="table longlist__table" aria-label={t.longlistTableAria}>
           <thead>
@@ -65,7 +85,7 @@ function LonglistBody({
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => (
+            {paged.map((s) => (
               <LonglistRow
                 key={s.id}
                 entry={s}

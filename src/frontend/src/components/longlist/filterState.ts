@@ -12,10 +12,36 @@ export type LonglistFilters = {
   mark: 'all' | 'good' | 'bad' | 'unmarked'
 }
 
-/** Which rows to show, and in what order. Two independent axes — resetting one leaves the other. */
+export const PAGE_SIZES = [50, 100, 150, 200, 250, 300] as const
+export const DEFAULT_PAGE_SIZE = 100
+
+/**
+ * Which rows to show, in what order, and which slice of them. Filters and sort are independent
+ * axes — resetting one leaves the other — while the page is subordinate to both: change what the
+ * table holds or how it is ordered and page 5 of the old arrangement means nothing, so the
+ * with* helpers below send it back to 1. Use them instead of spreading.
+ */
 export type LonglistState = {
   filters: LonglistFilters
   sort: LonglistSort
+  page: number
+  size: number
+}
+
+export function withFilters(s: LonglistState, filters: LonglistFilters): LonglistState {
+  return { ...s, filters, page: 1 }
+}
+
+export function withSort(s: LonglistState, sort: LonglistSort): LonglistState {
+  return { ...s, sort, page: 1 }
+}
+
+export function withPage(s: LonglistState, page: number): LonglistState {
+  return { ...s, page: Math.max(1, Math.floor(page)) }
+}
+
+export function withPageSize(s: LonglistState, size: number): LonglistState {
+  return { ...s, size, page: 1 }
 }
 
 export const DEFAULT_FILTERS: LonglistFilters = {
@@ -95,6 +121,8 @@ export function encodeToHash(s: LonglistState): URLSearchParams {
   if (f.mark !== 'all') p.set('mark', f.mark)
   const sort = encodeSort(s.sort)
   if (sort) p.set('sort', sort)
+  if (s.size !== DEFAULT_PAGE_SIZE) p.set('size', String(s.size))
+  if (s.page > 1) p.set('page', String(s.page))
   return p
 }
 
@@ -117,7 +145,11 @@ export function decodeFromHash(params: URLSearchParams): LonglistState {
   if (mark && ['good','bad','unmarked'].includes(mark)) f.mark = mark as LonglistFilters['mark']
   // A `shortlist=true` from a pre-R-085-rework URL is simply ignored: the chip it drove is gone,
   // and the Top jobs view is where that subset lives now.
-  return { filters: f, sort: decodeSort(params.get('sort')) }
+  const rawSize = Number(params.get('size'))
+  const size = (PAGE_SIZES as readonly number[]).includes(rawSize) ? rawSize : DEFAULT_PAGE_SIZE
+  const rawPage = Number(params.get('page'))
+  const page = Number.isInteger(rawPage) && rawPage > 1 ? rawPage : 1
+  return { filters: f, sort: decodeSort(params.get('sort')), page, size }
 }
 
 function clamp01(v: number) { return Math.max(0, Math.min(1, v)) }

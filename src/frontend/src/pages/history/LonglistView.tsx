@@ -1,7 +1,11 @@
 import type { RunDetail } from '../../api/types'
 import { LonglistTable } from '../../components/LonglistTable'
-import type { LonglistFilters } from '../../components/longlist/filterState'
-import type { LonglistSort } from '../../components/longlist/sortState'
+import {
+  withFilters,
+  withPage,
+  withPageSize,
+  withSort,
+} from '../../components/longlist/filterState'
 import { useLonglistState } from '../../components/longlist/useLonglistState'
 
 export function LonglistView({ data }: { data: RunDetail }) {
@@ -12,8 +16,12 @@ export function LonglistView({ data }: { data: RunDetail }) {
       data={data}
       filters={state.filters}
       sort={state.sort}
-      onFiltersChange={(filters: LonglistFilters) => setState({ ...state, filters })}
-      onSortChange={(sort: LonglistSort) => setState({ ...state, sort })}
+      page={state.page}
+      size={state.size}
+      onFiltersChange={(filters) => setState(withFilters(state, filters))}
+      onSortChange={(sort) => setState(withSort(state, sort))}
+      onPageChange={(page) => setState(withPage(state, page))}
+      onSizeChange={(size) => setState(withPageSize(state, size))}
     />
   )
 }

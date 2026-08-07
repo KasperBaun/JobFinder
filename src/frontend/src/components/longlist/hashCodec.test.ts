@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_FILTERS,
+  DEFAULT_PAGE_SIZE,
   decodeFromHash,
   encodeToHash,
   isDefault,
+  withFilters,
+  withPage,
+  withPageSize,
   withScoreMax,
   withScoreMin,
+  withSort,
   type LonglistFilters,
   type LonglistState,
 } from './filterState'
@@ -19,7 +24,12 @@ function decode(query: string): LonglistState {
   return decodeFromHash(new URLSearchParams(query))
 }
 
-const DEFAULT_STATE: LonglistState = { filters: DEFAULT_FILTERS, sort: DEFAULT_SORT }
+const DEFAULT_STATE: LonglistState = {
+  filters: DEFAULT_FILTERS,
+  sort: DEFAULT_SORT,
+  page: 1,
+  size: DEFAULT_PAGE_SIZE,
+}
 
 describe('isDefault', () => {
   it('is true for the pristine filters', () => {
@@ -28,7 +38,7 @@ describe('isDefault', () => {
 
   it('ignores the sort entirely, so changing only the sort leaves the filters pristine', () => {
     // The whole point of splitting sort out: the "Reset filters" link keys off this.
-    const state: LonglistState = { filters: DEFAULT_FILTERS, sort: { key: 'posted', dir: 'asc' } }
+    const state: LonglistState = { ...DEFAULT_STATE, sort: { key: 'posted', dir: 'asc' } }
     expect(isDefault(state.filters)).toBe(true)
   })
 
@@ -95,6 +105,7 @@ describe('encodeToHash', () => {
 
   it('carries filters and sort together', () => {
     const params = encodeToHash({
+      ...DEFAULT_STATE,
       filters: { ...DEFAULT_FILTERS, q: 'engineer', posted: '7d' },
       sort: { key: 'posted', dir: 'asc' },
     })
@@ -117,6 +128,8 @@ describe('decodeFromHash', () => {
         mark: 'good',
       },
       sort: { key: 'location', dir: 'desc' },
+      page: 3,
+      size: 50,
     }
     expect(decode(hash(state))).toEqual(state)
   })
@@ -162,5 +175,27 @@ describe('decodeFromHash', () => {
 
   it('ignores the retired shortlist param from an old bookmark', () => {
     expect(decode('tab=longlist&shortlist=true').filters).toEqual(DEFAULT_FILTERS)
+  })
+})
+
+describe('pagination state', () => {
+  it('falls back to defaults on a size not on the menu or a nonsense page', () => {
+    const state = decode('tab=longlist&size=999&page=0')
+    expect(state.size).toBe(DEFAULT_PAGE_SIZE)
+    expect(state.page).toBe(1)
+    expect(decode('tab=longlist&page=abc').page).toBe(1)
+  })
+
+  it('returns to page 1 when the filters, sort or page size change', () => {
+    const onPage5 = { ...DEFAULT_STATE, page: 5 }
+    expect(withFilters(onPage5, { ...DEFAULT_FILTERS, q: 'engineer' }).page).toBe(1)
+    expect(withSort(onPage5, { key: 'title', dir: 'asc' }).page).toBe(1)
+    expect(withPageSize(onPage5, 300).page).toBe(1)
+  })
+
+  it('never steps below page 1', () => {
+    expect(withPage(DEFAULT_STATE, 0).page).toBe(1)
+    expect(withPage(DEFAULT_STATE, -3).page).toBe(1)
+    expect(withPage(DEFAULT_STATE, 4).page).toBe(4)
   })
 })
