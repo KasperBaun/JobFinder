@@ -11,7 +11,6 @@ src/                                 ALL source, tests, configs, build infra
     Jobmatch/                        class library — models, parsing, adapters, ranking, dedupe, output, verification, services
     Jobmatch.Api/                    Minimal API server (runnable). Endpoints/, Handlers/, Models/, Routes.cs, Infrastructure/
     config/                          committed example/default configs (skillset.example.md, ranking.yml)
-    rules/                           backend conventions docs (api/, conventions/, data-access/, infrastructure/, security/, testing/)
   frontend/                          React 19 + Vite app (runnable independently against Jobmatch.Api)
   desktop/                           Electron shell (TS) — spawns Jobmatch.Host.exe on a loopback port, renders the SPA in a BrowserWindow (see "Entry point"). src/ is tracked; dist/, node_modules/, release/ are gitignored build output.
   infrastructure/
@@ -34,6 +33,7 @@ data/                                GITIGNORED — per-user state under data/<e
 package.json                         root npm wrapper — convenience scripts around dotnet + npm (build/dev/test/package/tool)
 publish/                             GITIGNORED — self-contained win-x64 publish output
 pkg/                                 GITIGNORED — local NuGet tool package (npm run package)
+.claude/skills/                      project skills — dotnet-backend-standards owns the backend conventions (replaced src/backend/rules/), plus frontend-standards, developer-documentation, business-analysis, verify
 .github/workflows/                   CI — release.yml builds the Windows installer on push to main
 README.md                            business-level intro
 todo.md                              backlog + in-progress (forward-looking only)
@@ -49,33 +49,22 @@ The SDK is pinned only by `<TargetFramework>net10.0</TargetFramework>` in `src/D
 - **What's in flight** → [`todo.md`](todo.md) (backlog + in-progress only)
 - **What's shipped** → [`CHANGELOG.md`](CHANGELOG.md)
 - **Why each DK portal got the verdict it did** → [`docs/tasks/T-007/`](docs/tasks/T-007/) — per-portal evaluation worksheets (api / rss / html / manual / dead) + the playbook for evaluating a new one. Reference data, not a task spec — keep when adding or reconsidering portals.
-- **How the backend should look** → read `src/backend/rules/` for the conventions (Endpoint → Handler → Service layering, HandlerBase + ExecuteAsync, IEndpointRegistration, typed Routes, custom exceptions, module pattern, file-size limits, coding conventions). Then read `src/backend/Jobmatch.Api/` to see the pattern applied. The structural/quality rules are the standard here; a few infra rules are deliberately excepted — see **Backend rules: adopted vs. exceptions** below.
+- **How the backend should look** → the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md) — SKILL.md plus the full rule set under its `reference/`): Endpoint → Handler → Service layering, HandlerBase + ExecuteAsync, IEndpointRegistration, typed Routes, custom exceptions, module pattern, file-size limits, coding conventions. Then read `src/backend/Jobmatch.Api/` to see the pattern applied. The structural/quality rules are the standard here; a few infra rules are deliberately excepted — see **Backend rules: adopted vs. exceptions** below.
 
 When changing behaviour, update the relevant requirement(s) before or with the code. When closing a task, drop it from `todo.md` and record the result as **one lean line** in `CHANGELOG.md` (full detail belongs in the commit) — keep `todo.md` forward-looking (backlog + in-progress only), never a prose changelog.
 
 ## Backend rules: adopted vs. exceptions
 
-`src/backend/rules/` was written for a multi-tenant SaaS (JWT auth, EF Core + SQL Server, GUID IDs). Jobfinder is local, single-user, file-based, no-auth. The split below is intentional: the **adopted** rules are the standard and bind all backend work; the **exceptions** are codified design decisions, not violations to "fix."
-
-**Adopted — these apply, no carve-out:**
-
-- Endpoint → Handler → Service layering; `HandlerBase` + `ExecuteAsync`; `IEndpointRegistration`; typed `Routes.*`; centralised OpenAPI metadata.
-- Custom exceptions (`ConfigException` / `InvalidRequestException` / `NotFoundException`) translated to HTTP by `ExecuteAsync`; the module pattern.
-- One concern per file; file/method size limits (300-line file / 50-line method hard limits); the partial-class refactoring strategy when a file outgrows the limit.
-- Coding conventions: collection expressions `[]`, `.Count > 0` over `.Any()`, primary constructors, enums for domain values, immutable records.
-- Testing conventions: xUnit, FluentAssertions, tests mirror the source tree, same size limits.
-
-**Deliberate exceptions — intentional for a local/single-user/file-based tool:**
+The backend conventions live in the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md)), which replaced the former `src/backend/rules/` tree — do not recreate that folder. The skill's `reference/` files were written for a multi-tenant SaaS (JWT auth, EF Core + SQL Server, GUID IDs); jobfinder is local, single-user, file-based, no-auth, and the skill's *"Jobfinder deviations from the generic rules"* table enumerates every carve-out. The deviations are codified design decisions, not violations to "fix" — the headline ones:
 
 - **No auth / no `.RequirePermission()`.** Deferred; may be added later. (See "No auth" under *Things to avoid*.)
 - **No EF Core / migrations.** State is JSON files under `data/<email>/`.
 - **SQLite, not SQL Server**, for Hangfire storage (`data/<email>/hangfire.db`).
 - **String timestamp run-ids, not GUID primary keys** (id == the history run id).
 - **Hangfire dashboard local-only / unsecured by design** (no auth provider).
-
-`rules/infrastructure/background-jobs.md` **applies** to the sanctioned search job (see *Background search jobs*) **except** the storage backend (SQLite, not SQL Server) and dashboard auth.
-
 - **Retry policy (intentional):** the search job uses `[AutomaticRetry(Attempts = 1)]`, not the rule's default of 3. A full re-run is expensive, and per-provider failures are already handled gracefully inside the `SearchService` pipeline (each adapter wrapped in try/catch, logged, skipped). Do **not** "fix" this back to 3.
+
+Everything else in the skill's `reference/` applies without carve-out: Endpoint → Handler → Service layering, `HandlerBase` + `ExecuteAsync`, `IEndpointRegistration`, typed `Routes.*`, centralised OpenAPI metadata, custom exceptions, the module pattern, the 300-line file / 50-line method limits and partial-class refactoring strategy, and the coding + testing conventions.
 
 ## Code conventions
 
@@ -195,7 +184,7 @@ Do **not** "fix" this back to a synchronous in-request run.
 - API: `POST /api/search` enqueues and returns `{ id }`; `GET /api/search/{id}/stream` is the SSE feed;
   `/api/search/active` for reconnect; `POST /api/search/{id}/cancel`.
 - DI gate: `AddJobmatchApi(enableBackgroundJobs)` — false in the "Testing" environment so tests don't
-  start a server or create a db. The `rules/infrastructure/background-jobs.md` conventions now apply.
+  start a server or create a db. The skill's `reference/infrastructure/background-jobs.md` conventions apply (storage backend and dashboard auth excepted — see above).
 
 ## Product & ranking constraints (don't regress these)
 
@@ -209,5 +198,5 @@ Durable decisions that outlive any single task — migrated here from earlier ha
 
 - Re-read [`docs/prd.md`](docs/prd.md) for principle.
 - Re-read [`docs/requirements.md`](docs/requirements.md) for the contract.
-- Re-read [`src/backend/rules/`](src/backend/rules/) for backend conventions.
+- Re-read the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md)) for backend conventions.
 - Read `src/backend/Jobmatch.Api/` for the conventions applied to actual code.
