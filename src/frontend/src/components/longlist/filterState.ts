@@ -10,7 +10,6 @@ export type LonglistFilters = {
   scoreMax: number             // 0..1
   stackHits: string[]          // empty = all (OR semantics across selected)
   mark: 'all' | 'good' | 'bad' | 'unmarked'
-  shortlistOnly: boolean
 }
 
 /** Which rows to show, and in what order. Two independent axes — resetting one leaves the other. */
@@ -27,7 +26,6 @@ export const DEFAULT_FILTERS: LonglistFilters = {
   scoreMax: 1,
   stackHits: [],
   mark: 'all',
-  shortlistOnly: false,
 }
 
 // Sort is deliberately not part of this. It used to be, which made the "Reset filters" link appear
@@ -39,7 +37,6 @@ export function isDefault(f: LonglistFilters): boolean {
     && f.scoreMin === 0 && f.scoreMax === 1
     && f.stackHits.length === 0
     && f.mark === 'all'
-    && !f.shortlistOnly
 }
 
 // Dragging one rating thumb past the other pins it instead of inverting the window. An inverted
@@ -57,7 +54,6 @@ export function filterRows(
   rows: readonly ScoredEntry[],
   f: LonglistFilters,
   marks: Marks,
-  shortlistIds: ReadonlySet<string>,
 ): ScoredEntry[] {
   const q = f.q.trim().toLowerCase()
   const portals = new Set(f.portals)
@@ -77,7 +73,6 @@ export function filterRows(
       const m = marks[r.id]
       if (f.mark === 'unmarked' ? m !== undefined : m !== f.mark) return false
     }
-    if (f.shortlistOnly && !shortlistIds.has(r.id)) return false
     return true
   })
 }
@@ -98,7 +93,6 @@ export function encodeToHash(s: LonglistState): URLSearchParams {
   if (f.scoreMin > 0 || f.scoreMax < 1) p.set('score', `${f.scoreMin.toFixed(2)}-${f.scoreMax.toFixed(2)}`)
   if (f.stackHits.length) p.set('stack', f.stackHits.join(','))
   if (f.mark !== 'all') p.set('mark', f.mark)
-  if (f.shortlistOnly) p.set('shortlist', 'true')
   const sort = encodeSort(s.sort)
   if (sort) p.set('sort', sort)
   return p
@@ -121,7 +115,8 @@ export function decodeFromHash(params: URLSearchParams): LonglistState {
   const stack = params.get('stack'); if (stack) f.stackHits = stack.split(',').filter(Boolean)
   const mark = params.get('mark')
   if (mark && ['good','bad','unmarked'].includes(mark)) f.mark = mark as LonglistFilters['mark']
-  if (params.get('shortlist') === 'true') f.shortlistOnly = true
+  // A `shortlist=true` from a pre-R-085-rework URL is simply ignored: the chip it drove is gone,
+  // and the Top jobs view is where that subset lives now.
   return { filters: f, sort: decodeSort(params.get('sort')) }
 }
 

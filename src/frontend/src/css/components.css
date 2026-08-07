@@ -2441,9 +2441,9 @@ button.pill--active:hover:not(:disabled) {
 .tab--active .tab__count { color: var(--c-action); }
 
 /* ------------------------------------------------------------------------
-   Run-detail toolbar — one row holding the view toggle, the collapsed audit
-   views, and (on the longlist) the filter bar. Stacked, these three cost
-   ~150px above the listings; as one row they cost one control height.
+   Run-detail toolbar — one row holding the view chooser and (on the
+   longlist) the filter bar. Stacked, these controls cost ~150px above the
+   listings; as one row they cost one control height.
    ------------------------------------------------------------------------ */
 .run-toolbar {
   display: flex;
@@ -2453,52 +2453,35 @@ button.pill--active:hover:not(:disabled) {
   margin: var(--space-5) 0 var(--space-4);
 }
 
-/* The row only stays a row if everything on it is narrow enough for ~1100px with Danish labels
-   and four-digit counts. Chip padding is trimmed here, not on .chip, so chips elsewhere keep
-   their roomier default. */
-.run-toolbar .chip { padding-inline: 0.5rem; letter-spacing: 0.02em; }
-
 /* ------------------------------------------------------------------------
-   Results view toggle — primary segmented control (Shortlist | Longlist),
-   sized to sit on the toolbar row beside chip-height controls.
+   View chooser — the one control selecting which of the run's five datasets
+   is on screen. Always filled: it always holds a value, and the fill marks
+   it as navigation rather than one more filter chip.
    ------------------------------------------------------------------------ */
-.view-toggle {
-  display: inline-flex;
-  border: 1px solid var(--c-slate-300);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--c-surface);
-  box-shadow: var(--shadow-1);
-}
-.view-toggle__seg {
+.view-switch {
   appearance: none;
-  background: transparent;
-  border: 0;
-  padding: 0.3rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--c-navy-800);
+  border-radius: var(--radius);
+  background: var(--c-navy-800);
+  color: #fff;
   font: inherit;
   font-family: var(--font-display);
   font-weight: 500;
   font-size: 0.88rem;
   letter-spacing: -0.005em;
-  color: var(--c-text-muted);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  transition: background var(--transition), color var(--transition);
-  border-right: 1px solid var(--c-slate-200);
+  box-shadow: var(--shadow-1);
+  transition: background var(--transition), border-color var(--transition);
 }
-.view-toggle__seg:last-child { border-right: 0; }
-.view-toggle__seg:hover:not(:disabled):not(.view-toggle__seg--active) {
-  background: var(--c-action-soft);
-  color: var(--c-text);
+.view-switch:hover {
+  background: var(--c-navy-900);
+  border-color: var(--c-navy-900);
 }
-.view-toggle__seg--active {
-  background: var(--c-navy-800);
-  color: #fff;
-}
-.view-toggle__seg:disabled { opacity: 0.4; cursor: not-allowed; }
-.view-toggle__count {
+.view-switch__count {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 400;
@@ -2509,13 +2492,10 @@ button.pill--active:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.14);
   color: inherit;
 }
-.view-toggle__seg:not(.view-toggle__seg--active) .view-toggle__count {
-  background: var(--c-action-soft);
-  color: var(--c-text-subtle);
-}
 
 /* ------------------------------------------------------------------------
-   Audit view menu — raw fetch · dedupe · dropped, inside the toolbar popover
+   View menu — the chooser's panel: two primary views, a rule, three audit
+   views
    ------------------------------------------------------------------------ */
 .view-menu {
   display: flex;
@@ -2552,6 +2532,11 @@ button.pill--active:hover:not(:disabled) {
   color: var(--c-text-subtle);
 }
 .view-menu__item--active .view-menu__count { color: var(--c-action); }
+.view-menu__divider {
+  height: 1px;
+  background: var(--c-slate-200);
+  margin: 0.25rem 0;
+}
 
 /* ------------------------------------------------------------------------
    Raw fetch tab — provider groups

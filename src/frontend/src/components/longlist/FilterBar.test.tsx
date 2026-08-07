@@ -150,13 +150,9 @@ describe('rating window', () => {
   })
 })
 
-describe('top-jobs toggle', () => {
-  it('stays a direct toggle rather than a panel', async () => {
-    const { onFiltersChange } = renderLonglist()
-    const toggle = trigger(/top jobs only/i)
-    expect(toggle).toHaveAttribute('aria-pressed', 'false')
-    expect(toggle).not.toHaveAttribute('aria-expanded')
-    await userEvent.click(toggle)
-    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ shortlistOnly: true }))
+describe('retired top-jobs toggle', () => {
+  it('is gone: the Top jobs view owns that subset now', () => {
+    renderLonglist()
+    expect(screen.queryByRole('button', { name: /top jobs only/i })).not.toBeInTheDocument()
   })
 })

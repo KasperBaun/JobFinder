@@ -7,14 +7,13 @@ import { FilterBar } from '../../components/longlist/FilterBar'
 import { useLonglistState } from '../../components/longlist/useLonglistState'
 import { isTerminalState } from '../../api/types'
 import { useT } from '../../i18n'
-import { AuditTabs } from './AuditTabs'
 import { DedupeTab } from './DedupeTab'
 import { DroppedTab } from './DroppedTab'
 import { buildHash, parseHash, type TabKey } from './hash'
 import { LonglistView } from './LonglistView'
 import { RawFetchTab } from './RawFetchTab'
-import { ResultsToggle } from './ResultsToggle'
 import { ShortlistTab } from './ShortlistTab'
+import { ViewMenu } from './ViewMenu'
 import { StateBadge } from './StateBadge'
 import { TimelineList } from './TimelineList'
 
@@ -59,11 +58,10 @@ export function RunDetailView({ runId }: { runId: string }) {
           <RunSummaryCard run={data} />
           {hasResults ? (
             <>
-              {/* One toolbar row: view switcher, collapsed audit views, and — on the longlist —
-                  its filters, so the controls cost one line instead of three (R-085). */}
+              {/* One toolbar row: the view chooser and — on the longlist — its filters, so the
+                  controls cost one line instead of three (R-085). */}
               <div className="run-toolbar">
-                <ResultsToggle active={tab} onChange={setTab} data={data} />
-                <AuditTabs active={tab} onChange={setTab} data={data} />
+                <ViewMenu active={tab} onChange={setTab} data={data} />
                 {tab === 'longlist' && data.scored && (
                   <FilterBar
                     scored={data.scored}

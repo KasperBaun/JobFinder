@@ -46,7 +46,6 @@ export const history = {
   tabAllRated: 'All rated',
   tabAllRatedTitle: 'All rated jobs — including those outside the top',
   notRecorded: 'Not recorded for this search.',
-  showLabel: 'show',
   tabRaw: 'all fetched',
   tabDedupe: 'duplicates',
   tabDropped: 'removed',
@@ -126,5 +125,4 @@ export const history = {
   markBad: 'bad',
   markUnmarked: 'not rated',
   ratingRange: (min: string, max: string) => `rating ${min}–${max}`,
-  topJobsOnly: 'top jobs only',
 }
