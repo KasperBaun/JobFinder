@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getRun } from '../../api/client'
 import { RunSummaryCard } from '../../components/RunSummaryCard'
+import { FilterBar } from '../../components/longlist/FilterBar'
+import { useLonglistState } from '../../components/longlist/useLonglistState'
 import { isTerminalState } from '../../api/types'
 import { useT } from '../../i18n'
 import { AuditTabs } from './AuditTabs'
@@ -21,6 +23,7 @@ export function RunDetailView({ runId }: { runId: string }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { tab, provider } = useMemo(() => parseHash(location.hash), [location.hash])
+  const [llState, setLlState] = useLonglistState()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['run', runId],
@@ -56,8 +59,19 @@ export function RunDetailView({ runId }: { runId: string }) {
           <RunSummaryCard run={data} />
           {hasResults ? (
             <>
-              <ResultsToggle active={tab} onChange={setTab} data={data} />
-              <AuditTabs active={tab} onChange={setTab} data={data} />
+              {/* One toolbar row: view switcher, collapsed audit views, and — on the longlist —
+                  its filters, so the controls cost one line instead of three (R-085). */}
+              <div className="run-toolbar">
+                <ResultsToggle active={tab} onChange={setTab} data={data} />
+                <AuditTabs active={tab} onChange={setTab} data={data} />
+                {tab === 'longlist' && data.scored && (
+                  <FilterBar
+                    scored={data.scored}
+                    filters={llState.filters}
+                    onChange={(filters) => setLlState({ ...llState, filters })}
+                  />
+                )}
+              </div>
               {tab === 'shortlist' && <ShortlistTab data={data} />}
               {tab === 'longlist'  && <LonglistView data={data} />}
               {tab === 'raw'       && <RawFetchTab data={data} focusProvider={provider} />}

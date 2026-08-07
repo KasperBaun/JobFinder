@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import type { RunDetail, ScoredEntry } from '../api/types'
 import { DEFAULT_FILTERS, filterRows, type LonglistFilters } from './longlist/filterState'
-import { FilterBar } from './longlist/FilterBar'
 import { LonglistRow } from './longlist/LonglistRow'
 import { SortBar } from './longlist/SortBar'
 import { SortableHeader } from './longlist/SortableHeader'
@@ -47,9 +46,10 @@ function LonglistBody({
     </SortableHeader>
   )
 
+  // The filter bar is not rendered here: it lives up in the run-detail toolbar, on the same row
+  // as the view switcher, and reaches this table through the shared hash state.
   return (
     <section className="longlist">
-      <FilterBar scored={scored} filters={filters} onChange={onFiltersChange} />
       <SortBar sort={sort} onChange={onSortChange} shown={rows.length} total={scored.length} />
       <div className="table-wrap">
         <table className="table longlist__table" aria-label={t.longlistTableAria}>

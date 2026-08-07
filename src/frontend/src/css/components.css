@@ -2441,11 +2441,29 @@ button.pill--active:hover:not(:disabled) {
 .tab--active .tab__count { color: var(--c-action); }
 
 /* ------------------------------------------------------------------------
-   Results view toggle — primary segmented control (Shortlist | Longlist)
+   Run-detail toolbar — one row holding the view toggle, the collapsed audit
+   views, and (on the longlist) the filter bar. Stacked, these three cost
+   ~150px above the listings; as one row they cost one control height.
+   ------------------------------------------------------------------------ */
+.run-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 var(--space-4);
+}
+
+/* The row only stays a row if everything on it is narrow enough for ~1100px with Danish labels
+   and four-digit counts. Chip padding is trimmed here, not on .chip, so chips elsewhere keep
+   their roomier default. */
+.run-toolbar .chip { padding-inline: 0.5rem; letter-spacing: 0.02em; }
+
+/* ------------------------------------------------------------------------
+   Results view toggle — primary segmented control (Shortlist | Longlist),
+   sized to sit on the toolbar row beside chip-height controls.
    ------------------------------------------------------------------------ */
 .view-toggle {
   display: inline-flex;
-  margin: 1.5rem 0 0.6rem;
   border: 1px solid var(--c-slate-300);
   border-radius: var(--radius);
   overflow: hidden;
@@ -2456,17 +2474,17 @@ button.pill--active:hover:not(:disabled) {
   appearance: none;
   background: transparent;
   border: 0;
-  padding: 0.65rem 1.4rem;
+  padding: 0.3rem 0.65rem;
   font: inherit;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 1.02rem;
+  font-size: 0.88rem;
   letter-spacing: -0.005em;
   color: var(--c-text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   transition: background var(--transition), color var(--transition);
   border-right: 1px solid var(--c-slate-200);
 }
@@ -2482,11 +2500,11 @@ button.pill--active:hover:not(:disabled) {
 .view-toggle__seg:disabled { opacity: 0.4; cursor: not-allowed; }
 .view-toggle__count {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  padding: 0.08rem 0.45rem;
+  padding: 0.05rem 0.4rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   color: inherit;
@@ -2497,53 +2515,43 @@ button.pill--active:hover:not(:disabled) {
 }
 
 /* ------------------------------------------------------------------------
-   Audit tabs — secondary, muted (raw fetch · dedupe · dropped)
+   Audit view menu — raw fetch · dedupe · dropped, inside the toolbar popover
    ------------------------------------------------------------------------ */
-.audit-tabs {
+.view-menu {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.15rem;
-  margin: 0 0 1.25rem;
-  font-size: 0.78rem;
+  flex-direction: column;
 }
-.audit-tabs__label {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--c-text-subtle);
-  margin-right: 0.4rem;
-}
-.audit-tab {
+.view-menu__item {
   appearance: none;
   background: transparent;
   border: 0;
-  padding: 0.3rem 0.7rem;
+  padding: 0.3rem 0.4rem;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: var(--c-text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
+  text-align: left;
   transition: background var(--transition), color var(--transition);
 }
-.audit-tab:hover:not(:disabled) { background: var(--c-action-soft); color: var(--c-text); }
-.audit-tab--active {
-  background: var(--c-action-soft);
+.view-menu__item:hover:not(:disabled) { background: var(--c-action-soft); color: var(--c-text); }
+.view-menu__item--active {
   color: var(--c-action);
   font-weight: 500;
 }
-.audit-tab--disabled { opacity: 0.4; cursor: not-allowed; }
-.audit-tab__count {
+.view-menu__item:disabled { opacity: 0.4; cursor: not-allowed; }
+.view-menu__count {
+  margin-left: auto;
+  padding-left: var(--space-3);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   color: var(--c-text-subtle);
 }
-.audit-tab--active .audit-tab__count { color: var(--c-action); }
+.view-menu__item--active .view-menu__count { color: var(--c-action); }
 
 /* ------------------------------------------------------------------------
    Raw fetch tab — provider groups
@@ -2815,23 +2823,29 @@ button.pill--active:hover:not(:disabled) {
   padding: var(--space-5) 0 var(--space-8);
 }
 
-/* One row of triggers. Expanded inline these groups ran to ~215px — and before the source list was
-   capped, ~490px — which pushed the listings off the first screen entirely. Deliberately not sticky:
-   what needs pinning while you scroll 2 000 rows is the sort, which .longlist__sortbar does. */
+/* The filter groups, one trigger each, flowing on the run toolbar's single row. Expanded inline
+   these groups ran to ~215px — and before the source list was capped, ~490px — which pushed the
+   listings off the first screen entirely. Deliberately not sticky: what needs pinning while you
+   scroll 2 000 rows is the sort, which .longlist__sortbar does. */
 .longlist__filter-bar {
-  background: var(--c-bg);
-  border-bottom: 1px solid var(--c-slate-200);
-  padding: var(--space-3) 0;
+  /* Basis 360px, not auto: at auto the bar's hypothetical size is its full max-content width,
+     so it never fits beside the toggle and always wraps to its own line — the exact layout this
+     toolbar replaces. At 360px it claims the rest of the toggle's row and wraps internally only
+     when the window is genuinely too narrow. */
+  flex: 1 1 360px;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
 }
 
+/* Shrinks before the row wraps: the search keeps working at 110px, whereas a wrapped second
+   line costs exactly the vertical space the single-row toolbar exists to save. */
 .longlist__search {
-  flex: 0 1 280px;
-  min-width: 200px;
+  flex: 1 1 110px;
+  min-width: 110px;
+  max-width: 280px;
   margin-right: auto;
 }
 
