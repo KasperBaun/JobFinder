@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getRun } from '../../api/client'
 import { RunSummaryCard } from '../../components/RunSummaryCard'
 import { FilterBar } from '../../components/longlist/FilterBar'
+import { SearchField } from '../../components/longlist/SearchField'
 import { useLonglistState } from '../../components/longlist/useLonglistState'
 import { isTerminalState } from '../../api/types'
 import { useT } from '../../i18n'
@@ -58,9 +59,15 @@ export function RunDetailView({ runId }: { runId: string }) {
           <RunSummaryCard run={data} />
           {hasResults ? (
             <>
-              {/* One toolbar row: the view chooser and — on the longlist — its filters, so the
-                  controls cost one line instead of three (R-085). */}
+              {/* One toolbar row: search leads, then the view chooser, then — on the longlist —
+                  the filter groups, so the controls cost one line instead of three (R-085). */}
               <div className="run-toolbar">
+                {tab === 'longlist' && data.scored && (
+                  <SearchField
+                    filters={llState.filters}
+                    onChange={(filters) => setLlState({ ...llState, filters })}
+                  />
+                )}
                 <ViewMenu active={tab} onChange={setTab} data={data} />
                 {tab === 'longlist' && data.scored && (
                   <FilterBar
