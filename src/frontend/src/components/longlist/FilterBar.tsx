@@ -69,17 +69,10 @@ export function FilterBar({ scored, filters, onChange }: Props) {
   }
   const scoreFiltered = filters.scoreMin > 0 || filters.scoreMax < 1
 
+  // The free-text search is not here: it leads the toolbar as its own SearchField, on the far
+  // side of the view menu, so this bar is purely the collapsed filter groups.
   return (
     <div className="longlist__filter-bar">
-      <input
-        className="input longlist__search"
-        type="search"
-        placeholder={t.searchTitleOrCompany}
-        value={filters.q}
-        onChange={(e) => onChange({ ...filters, q: e.target.value })}
-        onKeyDown={(e) => { if (e.key === 'Escape') onChange({ ...filters, q: '' }) }}
-      />
-
       {sources.length > 0 && (
         <FilterPopover
           label={t.filterSource}

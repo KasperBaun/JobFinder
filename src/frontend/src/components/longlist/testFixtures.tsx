@@ -6,6 +6,7 @@ import { I18nProvider } from '../../i18n'
 import type { Locale } from '../../i18n'
 import { LonglistTable } from '../LonglistTable'
 import { FilterBar } from './FilterBar'
+import { SearchField } from './SearchField'
 import { DEFAULT_FILTERS, type LonglistFilters } from './filterState'
 import { DEFAULT_SORT, type LonglistSort } from './sortState'
 
@@ -57,12 +58,13 @@ export function renderLonglist({
   const onFiltersChange = vi.fn()
   const onSortChange = vi.fn()
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  // FilterBar sits beside the table rather than inside it, exactly as RunDetailView composes
-  // them — the bar lives on the run toolbar, the table below — so the filter/sort-independence
-  // tests exercise the same wiring the page has.
+  // SearchField and FilterBar sit beside the table rather than inside it, exactly as
+  // RunDetailView composes them — both live on the run toolbar, the table below — so the
+  // filter/sort-independence tests exercise the same wiring the page has.
   render(
     <I18nProvider locale={locale}>
       <QueryClientProvider client={client}>
+        {data.scored && <SearchField filters={filters} onChange={onFiltersChange} />}
         {data.scored && <FilterBar scored={data.scored} filters={filters} onChange={onFiltersChange} />}
         <LonglistTable
           data={data}

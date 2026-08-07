@@ -2808,20 +2808,18 @@ button.pill--active:hover:not(:disabled) {
   padding: var(--space-5) 0 var(--space-8);
 }
 
-/* The filter groups, one trigger each, flowing on the run toolbar's single row. Expanded inline
-   these groups ran to ~215px — and before the source list was capped, ~490px — which pushed the
-   listings off the first screen entirely. Deliberately not sticky: what needs pinning while you
-   scroll 2 000 rows is the sort, which .longlist__sortbar does. */
+/* The filter groups, one trigger each, right-aligned on the run toolbar's single row after the
+   search and the view chooser. Expanded inline these groups ran to ~215px — and before the
+   source list was capped, ~490px — which pushed the listings off the first screen entirely.
+   Deliberately not sticky: what needs pinning while you scroll 2 000 rows is the sort, which
+   .longlist__sortbar does. */
 .longlist__filter-bar {
-  /* Basis 360px, not auto: at auto the bar's hypothetical size is its full max-content width,
-     so it never fits beside the toggle and always wraps to its own line — the exact layout this
-     toolbar replaces. At 360px it claims the rest of the toggle's row and wraps internally only
-     when the window is genuinely too narrow. */
-  flex: 1 1 360px;
+  margin-left: auto;
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
@@ -2831,7 +2829,6 @@ button.pill--active:hover:not(:disabled) {
   flex: 1 1 110px;
   min-width: 110px;
   max-width: 280px;
-  margin-right: auto;
 }
 
 .longlist__chips,
