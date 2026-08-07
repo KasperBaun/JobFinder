@@ -148,6 +148,25 @@ describe('rating window', () => {
     await userEvent.click(trigger(/^rating/))
     expect(document.querySelector('.range-dual')).not.toHaveClass('range-dual--min-on-top')
   })
+
+  it('previews the score distribution, raising only the occupied bins', async () => {
+    renderLonglist()
+    await userEvent.click(trigger(/^rating/))
+    const bars = document.querySelectorAll<HTMLElement>('.score-hist__bar')
+    expect(bars).toHaveLength(20)
+    // Fixture scores 0.20 / 0.50 / 0.90 land in bins 4, 10 and 18; every other bin is flat.
+    const raised = [...bars].map((b, i) => (b.style.height !== '0%' ? i : -1)).filter((i) => i >= 0)
+    expect(raised).toEqual([4, 10, 18])
+  })
+
+  it('marks only the bins inside the window as selected', async () => {
+    renderLonglist({ filters: { ...DEFAULT_FILTERS, scoreMin: 0.5 } })
+    await userEvent.click(trigger(/^rating/))
+    const bars = document.querySelectorAll<HTMLElement>('.score-hist__bar')
+    expect(bars[4]).not.toHaveClass('score-hist__bar--in')   // 0.20 — cut away
+    expect(bars[10]).toHaveClass('score-hist__bar--in')      // 0.50 — inside
+    expect(bars[18]).toHaveClass('score-hist__bar--in')      // 0.90 — inside
+  })
 })
 
 describe('retired top-jobs toggle', () => {

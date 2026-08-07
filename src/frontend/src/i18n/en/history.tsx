@@ -124,5 +124,4 @@ export const history = {
   markGood: 'good',
   markBad: 'bad',
   markUnmarked: 'not rated',
-  ratingRange: (min: string, max: string) => `rating ${min}–${max}`,
 }

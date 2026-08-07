@@ -39,6 +39,8 @@ export function FilterBar({ scored, filters, onChange }: Props) {
       .sort((a, b) => b.count - a.count || text.compare(a.label, b.label))
   }, [scored])
 
+  const scores = useMemo(() => scored.map((e) => e.score), [scored])
+
   const stackHits = useMemo(() => {
     const counts = new Map<string, number>()
     for (const e of scored) {
@@ -108,7 +110,7 @@ export function FilterBar({ scored, filters, onChange }: Props) {
         onOpenChange={toggleOpen('score')}
         onClear={() => onChange({ ...filters, scoreMin: 0, scoreMax: 1 })}
       >
-        <ScoreRange filters={filters} onChange={onChange} />
+        <ScoreRange filters={filters} scores={scores} onChange={onChange} />
       </FilterPopover>
 
       {stackHits.length > 0 && (

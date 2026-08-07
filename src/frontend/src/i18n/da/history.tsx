@@ -123,5 +123,4 @@ export const history: Messages['history'] = {
   markGood: 'god',
   markBad: 'dårlig',
   markUnmarked: 'ikke vurderet',
-  ratingRange: (min, max) => `score ${min}–${max}`,
 }
