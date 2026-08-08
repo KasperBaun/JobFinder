@@ -22,7 +22,7 @@ export function LonglistRow({ entry, runId, mark, markReason, markStatus }: Prop
       <tr>
         <td><a href={entry.url} target="_blank" rel="noreferrer">{entry.title}</a></td>
         <td>{entry.company ?? <span className="muted">—</span>}</td>
-        <td><span className="badge badge--muted">{entry.portalDisplayName ?? entry.portal}</span></td>
+        <td><span className="longlist__portal">{entry.portalDisplayName ?? entry.portal}</span></td>
         <td>{entry.location ?? <span className="muted">—</span>}</td>
         <td className="tabular mono">
           {entry.postedAt ? formatRelative(entry.postedAt) : <span className="muted">—</span>}

@@ -3257,6 +3257,15 @@ button.pill--active:hover:not(:disabled) {
 .longlist__table tbody tr { transition: background var(--transition); }
 .longlist__table tbody tr:hover { background: var(--c-action-soft); }
 
+/* A label, not a control: the badge pill read as an input and repeated a hundred
+   times per page once a portal filter was applied. */
+.longlist__portal {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  color: var(--c-text-subtle);
+}
+
 .longlist__score-cell {
   display: flex;
   align-items: center;
