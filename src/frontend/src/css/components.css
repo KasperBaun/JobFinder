@@ -2647,6 +2647,14 @@ button.pill--active:hover:not(:disabled) {
   background: var(--c-surface-alt, #f7f8fa);
   vertical-align: middle;
 }
+/* The bar's length is the score; the shaded segments split that length by component. */
+.bd-bar__fill {
+  position: relative;
+  display: inline-flex;
+  height: 100%;
+  min-width: 3px;
+  overflow: hidden;
+}
 .bd-bar__seg { display: block; height: 100%; }
 .bd-bar__seg--0 { background: var(--c-navy-800); }
 .bd-bar__seg--1 { background: var(--c-navy-700); }

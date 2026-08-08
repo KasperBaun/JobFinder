@@ -30,7 +30,7 @@ export function LonglistRow({ entry, runId, mark, markReason, markStatus }: Prop
         <td className="tabular mono">
           <div className="longlist__score-cell">
             <span>{dec(entry.score, 2)}</span>
-            <BreakdownBar b={entry.breakdown} />
+            <BreakdownBar b={entry.breakdown} score={entry.score} />
           </div>
         </td>
         <td>

@@ -8,34 +8,36 @@ const COMPONENT_KEYS: ComponentKey[] = [
   'primaryStack', 'secondaryStack', 'seniority', 'locationRemote', 'domain', 'freshness',
 ]
 
-export function BreakdownBar({ b }: { b: ScoreBreakdown }) {
+export function BreakdownBar({ b, score }: { b: ScoreBreakdown; score: number }) {
   const t = useT('listing')
   const positives = COMPONENT_KEYS.map(key => ({ key, label: t.component[key], value: Math.max(0, b[key]) }))
   const totalPositive = positives.reduce((n, c) => n + c.value, 0)
   if (totalPositive === 0 && b.disqualifierPenalty === 0) {
     return <span className="muted">—</span>
   }
+  const fillPct = Math.min(Math.max(score, 0), 1) * 100
   return (
     <div className="bd-bar" aria-label={t.breakdownAria}>
-      {positives.map((c, i) => {
-        if (c.value <= 0) return null
-        const pct = (c.value / Math.max(totalPositive, 0.001)) * 100
-        return (
+      <span className="bd-bar__fill" style={{ width: `${fillPct}%` }}>
+        {positives.map((c, i) => {
+          if (c.value <= 0) return null
+          const pct = (c.value / Math.max(totalPositive, 0.001)) * 100
+          return (
+            <span
+              key={c.key}
+              className={`bd-bar__seg bd-bar__seg--${i}`}
+              style={{ width: `${pct}%` }}
+              title={`${c.label}: ${dec(c.value, 3)}`}
+            />
+          )
+        })}
+        {b.disqualifierPenalty < 0 && (
           <span
-            key={c.key}
-            className={`bd-bar__seg bd-bar__seg--${i}`}
-            style={{ width: `${pct}%` }}
-            title={`${c.label}: ${dec(c.value, 3)}`}
+            className="bd-bar__seg bd-bar__seg--penalty"
+            title={`${t.disqualifierPenalty}: ${dec(b.disqualifierPenalty, 3)}`}
           />
-        )
-      })}
-      {b.disqualifierPenalty < 0 && (
-        <span
-          className="bd-bar__seg bd-bar__seg--penalty"
-          style={{ width: '100%' }}
-          title={`${t.disqualifierPenalty}: ${dec(b.disqualifierPenalty, 3)}`}
-        />
-      )}
+        )}
+      </span>
     </div>
   )
 }
