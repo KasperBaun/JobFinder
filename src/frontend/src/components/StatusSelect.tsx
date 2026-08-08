@@ -63,6 +63,7 @@ export function StatusSelect({ runId, listingId, current, compact }: Props) {
     'status-select',
     optimistic ? `status-select--${optimistic}` : '',
     compact ? 'status-select--compact' : '',
+    compact && !optimistic ? 'status-select--ghost' : '',
   ].filter(Boolean).join(' ')
 
   return (

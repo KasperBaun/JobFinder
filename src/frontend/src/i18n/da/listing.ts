@@ -45,11 +45,12 @@ export const listing: Messages['listing'] = {
 
   markGood: 'Godt match',
   markBad: 'Ikke et match',
-  markUnset: 'Vurdér dette job',
+  markGroupAria: 'Vurdér dette job',
   markTooltip: {
-    unset: 'Vurdér dette job. Dine vurderinger hjælper jobfinder med at finde bedre job næste gang. Tryk for et godt match.',
-    good: 'Markeret som et godt match. Tryk for at skifte til Ikke et match.',
-    bad: 'Markeret som Ikke et match. Tryk for at rydde vurderingen.',
+    good: 'Markér som et godt match. Dine vurderinger hjælper jobfinder med at finde bedre job næste gang.',
+    goodActive: 'Markeret som et godt match. Tryk for at rydde vurderingen.',
+    bad: 'Markér som ikke et match. Dine vurderinger hjælper jobfinder med at finde bedre job næste gang.',
+    badActive: 'Markeret som ikke et match. Tryk for at rydde vurderingen.',
   },
   markFailed: 'Markeringen mislykkedes',
 

@@ -20,12 +20,6 @@ interface MarkPayload {
   reason: string | null
 }
 
-function nextState(value: MarkValue): MarkValue {
-  if (value === undefined) return 'good'
-  if (value === 'good') return 'bad'
-  return undefined
-}
-
 export function MarkButton({ runId, listingId, current, reason, compact }: Props) {
   const t = useT('listing')
   const [optimistic, setOptimistic] = useState<MarkValue>(current)
@@ -71,12 +65,21 @@ export function MarkButton({ runId, listingId, current, reason, compact }: Props
     },
   })
 
-  function handleClick() {
-    const target = nextState(optimistic)
-    setOptimistic(target)
+  function handleToggle(target: 'good' | 'bad') {
+    const next = optimistic === target ? undefined : target
+    setOptimistic(next)
     setError(null)
     // Flipping or clearing the mark drops the reason — it explained the old mark.
-    mutation.mutate({ mark: target, reason: null })
+    mutation.mutate({ mark: next, reason: null })
+  }
+
+  function toggleCls(target: 'good' | 'bad') {
+    return [
+      'mark-toggle',
+      `mark-toggle--${target}`,
+      optimistic === target ? 'mark-toggle--active' : '',
+      compact ? 'mark-toggle--compact' : '',
+    ].filter(Boolean).join(' ')
   }
 
   function handleSaveReason(next: string | null) {
@@ -84,33 +87,35 @@ export function MarkButton({ runId, listingId, current, reason, compact }: Props
     mutation.mutate({ mark: optimistic, reason: next })
   }
 
-  const label =
-    optimistic === 'good' ? t.markGood :
-    optimistic === 'bad' ? t.markBad :
-    t.markUnset
-
-  const cls =
-    optimistic === 'good' ? `mark-button mark-button--good${compact ? ' mark-button--compact' : ''}` :
-    optimistic === 'bad' ? `mark-button mark-button--bad${compact ? ' mark-button--compact' : ''}` :
-    `mark-button${compact ? ' mark-button--compact' : ''}`
-
-  const tooltip =
-    optimistic === 'good' ? t.markTooltip.good :
-    optimistic === 'bad' ? t.markTooltip.bad :
-    t.markTooltip.unset
+  const goodTip = optimistic === 'good' ? t.markTooltip.goodActive : t.markTooltip.good
+  const badTip = optimistic === 'bad' ? t.markTooltip.badActive : t.markTooltip.bad
 
   return (
     <div className="mark-button-wrap">
-      <button
-        type="button"
-        className={cls}
-        onClick={handleClick}
-        disabled={mutation.isPending}
-        aria-label={tooltip}
-        data-tooltip={tooltip}
-      >
-        {label}
-      </button>
+      <div className="mark-toggle-group" role="group" aria-label={t.markGroupAria}>
+        <button
+          type="button"
+          className={toggleCls('good')}
+          onClick={() => handleToggle('good')}
+          disabled={mutation.isPending}
+          aria-pressed={optimistic === 'good'}
+          aria-label={goodTip}
+          data-tooltip={goodTip}
+        >
+          {compact ? <span aria-hidden>✓</span> : t.markGood}
+        </button>
+        <button
+          type="button"
+          className={toggleCls('bad')}
+          onClick={() => handleToggle('bad')}
+          disabled={mutation.isPending}
+          aria-pressed={optimistic === 'bad'}
+          aria-label={badTip}
+          data-tooltip={badTip}
+        >
+          {compact ? <span aria-hidden>✕</span> : t.markBad}
+        </button>
+      </div>
       {optimistic !== undefined && (
         <MarkWhy reason={reason} saving={mutation.isPending} onSave={handleSaveReason} />
       )}
