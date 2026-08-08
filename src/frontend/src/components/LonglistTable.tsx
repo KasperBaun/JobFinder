@@ -101,7 +101,7 @@ function LonglistBody({
           <div className="muted longlist__empty">
             {t.noJobsMatchFilters}{' '}
             <button type="button" className="link-button" onClick={() => onFiltersChange(DEFAULT_FILTERS)}>
-              {t.reset}
+              {t.resetFilters}
             </button>
           </div>
         )}

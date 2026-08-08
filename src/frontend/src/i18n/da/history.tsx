@@ -109,7 +109,6 @@ export const history: Messages['history'] = {
   expand: 'udvid',
   collapse: 'klap sammen',
   noJobsMatchFilters: 'Ingen job matcher disse filtre.',
-  reset: 'Nulstil',
   resetFilters: 'Nulstil filtre',
   searchTitleOrCompany: 'Søg i titel eller virksomhed…',
   filterSource: 'jobkilde',

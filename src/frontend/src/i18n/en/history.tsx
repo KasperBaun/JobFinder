@@ -110,7 +110,6 @@ export const history = {
   expand: 'expand',
   collapse: 'collapse',
   noJobsMatchFilters: 'No jobs match these filters.',
-  reset: 'Reset',
   resetFilters: 'Reset filters',
   searchTitleOrCompany: 'Search title or company…',
   filterSource: 'source',
