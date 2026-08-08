@@ -1465,13 +1465,15 @@ button.pill--active:hover:not(:disabled) {
 
 .mark-button-wrap { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
-.mark-button {
+.mark-toggle-group { display: inline-flex; }
+
+.mark-toggle {
   position: relative;
   font-family: var(--font-mono);
   font-size: 0.78rem;
   letter-spacing: 0.04em;
+  white-space: nowrap;
   padding: 0.32rem 0.85rem;
-  border-radius: 999px;
   border: 1px solid var(--c-slate-300);
   background: var(--c-surface);
   color: var(--c-text-muted);
@@ -1479,21 +1481,26 @@ button.pill--active:hover:not(:disabled) {
   transition: border-color var(--transition), background var(--transition), color var(--transition);
 }
 
-.mark-button:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+.mark-toggle--good { border-radius: 999px 0 0 999px; border-right-width: 0; }
+.mark-toggle--bad { border-radius: 0 999px 999px 0; }
 
-.mark-button--good {
+.mark-toggle:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+
+.mark-toggle--good.mark-toggle--active {
   background: var(--c-good-bg);
   color: var(--c-good);
   border-color: var(--c-good-border);
 }
 
-.mark-button--bad {
+.mark-toggle--bad.mark-toggle--active {
   background: var(--c-bad-bg);
   color: var(--c-bad);
   border-color: var(--c-bad-border);
 }
 
-.mark-button:disabled { opacity: 0.6; }
+.mark-toggle:disabled { opacity: 0.6; }
+
+.mark-toggle--compact { padding: 0.14rem 0.5rem; font-size: 0.72rem; line-height: 1.4; }
 
 .mark-button__error {
   font-size: 0.72rem;
@@ -1561,6 +1568,11 @@ button.pill--active:hover:not(:disabled) {
 }
 
 .status-select--compact { font-size: 0.72rem; padding: 0.15rem 0.45rem; }
+
+/* Unset status in a table row: quiet text until hovered, so 100 rows of
+   "Status…" don't compete with the data. */
+.status-select--ghost { border-color: transparent; background: transparent; color: var(--c-text-subtle); }
+.status-select--ghost:hover:not(:disabled) { border-color: var(--c-slate-300); }
 
 .status-select:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
 .status-select:disabled { opacity: 0.6; }
@@ -3330,15 +3342,6 @@ button.pill--active:hover:not(:disabled) {
 .sortable--active .sort-header__glyph {
   opacity: 1;
   color: var(--c-action);
-}
-
-/* ============================================================
-   mark-button compact variant
-   ============================================================ */
-
-.mark-button--compact {
-  padding: 0.18rem 0.55rem;
-  font-size: 0.72rem;
 }
 
 /* ============================================================
