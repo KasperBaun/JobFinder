@@ -46,9 +46,9 @@ export const history = {
   tabAllRated: 'All rated',
   tabAllRatedTitle: 'All rated jobs — including those outside the top',
   notRecorded: 'Not recorded for this search.',
-  tabRaw: 'all fetched',
-  tabDedupe: 'duplicates',
-  tabDropped: 'removed',
+  tabRaw: 'All fetched',
+  tabDedupe: 'Duplicates',
+  tabDropped: 'Removed',
 
   noRatingsRecorded: 'No ratings recorded for this search.',
 
@@ -66,7 +66,7 @@ export const history = {
   noDedupeRecorded: 'No duplicate data recorded for this search.',
   noDuplicatesMerged: 'No duplicates were merged in this search.',
   dedupeKept: 'kept',
-  dedupeAlsoSeen: (count: number) => `also seen on ${count}`,
+  dedupeAlsoSeen: (count: number) => count === 1 ? 'also seen in 1 other place' : `also seen in ${count} other places`,
 
   noDroppedRecorded: 'No removed-job data recorded for this search.',
   nothingRemoved: 'Nothing was removed in this search.',

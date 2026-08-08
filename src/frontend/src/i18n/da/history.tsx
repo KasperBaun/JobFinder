@@ -45,9 +45,9 @@ export const history: Messages['history'] = {
   tabAllRated: 'Alle vurderede',
   tabAllRatedTitle: 'Alle vurderede job — også dem uden for toppen',
   notRecorded: 'Ikke gemt for denne søgning.',
-  tabRaw: 'alle hentede',
-  tabDedupe: 'dubletter',
-  tabDropped: 'fjernede',
+  tabRaw: 'Alle hentede',
+  tabDedupe: 'Dubletter',
+  tabDropped: 'Fjernede',
 
   noRatingsRecorded: 'Der er ikke gemt scorer for denne søgning.',
 
@@ -65,7 +65,7 @@ export const history: Messages['history'] = {
   noDedupeRecorded: 'Der er ikke gemt dubletdata for denne søgning.',
   noDuplicatesMerged: 'Der blev ikke slået dubletter sammen i denne søgning.',
   dedupeKept: 'beholdt',
-  dedupeAlsoSeen: count => `også set ${count} andre steder`,
+  dedupeAlsoSeen: count => count === 1 ? 'også set 1 andet sted' : `også set ${count} andre steder`,
 
   noDroppedRecorded: 'Der er ikke gemt data om fjernede job for denne søgning.',
   nothingRemoved: 'Intet blev fjernet i denne søgning.',

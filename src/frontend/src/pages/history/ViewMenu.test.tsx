@@ -34,14 +34,14 @@ describe('ViewMenu', () => {
     renderMenu()
     const trigger = screen.getByRole('button', { name: /Top jobs 2/ })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('button', { name: /all fetched/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /All fetched/ })).not.toBeInTheDocument()
   })
 
   it('lists all five views with counts when opened, audit views behind a separator', async () => {
     renderMenu()
     await userEvent.click(screen.getByRole('button', { name: /Top jobs/ }))
     const panel = screen.getByRole('group', { name: /result view/i })
-    for (const name of [/Top jobs 2/, /All rated 3/, /all fetched 3/, /duplicates 1/, /removed 1/]) {
+    for (const name of [/Top jobs 2/, /All rated 3/, /All fetched 3/, /Duplicates 1/, /Removed 1/]) {
       expect(within(panel).getByRole('button', { name })).toBeEnabled()
     }
     expect(panel.querySelector('.view-menu__divider')).toBeInTheDocument()
@@ -57,21 +57,21 @@ describe('ViewMenu', () => {
 
   it('marks the active view in the list', async () => {
     renderMenu({ active: 'dedupe' })
-    await userEvent.click(screen.getByRole('button', { name: /duplicates 1/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Duplicates 1/ }))
     const panel = screen.getByRole('group', { name: /result view/i })
-    const active = within(panel).getByRole('button', { name: /duplicates/ })
+    const active = within(panel).getByRole('button', { name: /Duplicates/ })
     expect(active).toHaveAttribute('aria-current', 'true')
   })
 
   it('shows an audit view on the trigger while it is active', () => {
     renderMenu({ active: 'raw' })
-    expect(screen.getByRole('button', { name: /all fetched 3/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /All fetched 3/ })).toBeInTheDocument()
   })
 
   it('disables a view the run never recorded', async () => {
     const { onChange } = renderMenu({ data: auditedRun({ dropped: undefined, scored: undefined }) })
     await userEvent.click(screen.getByRole('button', { name: /Top jobs/ }))
-    const removed = screen.getByRole('button', { name: /removed/ })
+    const removed = screen.getByRole('button', { name: /Removed/ })
     expect(removed).toBeDisabled()
     expect(removed).toHaveAttribute('title', 'Not recorded for this search.')
     expect(screen.getByRole('button', { name: /All rated/ })).toBeDisabled()
