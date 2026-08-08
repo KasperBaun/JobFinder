@@ -287,7 +287,7 @@ public sealed partial class SearchService : ISearchService
             }
 
             var results = await adapter.FetchAsync(srcCts.Token).ConfigureAwait(false);
-            return (results, null, adapter.HitPageCap);
+            return (results.Select(ListingTextDecoder.Decode).ToList(), null, adapter.HitPageCap);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
