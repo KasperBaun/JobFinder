@@ -3149,11 +3149,14 @@ button.pill--active:hover:not(:disabled) {
   color: var(--c-text-subtle);
 }
 
+/* Rounded like the filter pills beside them, so the toolbar's native selects and the
+   custom triggers read as one control family. */
 .select--inline {
   width: auto;
   min-width: 7rem;
-  padding: 0.3rem 2rem 0.3rem 0.6rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 2rem 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
 }
 
 .sort-dir {
@@ -3165,7 +3168,7 @@ button.pill--active:hover:not(:disabled) {
   justify-content: center;
   background: var(--c-surface);
   border: 1px solid var(--c-slate-300);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   color: var(--c-text);
   font-family: var(--font-mono);
   font-size: 0.9rem;
