@@ -4,6 +4,14 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
+- **Cross-portal duplicates reach the Top-jobs shortlist.** The T-011 review of run
+  `20260806-113247-dd3dc6` found "Senior Software Engineer C#/.net" at #1 *and* #2
+  (danske bank via oracle vs jobindex) and the SimCorp .Net/Angular role three times in
+  the top 20 — same employer, same role, but title/URL differ per portal so dedupe
+  misses them. Hurts the "would the user take one of the top-10" metric more than any
+  styling issue; needs a fuzzier same-employer+similar-title pass (or shortlist-time
+  grouping), not a GUI fix. See `docs/tasks/T-011-results-polish/plan.md`.
+
 - **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
   `react-hooks/set-state-in-effect`: `MarkButton`, `StatusSelect` and `MarkWhy` reset optimistic
