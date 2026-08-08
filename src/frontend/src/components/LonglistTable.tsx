@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import type { RunDetail, ScoredEntry } from '../api/types'
 import { DEFAULT_FILTERS, filterRows, type LonglistFilters } from './longlist/filterState'
 import { LonglistRow } from './longlist/LonglistRow'
@@ -48,6 +48,15 @@ function LonglistBody({
   const current = Math.min(page, pageCount)
   const paged = useMemo(() => rows.slice((current - 1) * size, current * size), [rows, current, size])
 
+  // Changing page mid-scroll would otherwise swap the rows underneath the reader and leave them
+  // stranded halfway down the new page, so the table is re-anchored at its top.
+  const sectionRef = useRef<HTMLElement>(null)
+  const handlePageChange = (next: number) => {
+    onPageChange(next)
+    // Optional call: jsdom has no scrollIntoView.
+    sectionRef.current?.scrollIntoView?.({ block: 'start' })
+  }
+
   const dirFor = (key: SortKey) => (sort.key === key ? sort.dir : undefined)
   const header = (key: SortKey, label: string) => (
     <SortableHeader dir={dirFor(key)} onActivate={() => onSortChange(toggleSort(sort, key))}>
@@ -58,7 +67,7 @@ function LonglistBody({
   // The filter bar is not rendered here: it lives up in the run-detail toolbar, on the same row
   // as the view switcher, and reaches this table through the shared hash state.
   return (
-    <section className="longlist">
+    <section className="longlist" ref={sectionRef}>
       <SortBar
         sort={sort}
         onChange={onSortChange}
@@ -67,7 +76,7 @@ function LonglistBody({
         page={current}
         pageCount={pageCount}
         size={size}
-        onPageChange={onPageChange}
+        onPageChange={handlePageChange}
         onSizeChange={onSizeChange}
       />
       <div className="table-wrap">
