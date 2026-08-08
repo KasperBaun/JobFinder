@@ -1736,12 +1736,14 @@ button.pill--active:hover:not(:disabled) {
   letter-spacing: 0.04em;
 }
 
+/* A grid rather than a wrapping flex row: when the card gets narrow the stats
+   re-flow as aligned columns instead of one orphan dropping under the others. */
 .run-stat-bar__metrics {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   align-items: stretch;
   flex: 1;
-  gap: 0;
+  gap: var(--space-3) 0;
   margin: 0;
 }
 
@@ -1750,7 +1752,7 @@ button.pill--active:hover:not(:disabled) {
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-4);
   border-right: 1px solid var(--c-slate-200);
   min-width: max-content;
 }
@@ -2845,9 +2847,11 @@ button.pill--active:hover:not(:disabled) {
 
 /* Shrinks before the row wraps: the search keeps working at 110px, whereas a wrapped second
    line costs exactly the vertical space the single-row toolbar exists to save. */
+/* Never narrower than its placeholder: below this the toolbar wraps the filter
+   pills to a second row instead of squeezing the page's primary input. */
 .longlist__search {
-  flex: 1 1 110px;
-  min-width: 110px;
+  flex: 1 1 200px;
+  min-width: 200px;
   max-width: 280px;
 }
 
