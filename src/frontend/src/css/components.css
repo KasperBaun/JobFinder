@@ -2629,6 +2629,13 @@ button.pill--active:hover:not(:disabled) {
   color: var(--c-text-subtle);
 }
 .dedupe-group__title { color: var(--c-text); font-weight: 500; }
+.dedupe-group__source {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--c-text-subtle);
+}
 .dedupe-group__merges ul {
   list-style: disc;
   margin: 0;
