@@ -4,16 +4,14 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Shortlist-time grouping of near-duplicate roles (T-012 phase 2).** T-012 phase 1
-  (R-115) fixed the exact-key gaps — the T-011 review's named pairs now merge — but
-  title *variants* of the same ad ("Senior Software Engineer- (C#, APL)" vs
-  "Senior/Lead Software Engineer- (C#, APL)", jobindex's rewritten titles) still
-  survive, and rightly so: SimCorp posts Senior *and* Lead as two real jobs, so the
-  destructive deduper must never fuzzy-match titles. Remaining work is non-destructive:
-  group same-company similar-title entries (null location as wildcard) into one
-  shortlist slot at `BuildShortlist` time, and carry sightings on `ListingMatch` so a
-  Top-jobs card can say "also seen on jobindex". See
-  `docs/tasks/T-012-dedupe-place-key/plan.md`.
+- **Stack-token conflict guard for the probabilistic matcher (T-013 tuning).** The Aug 6
+  replay showed Sopra Steria's "Senior .Net udvikler til afdeling i vækst" vs "Senior
+  Fullstack **Java** udvikler til afdeling i vækst" at p=0.89 — Danish filler tokens
+  (til, afdeling, i, vækst) inflate title Jaccard, and only the 0.90 SameAd threshold
+  kept two different-stack roles apart. Treat conflicting stack tokens (java vs .net vs
+  python …) as disqualifying evidence like the seniority signature, so such pairs can
+  never cross into SameAd however wordy the title. See
+  `docs/tasks/T-013-probabilistic-matcher/plan.md`.
 
 - **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
