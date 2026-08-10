@@ -47,7 +47,6 @@ export const history: Messages['history'] = {
   notRecorded: 'Ikke gemt for denne søgning.',
   tabRaw: 'Alle hentede',
   tabDedupe: 'Dubletter',
-  tabDropped: 'Fjernede',
 
   noRatingsRecorded: 'Der er ikke gemt scorer for denne søgning.',
 
@@ -67,20 +66,7 @@ export const history: Messages['history'] = {
   dedupeKept: 'beholdt',
   dedupeAlsoSeen: count => count === 1 ? 'også set 1 andet sted' : `også set ${count} andre steder`,
 
-  noDroppedRecorded: 'Der er ikke gemt data om fjernede job for denne søgning.',
-  nothingRemoved: 'Intet blev fjernet i denne søgning.',
-  dropFilterAll: 'alle',
-  dropReason: {
-    disqualifier: 'dealbreaker',
-    below_min_score: 'for lav score',
-    beyond_top_n: 'uden for toplisten',
-    above_max_age: 'for gammelt',
-    missing_required_primary: 'ingen skal-have-kompetence',
-    outside_radius: 'for langt væk',
-  },
   colRating: 'Score',
-  colReason: 'Årsag',
-  colWhy: 'Hvorfor',
 
   sortBarAria: 'Antal resultater og sortering',
   sortCount: (shown, total) =>

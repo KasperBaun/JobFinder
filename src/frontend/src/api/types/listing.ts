@@ -73,21 +73,3 @@ export type ScoredEntry = {
   secondaryStackHits: string[]
 }
 
-export type DropReason =
-  | 'disqualifier'
-  | 'below_min_score'
-  | 'beyond_top_n'
-  | 'above_max_age'
-  | 'missing_required_primary'
-  | 'outside_radius'
-
-export type DroppedEntry = {
-  id: string
-  title: string
-  company?: string
-  score: number
-  reason: DropReason
-  /** English prose. Kept as the fallback for runs recorded before `contextArgs` existed. */
-  context?: string
-  contextArgs?: Record<string, unknown>
-}

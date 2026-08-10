@@ -1,6 +1,5 @@
 import type {
   DedupeGroup,
-  DroppedEntry,
   ListingMatch,
   ProviderRaw,
   ScoredEntry,
@@ -34,7 +33,6 @@ export type RunDetail = RunSummary & {
   raw?: ProviderRaw[]
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
-  dropped?: DroppedEntry[]
   timeline?: JobSearchEvent[]
 }
 

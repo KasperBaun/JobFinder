@@ -7,8 +7,8 @@ import type { TabKey } from './hash'
 type Entry = { key: TabKey; label: string; count?: number; available: boolean; title?: string }
 
 /**
- * The one chooser for which of a run's five datasets is on screen: the two primary views
- * (top jobs, all rated) and the three audit views (raw fetch, dedupe, dropped). These used to
+ * The one chooser for which of a run's four datasets is on screen: the two primary views
+ * (top jobs, all rated) and the two audit views (raw fetch, dedupe). These used to
  * be a wide segmented control plus a separate menu — two mechanisms for the same decision.
  * The trigger names the active view with its count, because a collapsed control you cannot
  * read is worse than an expanded one.
@@ -31,9 +31,8 @@ export function ViewMenu({
     { key: 'longlist',  label: t.tabAllRated, count: data.scored?.length, available: !!data.scored, title: t.tabAllRatedTitle },
   ]
   const audit: Entry[] = [
-    { key: 'raw',     label: t.tabRaw,     count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
-    { key: 'dedupe',  label: t.tabDedupe,  count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
-    { key: 'dropped', label: t.tabDropped, count: data.dropped?.length, available: !!data.dropped },
+    { key: 'raw',    label: t.tabRaw,    count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
+    { key: 'dedupe', label: t.tabDedupe, count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
   ]
   const current = [...primary, ...audit].find((e) => e.key === active) ?? primary[0]
 

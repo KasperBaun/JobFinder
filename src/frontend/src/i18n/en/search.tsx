@@ -82,8 +82,4 @@ export const search = {
   topScore: (score: string) => `top ${score}`,
 
   activityLog: (count: number) => `Activity log (${count} events)`,
-
-  topJobs: 'Top jobs',
-  loadingResults: 'Loading results…',
-  noJobsMetMinimum: 'No jobs met the minimum rating.',
 }

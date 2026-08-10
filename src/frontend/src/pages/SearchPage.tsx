@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getHistory, getProviders, getRun, getSetupStatus } from '../api/client'
+import { getHistory, getProviders, getSetupStatus } from '../api/client'
 import { useSearchRun } from '../context/SearchRunContext'
-import { ListingCard } from '../components/ListingCard'
 import { LlmModelBanner } from '../components/LlmModelBanner'
 import { SearchProgress } from '../components/SearchProgress'
 import { formatRelative } from '../utils/time'
@@ -39,22 +38,18 @@ export function SearchPage() {
 
   const succeeded = job?.state === 'succeeded'
 
-  // Collapse the steps once, the moment a run finishes, so the top-jobs list is right there. Keyed on
-  // the run id so it fires once per run and never fights the user if they re-open the steps afterward.
-  const collapsedFor = useRef<string | null>(null)
+  // The run's history page is the one results surface, so a finishing run hands over to it.
+  // Seeded with the mount-time id: a run that finished while this page was closed must not
+  // bounce the user off the search page when they come back to start a new one.
+  const navigate = useNavigate()
   const jobId = job?.id
+  const redirectedFor = useRef<string | null>(succeeded ? jobId ?? null : null)
   useEffect(() => {
-    if (succeeded && jobId && collapsedFor.current !== jobId) {
-      collapsedFor.current = jobId
-      setStepsOpen(false)
+    if (succeeded && jobId && redirectedFor.current !== jobId) {
+      redirectedFor.current = jobId
+      navigate(`/history/${jobId}`)
     }
-  }, [succeeded, jobId])
-
-  const runDetailQuery = useQuery({
-    queryKey: ['run', job?.id],
-    queryFn: () => getRun(job!.id),
-    enabled: succeeded && !!job?.id,
-  })
+  }, [succeeded, jobId, navigate])
 
   function toggleProvider(name: string) {
     const base = selectedProviders ?? enabledProviderNames
@@ -210,31 +205,6 @@ export function SearchPage() {
           stepsOpen={stepsOpen}
           onToggleSteps={() => setStepsOpen(o => !o)}
         />
-      )}
-
-      {succeeded && job && (
-        <section className="results">
-          <h2 className="results__heading">
-            {t.topJobs}{' '}
-            <span className="muted serif" style={{ fontStyle: 'italic' }}>
-              ({runDetailQuery.data?.shortlist.length ?? job.shortlistCount})
-            </span>
-          </h2>
-          {runDetailQuery.isLoading && <div className="muted">{t.loadingResults}</div>}
-          {runDetailQuery.data?.shortlist.length === 0 && (
-            <div className="muted">{t.noJobsMetMinimum}</div>
-          )}
-          <div className="listing-list">
-            {runDetailQuery.data?.shortlist.map(m => (
-              <ListingCard
-                key={m.id}
-                match={m}
-                runId={job.id}
-                breakdownEntry={runDetailQuery.data?.scored?.find(e => e.id === m.id)}
-              />
-            ))}
-          </div>
-        </section>
       )}
     </div>
   )

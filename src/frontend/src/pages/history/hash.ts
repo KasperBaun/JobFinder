@@ -1,6 +1,6 @@
-export type TabKey = 'shortlist' | 'longlist' | 'raw' | 'dedupe' | 'dropped'
+export type TabKey = 'shortlist' | 'longlist' | 'raw' | 'dedupe'
 
-const VALID: TabKey[] = ['shortlist', 'longlist', 'raw', 'dedupe', 'dropped']
+const VALID: TabKey[] = ['shortlist', 'longlist', 'raw', 'dedupe']
 
 export function parseHash(hash: string): { tab: TabKey; provider?: string } {
   const cleaned = hash.startsWith('#') ? hash.slice(1) : hash
