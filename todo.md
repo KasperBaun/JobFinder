@@ -70,6 +70,14 @@ Current status of work on `jobfinder`.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.
+- **Exact-key location reduction over-merges shared-first-city multi-site strings.** The
+  run-6 audit (T-013) caught the exact deduper merging Wolt's "Aalborg, Denmark" listing
+  with its "Aalborg, Denmark; Aarhus, …; Søborg, Denmark" listing — the first-comma-segment
+  key reduces both to `aalborg`. Distinct reqs, destructively merged, pre-dating T-013.
+  Fix belongs in `Deduper.NormaliseLocation` (site-set key for multi-site strings, as the
+  matcher already does), not the matcher. Same audit: jobsearch-dk's stripped titles with
+  no company/location merge unrelated ads by bare title — the existing jobsearch-dk parser
+  backlog item is the root fix.
 - **"New since last run" flag.** Mark listings in results/longlist that never appeared in any
   prior history run (compare canonical dedupe keys against `history/*.json`); badge + filter in
   `LonglistTable`. *(Concept from MadsLorentzen/ai-job-search `seen_jobs.json` cross-run dedupe.)*

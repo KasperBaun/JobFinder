@@ -96,3 +96,18 @@ duplicates in the *whole ranked list* fell 10 → 5, and each survivor is a deli
 keep — contradictory locations (jobindex's "Frankrig" vs Copenhagen, Manila vs
 København, Suzhou vs Bjerringbro) or unresolvable text ("Udlandet",
 "Headquarters (IT)") where merging would be a guess.
+
+A third iteration (runs `20260810-090726`/`-091401`) added the remaining evidence
+fields. **Body text** (`DescriptionSimilarity`): word-shingle containment, so a
+portal's excerpt registers against the full ad; near-copy +6, overlap +2, substantial
+disjoint −3, computed lazily only for pairs the other fields put near a boundary — and
+*suppressed entirely when two resolved places disagree*, because one employer's reqs
+share template text (SimCorp Manila must not merge into København on boilerplate).
+This settled both unresolvable-location survivors live: Saxo's "Headquarters (IT)" and
+SimCorp's "Udlandet" ads merged on their bodies, taking the ranked-list residue 5 → 3,
+all three resolved contradictions. **Company drift**: blocking widened to the first
+company token with a token-*subset* gate ("Danske Bank" ⊂ "Danske Bank Group" compares
+at −1; "Danske Bank" vs "Danske Spil" never does) — the run-6 audit found zero false
+merges from it. **Audit ordering**: possible pairs carry a `samePortal` flag and sort
+cross-portal-first then probability; the duplicates view previews the strongest 30
+with a show-all expander.

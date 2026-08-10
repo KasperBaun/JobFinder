@@ -68,6 +68,7 @@ export const history: Messages['history'] = {
   possibleHeading: count => count === 1 ? '1 mulig dublet' : `${count} mulige dubletter`,
   possibleIntro: 'Samme arbejdsgiver, lignende ordlyd — beholdt som separate opslag, fordi matchet ikke er sikkert.',
   possibleProbability: p => `sandsynlighed ${p}`,
+  possibleShowAll: count => `Vis alle ${count}`,
 
   colRating: 'Score',
 

@@ -138,6 +138,33 @@ public sealed class ProbabilisticDeduperTests
     }
 
     [Fact]
+    public void Possible_Pairs_List_CrossPortal_First_Then_By_Probability()
+    {
+        // A cross-portal pair (possible matcher miss) outranks a same-portal re-post, however
+        // certain the re-post looks.
+        var result = Merge(
+            Make("a", "Senior Engineer", "Acme", "Copenhagen"),
+            Make("b", "Senior Engineer", "Acme", "Copenhagen", portal: "portal-a", description: "x"),
+            Make("c", "Senior/Lead Platform Engineer", "Globex", "Copenhagen", portal: "p1"),
+            Make("d", "Senior Platform Engineer", "Globex", "Copenhagen", portal: "p2"));
+
+        Assert.True(result.PossibleDuplicates.Count >= 2);
+        Assert.False(result.PossibleDuplicates[0].SamePortal);
+        Assert.True(result.PossibleDuplicates[^1].SamePortal);
+    }
+
+    [Fact]
+    public void Company_Convention_Drift_Still_Merges_Via_The_Token_Block()
+    {
+        var result = Merge(
+            Make("a", "Senior Engineer", "twoday", "Copenhagen", portal: "teamtailor"),
+            Make("b", "Senior Engineer", "twoday Denmark", "København", portal: "jobindex"));
+
+        Assert.Single(result.Deduped);
+        Assert.Single(result.Merges);
+    }
+
+    [Fact]
     public void Result_Is_Independent_Of_Input_Order()
     {
         var listings = new[]

@@ -44,6 +44,8 @@ export type PossibleDuplicate = {
   keptId: string
   candidateId: string
   probability: number
+  /** An employer re-post the same-portal rule refuses to merge. Absent on older runs. */
+  samePortal?: boolean
 }
 
 export type ScoreBreakdown = {
