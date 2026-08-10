@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Jobmatch.Deduplication;
 using Jobmatch.Geo;
 using Jobmatch.Llm;
 using Jobmatch.Models;
@@ -36,9 +37,10 @@ public sealed partial class SearchService
         double minScore,
         int topN,
         RadiusFilter? radius,
-        IReadOnlySet<string> attempted)
+        IReadOnlySet<string> attempted,
+        ProbabilisticMatcher? matcher = null)
     {
-        var (shortlist, _) = BuildShortlist(scored, ranking, minScore, topN, radius);
+        var shortlist = BuildShortlist(scored, ranking, minScore, topN, radius, matcher).Shortlist;
         return [.. shortlist.Where(m => !attempted.Contains(m.Listing.Id))];
     }
 
@@ -51,11 +53,12 @@ public sealed partial class SearchService
         List<Match> scored,
         RunPrep prep,
         RadiusFilter? radius,
+        ProbabilisticMatcher matcher,
         HttpClient http,
         [EnumeratorCancellation] CancellationToken ct)
     {
         var llm = prep.Ranking.Llm;
-        var planner = new JudgePlanner(prep.Ranking, prep.MinScore, prep.TopN, radius, llm.TopN);
+        var planner = new JudgePlanner(prep.Ranking, prep.MinScore, prep.TopN, radius, llm.TopN, matcher);
         var toJudge = planner.Next(scored);
         if (toJudge.Count == 0) yield break;
 

@@ -120,6 +120,7 @@ public sealed partial class SearchService : ISearchService
 
         var scoredAll = Ranker.Score(deduped, prep.Skillset, prep.Ranking).ToList();
         var radiusFilter = RadiusFilter.Create(prep.Skillset, _gazetteer ?? Gazetteer.LoadBundled());
+        var matcher = new ProbabilisticMatcher(_gazetteer ?? Gazetteer.LoadBundled());
 
         // Optional LLM re-rank layer. Judges the listings that survive the hard filters against the
         // user's skillset + curated examples, then blends LLM and keyword scores — repeating for
@@ -129,15 +130,16 @@ public sealed partial class SearchService : ISearchService
         // budget of 50 takes ~1-2 minutes; SSE stays open but silent between passes.
         if (prep.Ranking.Llm.Enabled)
         {
-            await foreach (var evt in JudgeUntilShortlistStable(scoredAll, prep, radiusFilter, http, ct).ConfigureAwait(false))
+            await foreach (var evt in JudgeUntilShortlistStable(scoredAll, prep, radiusFilter, matcher, http, ct).ConfigureAwait(false))
                 yield return evt;
         }
 
-        var (shortlist, dropped) = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN, radiusFilter);
+        var selection = BuildShortlist(scoredAll, prep.Ranking, prep.MinScore, prep.TopN, radiusFilter, matcher);
+        var shortlist = selection.Shortlist;
         yield return new RankEvent(shortlist.Count, shortlist.Count > 0 ? shortlist[0].Score : 0.0);
 
         var listingMatches = WriteReportsAndHistory(
-            runId, prep, statuses, rawByProvider, fetched, deduped, dedupeResult.Merges, scoredAll, shortlist, dropped);
+            runId, prep, statuses, rawByProvider, fetched, deduped, dedupeResult.Merges, scoredAll, selection);
         yield return new CompleteEvent(runId, listingMatches);
     }
 

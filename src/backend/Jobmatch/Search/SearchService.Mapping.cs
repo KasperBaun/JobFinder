@@ -5,7 +5,10 @@ namespace Jobmatch.Search;
 
 public sealed partial class SearchService
 {
-    private static ListingMatch ToListingMatch(Match match, IReadOnlyDictionary<string, string> portalDisplayNames)
+    private static ListingMatch ToListingMatch(
+        Match match,
+        IReadOnlyDictionary<string, string> portalDisplayNames,
+        IReadOnlyList<ListingSighting>? sightings = null)
     {
         var l = match.Listing;
         return new ListingMatch(
@@ -26,7 +29,21 @@ public sealed partial class SearchService
             ReasoningNotes: match.Reasoning.NoteKeys,
             Description: string.IsNullOrWhiteSpace(l.Description) ? null : l.Description,
             LlmScore: match.Reasoning.LlmScore,
-            LlmReason: match.Reasoning.LlmReason);
+            LlmReason: match.Reasoning.LlmReason,
+            Sightings: sightings);
+    }
+
+    private static IReadOnlyList<ListingSighting>? ToSightings(
+        Match primary, ShortlistSelection selection, IReadOnlyDictionary<string, string> portalDisplayNames)
+    {
+        if (!selection.SightingsByPrimary.TryGetValue(primary.Listing.Id, out var absorbed)) return null;
+        return absorbed.Select(s => new ListingSighting(
+            Id: s.Match.Listing.Id,
+            Portal: s.Match.Listing.Portal,
+            PortalDisplayName: portalDisplayNames.TryGetValue(s.Match.Listing.Portal, out var dn) ? dn : s.Match.Listing.Portal,
+            Title: s.Match.Listing.Title,
+            Url: s.Match.Listing.Url.ToString(),
+            Probability: Math.Round(s.Probability, 2))).ToList();
     }
 
     private static RawListing ToRawListing(Listing l) => new(
