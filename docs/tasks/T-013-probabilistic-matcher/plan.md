@@ -19,7 +19,11 @@ field contributes hand-set log₂-odds evidence; the sum becomes a probability a
   **seniority signature** — {senior, lead, junior, student, …} tokens compared as sets,
   where a *subset* is no conflict ("Senior/Lead X" spans "Senior X"; unstated spans
   everything) but *divergent* signatures ("Senior X" vs "Lead X") cost −9, sinking any
-  title similarity short of certainty.
+  title similarity short of certainty. A **stack signature** works the same way over
+  token *families* (−9 on divergence): ".Net udvikler" vs "Java udvikler" is two jobs
+  however wordy the shared title, while C#/.NET/ASP.NET are one family so a cross-portal
+  re-title between synonyms is not punished. Ambiguous English words ("go", "c") stay
+  out of the family map — a false stack conflict silently unmerges a real duplicate.
 - **Location:** the T-012 canonical place keys. Same place +3, different −7, either side
   missing 0 — the null-location wildcard lives here, where a mistake costs nothing.
 - **Recency:** posted ≤14 days apart +1, >60 days apart −2, unknown 0.
@@ -55,9 +59,9 @@ top-25 (scratch harness, not committed):
 - 13 `Possible` pairs, all genuine judgment calls — Workday same-title/other-city reqs
   at 0.33, the same-portal "Senior X"/"X" Danske Bank pair, and Sopra Steria's
   ".Net udvikler" vs "Fullstack **Java** udvikler" at 0.89: Danish filler tokens (til,
-  afdeling, i, vækst) inflate Jaccard — a stack-token conflict guard (java vs .net as
-  disqualifying evidence, like seniority) is the obvious next tuning knob if such a pair
-  ever crosses 0.90. Recorded in todo.md.
+  afdeling, i, vækst) inflate Jaccard, and only the 0.90 threshold kept two different-
+  stack roles apart — the finding that motivated the stack-signature guard above, which
+  now sinks that pair to Distinct outright.
 
 ## Verification
 

@@ -38,6 +38,19 @@ public sealed class TitleSimilarityTests
     }
 
     [Theory]
+    [InlineData("Senior .Net udvikler til afdeling i vækst", "Senior Fullstack Java udvikler til afdeling i vækst", true)]
+    [InlineData("React Developer", "Angular Developer", true)]
+    [InlineData("Cloud Engineer (Azure)", "Cloud Engineer (AWS)", true)]
+    [InlineData("Senior C# Developer", "Senior .NET Developer", false)]
+    [InlineData("Senior Developer", "Senior .NET Developer", false)]
+    [InlineData("Full-Stack Engineer (.Net/Angular)", "Full-Stack Engineer (.Net)", false)]
+    [InlineData("Softwareudvikler", "Softwareudvikler", false)]
+    public void StackConflicts_Only_Across_Diverging_Families(string a, string b, bool conflict)
+    {
+        Assert.Equal(conflict, TitleSimilarity.StackConflicts(Tokens(a), Tokens(b)));
+    }
+
+    [Theory]
     [InlineData("Senior Engineer", "Lead Engineer", true)]
     [InlineData("Junior Developer", "Senior Developer", true)]
     [InlineData("Senior Engineer", "Senior/Lead Engineer", false)]

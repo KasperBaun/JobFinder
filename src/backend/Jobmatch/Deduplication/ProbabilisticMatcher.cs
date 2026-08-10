@@ -32,6 +32,7 @@ public sealed class ProbabilisticMatcher(Gazetteer? gazetteer = null)
     private const double SimilarJaccard = 0.65;
     private const double WeakJaccard = 0.45;
     private const double SeniorityConflictPenalty = -9;
+    private const double StackConflictPenalty = -9;
     private const double LocationAgrees = 3;
     private const double LocationDiffers = -7;
     private const double RecencyClose = 1;
@@ -76,6 +77,7 @@ public sealed class ProbabilisticMatcher(Gazetteer? gazetteer = null)
             _ => TitleDifferent,
         };
         if (TitleSimilarity.SeniorityConflicts(tokensA, tokensB)) evidence += SeniorityConflictPenalty;
+        if (TitleSimilarity.StackConflicts(tokensA, tokensB)) evidence += StackConflictPenalty;
         return evidence;
     }
 

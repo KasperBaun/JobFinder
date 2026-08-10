@@ -112,6 +112,32 @@ public sealed class ProbabilisticMatcherTests
     }
 
     [Fact]
+    public void Compare_Diverging_Stacks_Are_Distinct_Despite_Wordy_Title_Overlap()
+    {
+        // The Aug 6 near-miss: Danish filler tokens (til, afdeling, i, vækst) inflated Jaccard
+        // to p=0.89 for a .Net role vs a Java role. The stack guard sinks it outright.
+        var verdict = Matcher.Compare(
+            Make("Senior .Net udvikler til afdeling i vækst", "Sopra Steria", "København", portal: "portal-a"),
+            Make("Senior Fullstack Java udvikler til afdeling i vækst", "Sopra Steria", "København", "https://b.com/2", portal: "portal-b"));
+        Assert.Equal(MatchBand.Distinct, verdict.Band);
+    }
+
+    [Fact]
+    public void Compare_CSharp_And_DotNet_Are_The_Same_Family()
+    {
+        // C#/.NET is one family, so no stack penalty applies — unlike C#/Java, where it does.
+        // (The pair still lands Distinct on its own: a three-word title differing by a token is
+        // genuinely weak evidence; what matters is the guard not firing on synonyms.)
+        var sameFamily = Matcher.Compare(
+            Make("Senior C# Developer", "Acme", "Copenhagen"),
+            Make("Senior .NET Developer", "Acme", "Copenhagen", "https://b.com/2", portal: "portal-b"));
+        var crossFamily = Matcher.Compare(
+            Make("Senior C# Developer", "Acme", "Copenhagen"),
+            Make("Senior Java Developer", "Acme", "Copenhagen", "https://c.com/3", portal: "portal-b"));
+        Assert.True(sameFamily.TitleEvidence > crossFamily.TitleEvidence);
+    }
+
+    [Fact]
     public void Compare_Unrelated_Titles_Same_Company_Is_Distinct()
     {
         var verdict = Matcher.Compare(
