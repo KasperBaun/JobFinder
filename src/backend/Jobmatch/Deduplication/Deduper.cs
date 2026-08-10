@@ -124,6 +124,14 @@ public static class Deduper
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;
         var t = LocationDanishRemoteSuffix.Replace(input.Trim(), string.Empty);
+
+        // A multi-site string must never share a key with one of its sites: "Aalborg, Denmark;
+        // Aarhus, …" is a different posting than "Aalborg, Denmark", and the first-segment cut
+        // below would reduce both to the same city (caught live in the T-013 run-6 audit). The
+        // full string is resolved first; only a single-site string takes the reduction path.
+        var fullSites = gazetteer?.ResolveSites(t, null);
+        if (fullSites is { Count: > 1 }) return SiteSetKey(fullSites);
+
         var commaIdx = t.IndexOf(',');
         if (commaIdx > 0) t = t[..commaIdx];
         t = LocationDistrictSuffix.Replace(t, string.Empty);
@@ -136,14 +144,14 @@ public static class Deduper
         // whichever site a portal happened to list first. The '#' suffix keeps a resolved key
         // from ever colliding with an unresolved raw string.
         var sites = gazetteer?.ResolveSites(t, null);
-        if (sites is { Count: > 0 })
-        {
-            return string.Join("+", sites
-                .Select(p => $"{Normalise(p.Name)} #{p.CountryCode.ToLowerInvariant()}")
-                .Distinct(StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal));
-        }
+        if (sites is { Count: > 0 }) return SiteSetKey(sites);
 
         return Normalise(t);
     }
+
+    private static string SiteSetKey(IReadOnlyList<Geo.GeoPlace> sites) =>
+        string.Join("+", sites
+            .Select(p => $"{Normalise(p.Name)} #{p.CountryCode.ToLowerInvariant()}")
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal));
 }
