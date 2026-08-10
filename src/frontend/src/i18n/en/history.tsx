@@ -65,6 +65,9 @@ export const history = {
   noDuplicatesMerged: 'No duplicates were merged in this search.',
   dedupeKept: 'kept',
   dedupeAlsoSeen: (count: number) => count === 1 ? 'also seen in 1 other place' : `also seen in ${count} other places`,
+  possibleHeading: (count: number) => count === 1 ? '1 possible duplicate' : `${count} possible duplicates`,
+  possibleIntro: 'Same employer, similar wording — kept as separate listings because the match is not certain.',
+  possibleProbability: (p: string) => `probability ${p}`,
 
   colRating: 'Rating',
 

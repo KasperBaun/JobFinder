@@ -79,6 +79,24 @@ export function ListingCard({ match, runId, mark, markReason, markStatus, breakd
         </div>
       )}
 
+      {match.sightings && match.sightings.length > 0 && (
+        <div className="listing-card__sightings">
+          <span className="listing-card__sightings-label">{t.alsoSeenOn}</span>
+          {match.sightings.map(s => (
+            <a
+              key={s.id}
+              href={s.url}
+              target="_blank"
+              rel="noreferrer"
+              className="listing-card__sighting"
+              title={s.title}
+            >
+              {s.portalDisplayName ?? s.portal} ↗
+            </a>
+          ))}
+        </div>
+      )}
+
       <footer className="listing-card__footer">
         <MarkButton runId={runId} listingId={match.id} current={mark} reason={markReason} />
         <StatusSelect runId={runId} listingId={match.id} current={markStatus} />
