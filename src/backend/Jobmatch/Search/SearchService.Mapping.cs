@@ -1,3 +1,4 @@
+using Jobmatch.Deduplication;
 using Jobmatch.Models;
 using Match = Jobmatch.Models.Match;
 
@@ -5,7 +6,10 @@ namespace Jobmatch.Search;
 
 public sealed partial class SearchService
 {
-    private static ListingMatch ToListingMatch(Match match, IReadOnlyDictionary<string, string> portalDisplayNames)
+    private static ListingMatch ToListingMatch(
+        Match match,
+        IReadOnlyDictionary<string, string> portalDisplayNames,
+        IReadOnlyList<ListingSighting>? sightings = null)
     {
         var l = match.Listing;
         return new ListingMatch(
@@ -26,7 +30,21 @@ public sealed partial class SearchService
             ReasoningNotes: match.Reasoning.NoteKeys,
             Description: string.IsNullOrWhiteSpace(l.Description) ? null : l.Description,
             LlmScore: match.Reasoning.LlmScore,
-            LlmReason: match.Reasoning.LlmReason);
+            LlmReason: match.Reasoning.LlmReason,
+            Sightings: sightings);
+    }
+
+    private static IReadOnlyList<ListingSighting>? ToSightings(
+        Match primary, ProbabilisticDedupeResult probDedupe, IReadOnlyDictionary<string, string> portalDisplayNames)
+    {
+        if (!probDedupe.SightingsByCanonical.TryGetValue(primary.Listing.Id, out var absorbed)) return null;
+        return absorbed.Select(s => new ListingSighting(
+            Id: s.Listing.Id,
+            Portal: s.Listing.Portal,
+            PortalDisplayName: portalDisplayNames.TryGetValue(s.Listing.Portal, out var dn) ? dn : s.Listing.Portal,
+            Title: s.Listing.Title,
+            Url: s.Listing.Url.ToString(),
+            Probability: s.Probability)).ToList();
     }
 
     private static RawListing ToRawListing(Listing l) => new(

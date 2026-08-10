@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getApplications } from '../api/client'
 import { StatusSelect } from '../components/StatusSelect'
+import { SortableHeader } from '../components/longlist/SortableHeader'
 import { formatAbsolute, formatRelative } from '../utils/time'
 import type { ApplicationEntry, ApplicationStatus } from '../api/types'
 import { dec, n, useT } from '../i18n'
@@ -72,15 +73,9 @@ export function ApplicationsPage() {
                 <th>{t.colSource}</th>
                 <th>{t.colRating}</th>
                 <th>{t.colStatus}</th>
-                <th
-                  className={`sortable ${sort !== 'none' ? 'sortable--active' : ''}`}
-                  aria-sort={sort === 'none' ? undefined : sort === 'desc' ? 'descending' : 'ascending'}
-                  onClick={cycleSort}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                >
+                <SortableHeader dir={sort === 'none' ? undefined : sort} onActivate={cycleSort}>
                   {t.colStatusSet}
-                  {sort !== 'none' && <span aria-hidden> {sort === 'desc' ? '↓' : '↑'}</span>}
-                </th>
+                </SortableHeader>
                 <th>{t.colYourRating}</th>
                 <th>{t.colFromSearch}</th>
               </tr>

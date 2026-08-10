@@ -1,7 +1,7 @@
 {
   "name": "jobfinder",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Local-first job aggregator. Top-level convenience scripts that wrap dotnet + npm.",
   "scripts": {
     "build": "dotnet build src/Jobmatch.slnx -c Release -p:BuildGui=true",

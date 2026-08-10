@@ -4,6 +4,18 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
+- **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
+  passes with zero errors and nine warnings, and CI now runs it. Seven are
+  `react-hooks/set-state-in-effect`: `MarkButton`, `StatusSelect` and `MarkWhy` reset optimistic
+  state from an effect when the server value changes, `I18nProvider` mirrors its pinned locale,
+  and `SetupPage`/`SkillsetPage`/`HistoryListView` seed form or selection state from a query.
+  Each is the "sync external value into local state" pattern the rule discourages in favour of
+  derived state or a `key`; unwinding them is a behavioural change per call site, not a lint fix,
+  so the rule is set to `warn` with that noted in `eslint.config.js`. The other two are
+  `react-refresh/only-export-components` (`SecretsCard`, `SearchRunContext` export non-components
+  alongside components — only affects HMR granularity). `rules-of-hooks` is an **error** and the
+  tree is clean; that is the rule the config exists for.
+
 - **Radius-filter residuals (R-105), each measured and deliberately left.** From the
   2026-08-05 verification pass over a real 2 330-listing corpus; frequency in that
   corpus in brackets. *(a)* A bare four-digit token in a string where nothing else
@@ -54,7 +66,9 @@ Current status of work on `jobfinder`.
 - **`jobsearch-dk` company/location parser.** Items expose only `title` /
   `description` / `link` — no `pubDate`, no structured company/location.
   Add a parser that extracts company/location from the title or URL slug
-  `/{role}/{city}/{id}`.
+  `/{role}/{city}/{id}`. Bite: the T-013 run-6 audit showed its stripped generic
+  titles ("Revisor i", no company, no location) exact-merging unrelated ads by
+  bare title — the parser is the root fix for that dedupe hazard too.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.

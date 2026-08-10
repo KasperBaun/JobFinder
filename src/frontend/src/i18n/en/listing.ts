@@ -4,6 +4,7 @@ export const listing = {
   favoriteBadge: '★ Favorite',
   favoriteTitle: 'One of your favorite companies — rating boosted',
   openPosting: 'Open job posting →',
+  alsoSeenOn: 'Also seen on',
 
   facts: {
     mustHave: 'Must-have',
@@ -45,11 +46,12 @@ export const listing = {
 
   markGood: 'Good match',
   markBad: 'Not a match',
-  markUnset: 'Rate this job',
+  markGroupAria: 'Rate this job',
   markTooltip: {
-    unset: 'Rate this job. Your ratings help jobfinder find better jobs next time. Click for a good match.',
-    good: 'Marked as a Good match. Click to flip to Not a match.',
-    bad: 'Marked as Not a match. Click to clear the rating.',
+    good: 'Mark as a good match. Your ratings help jobfinder find better jobs next time.',
+    goodActive: 'Marked as a good match. Click to clear the rating.',
+    bad: 'Mark as not a match. Your ratings help jobfinder find better jobs next time.',
+    badActive: 'Marked as not a match. Click to clear the rating.',
   },
   markFailed: 'Mark failed',
 

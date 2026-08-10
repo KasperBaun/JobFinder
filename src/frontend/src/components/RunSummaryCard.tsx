@@ -1,6 +1,6 @@
 import type { RunSummary } from '../api/types'
 import { formatRelative, formatAbsolute } from '../utils/time'
-import { dec, useT } from '../i18n'
+import { dec, n, useT } from '../i18n'
 
 interface Props {
   run: RunSummary
@@ -34,15 +34,15 @@ export function RunSummaryCard({ run }: Props) {
         </div>
         <div className="stat">
           <dt>{t.runJobsFound}</dt>
-          <dd><span className="stat__num">{run.fetchedCount}</span></dd>
+          <dd><span className="stat__num">{n(run.fetchedCount)}</span></dd>
         </div>
         <div className="stat">
           <dt>{t.runUniqueJobs}</dt>
-          <dd><span className="stat__num">{run.dedupedCount}</span></dd>
+          <dd><span className="stat__num">{n(run.dedupedCount)}</span></dd>
         </div>
         <div className="stat">
           <dt>{t.runTopJobs}</dt>
-          <dd><span className="stat__num">{run.shortlistCount}</span></dd>
+          <dd><span className="stat__num">{n(run.shortlistCount)}</span></dd>
         </div>
         <div className="stat">
           <dt>{t.runBestRating}</dt>
@@ -50,7 +50,7 @@ export function RunSummaryCard({ run }: Props) {
         </div>
         <div className="stat">
           <dt>{t.runGoodMatches}</dt>
-          <dd><span className="stat__num">{run.goodMarks}</span> / {run.shortlistCount}</dd>
+          <dd><span className="stat__num">{n(run.goodMarks)}</span> / {n(run.shortlistCount)}</dd>
         </div>
       </dl>
     </div>

@@ -16,12 +16,12 @@ Endpoint → Handler → Service
 Never skip a layer, never mix concerns across layers. This skill is the guide to write
 that shape and the checklist to verify it before you call the work done.
 
-> **Local reference wins.** The project's authoritative rules live in
-> [`src/backend/rules/`](../../../src/backend/rules/); jobfinder-specific exceptions are
-> enumerated in [`CLAUDE.md`](../../../CLAUDE.md) → *"Backend rules: adopted vs. exceptions"*.
-> This skill is the portable navigator — when it disagrees with `src/backend/rules/` or
-> CLAUDE.md, those win. The full generic rule set travels in
-> [`reference/`](reference/README.md).
+> **This skill is the authority on backend conventions.** The full rule set lives in
+> [`reference/`](reference/README.md); the jobfinder-specific carve-outs are the
+> deviations table below. It replaced the former `src/backend/rules/` tree — do not
+> recreate that folder. [`CLAUDE.md`](../../../CLAUDE.md) still wins on product
+> decisions and repo-wide workflow (its *"Backend rules: adopted vs. exceptions"*
+> section is a summary pointing here).
 
 ## Jobfinder deviations from the generic rules (read first)
 
@@ -129,7 +129,7 @@ Committed `src/backend/config/*.example.*` files are templates copied on first u
 | Splitting an oversized file | [`reference/conventions/refactoring-strategy.md`](reference/conventions/refactoring-strategy.md) |
 
 Architecture index: [`reference/README.md`](reference/README.md). Project-specific
-conventions: [`src/backend/rules/`](../../../src/backend/rules/).
+context: [`CLAUDE.md`](../../../CLAUDE.md).
 
 ## Completion checklist
 
@@ -165,6 +165,5 @@ When a check flags a file, open it — do not skip.
 | "Bumping Hangfire retries back to 3 is safer" | The search job is `Attempts = 1` on purpose — a full re-run is expensive, per-provider failures degrade gracefully inside the pipeline. Don't change it. |
 
 **Violating the letter of these rules is violating the spirit of them.** If a check is
-genuinely ambiguous, read the relevant [`reference/`](reference/README.md) file, or
-[`src/backend/rules/`](../../../src/backend/rules/), or CLAUDE.md — those are the source
-of truth.
+genuinely ambiguous, read the relevant [`reference/`](reference/README.md) file or
+CLAUDE.md — those are the source of truth.

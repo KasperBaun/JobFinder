@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.5.${{ github.run_number }}
+  VERSION: 0.6.${{ github.run_number }}
 
 jobs:
   cleanup:
@@ -59,6 +59,7 @@ jobs:
       - name: Test frontend
         run: |
           npm --prefix src/frontend ci
+          npm --prefix src/frontend run lint
           npm --prefix src/frontend run test
 
       - name: Publish backend (self-contained win-x64, GUI bundled)
@@ -114,6 +115,7 @@ jobs:
       - name: Test frontend
         run: |
           npm --prefix src/frontend ci
+          npm --prefix src/frontend run lint
           npm --prefix src/frontend run test
 
       - name: Publish backend (self-contained linux-x64, GUI bundled)

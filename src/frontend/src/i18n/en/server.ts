@@ -58,17 +58,4 @@ export const server = {
     locationUnknownRemoteMismatch: () => 'Location not stated; remote setup doesn’t match.',
     agePenalty: (a: ServerArgs) => `Posted ${num(a, 'days')} days ago — rating reduced for age.`,
   } satisfies Record<string, ServerRenderer>,
-
-  // Keyed by DropReason — the reason value is already the message key.
-  dropContext: {
-    above_max_age: (a: ServerArgs) => `posted ${num(a, 'days')} days ago, max ${num(a, 'maxAge')}`,
-    missing_required_primary: () => 'no primary-stack keyword matched in title or description',
-    disqualifier: (a: ServerArgs) => `matched disqualifier: ${list(a, 'hits').join(', ')}`,
-    below_min_score: (a: ServerArgs) =>
-      `score ${dec(num(a, 'score'), 2)} below threshold ${dec(num(a, 'threshold'), 2)}`,
-    beyond_top_n: (a: ServerArgs) =>
-      `rank ${num(a, 'rank')} of ${num(a, 'total')} (top ${num(a, 'topN')} taken)`,
-    outside_radius: (a: ServerArgs) =>
-      `located ~${n(num(a, 'km'))} km away (${str(a, 'place')}), max ${n(num(a, 'maxKm'))} km`,
-  } satisfies Record<string, ServerRenderer>,
 }
