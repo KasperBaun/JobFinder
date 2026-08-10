@@ -35,6 +35,7 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 ## Running a search
 
 - **R-030** The system should run a search across all enabled providers in a single user-initiated action, deduplicate, rank against the user's skillset, and produce a top-N shortlist.
+- **R-115** The system should recognise the same ad across portals whose only differences are spelling conventions, and merge it before ranking: locations resolve through the bundled gazetteer so language variants and folded spellings of the same place ("Copenhagen V, Denmark" / "København", "Århus" / "Aarhus C") compare equal — a multi-site listing matching on its sorted site set, never on whichever site is listed first — HTML-entity depth in any key field ("&amp;amp;" / "&amp;" / "&") never splits a key, and a listing absorbed by one key still registers its other key so a third portal's copy cannot survive as a phantom. Title text itself is never fuzzy-matched: near-identical titles (Senior vs Lead) are distinct jobs, and the destructive merge must not gamble on them.
 - **R-031** The system should keep one provider's failure (timeout, rate limit, parse error) from killing the rest of the run.
 - **R-032** The system should persist raw per-provider results so a run can be re-examined or re-ranked without re-fetching.
 - **R-033** The system should write a human-readable top-N report alongside the machine-readable ranked output.

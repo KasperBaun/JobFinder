@@ -4,13 +4,16 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Cross-portal duplicates reach the Top-jobs shortlist.** The T-011 review of run
-  `20260806-113247-dd3dc6` found "Senior Software Engineer C#/.net" at #1 *and* #2
-  (danske bank via oracle vs jobindex) and the SimCorp .Net/Angular role three times in
-  the top 20 — same employer, same role, but title/URL differ per portal so dedupe
-  misses them. Hurts the "would the user take one of the top-10" metric more than any
-  styling issue; needs a fuzzier same-employer+similar-title pass (or shortlist-time
-  grouping), not a GUI fix. See `docs/tasks/T-011-results-polish/plan.md`.
+- **Shortlist-time grouping of near-duplicate roles (T-012 phase 2).** T-012 phase 1
+  (R-115) fixed the exact-key gaps — the T-011 review's named pairs now merge — but
+  title *variants* of the same ad ("Senior Software Engineer- (C#, APL)" vs
+  "Senior/Lead Software Engineer- (C#, APL)", jobindex's rewritten titles) still
+  survive, and rightly so: SimCorp posts Senior *and* Lead as two real jobs, so the
+  destructive deduper must never fuzzy-match titles. Remaining work is non-destructive:
+  group same-company similar-title entries (null location as wildcard) into one
+  shortlist slot at `BuildShortlist` time, and carry sightings on `ListingMatch` so a
+  Top-jobs card can say "also seen on jobindex". See
+  `docs/tasks/T-012-dedupe-place-key/plan.md`.
 
 - **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
