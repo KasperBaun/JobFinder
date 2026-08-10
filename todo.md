@@ -4,15 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Stack-token conflict guard for the probabilistic matcher (T-013 tuning).** The Aug 6
-  replay showed Sopra Steria's "Senior .Net udvikler til afdeling i vækst" vs "Senior
-  Fullstack **Java** udvikler til afdeling i vækst" at p=0.89 — Danish filler tokens
-  (til, afdeling, i, vækst) inflate title Jaccard, and only the 0.90 SameAd threshold
-  kept two different-stack roles apart. Treat conflicting stack tokens (java vs .net vs
-  python …) as disqualifying evidence like the seniority signature, so such pairs can
-  never cross into SameAd however wordy the title. See
-  `docs/tasks/T-013-probabilistic-matcher/plan.md`.
-
 - **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
   `react-hooks/set-state-in-effect`: `MarkButton`, `StatusSelect` and `MarkWhy` reset optimistic
