@@ -28,4 +28,7 @@ public sealed record ListingMatch(
     // The LLM judge's verdict for the AI row on the card. Null when the judge didn't run and on
     // runs recorded before the fields existed (those carry it inside Reasoning as "AI review: …").
     double? LlmScore = null,
-    string? LlmReason = null);
+    string? LlmReason = null,
+    // Other portals' copies of this ad, grouped into this slot by the probabilistic matcher
+    // (R-117). Null when nothing was grouped and on runs recorded before the field existed.
+    IReadOnlyList<ListingSighting>? Sightings = null);

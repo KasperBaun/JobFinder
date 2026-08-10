@@ -30,4 +30,5 @@ public sealed record RunDetail(
     IReadOnlyList<JobSearchEvent>? Timeline = null,
     IReadOnlyDictionary<string, string>? MarkReasons = null,
     IReadOnlyDictionary<string, string>? MarkStatuses = null,
-    IReadOnlyDictionary<string, DateTimeOffset>? MarkStatusAt = null);
+    IReadOnlyDictionary<string, DateTimeOffset>? MarkStatusAt = null,
+    IReadOnlyList<PossibleDuplicate>? PossibleDuplicates = null);
