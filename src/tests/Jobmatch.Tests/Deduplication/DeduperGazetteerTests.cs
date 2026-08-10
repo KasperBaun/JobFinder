@@ -16,6 +16,7 @@ public sealed class DeduperGazetteerTests
     [
         new GazetteerEntry("Copenhagen", ["København", "Kbh", "Cph"], 55.67594, 12.56553, "DK", GeoPlaceType.City, 1_153_615),
         new GazetteerEntry("Århus", ["Arhus", "Aarhus"], 56.15674, 10.21076, "DK", GeoPlaceType.City, 285_273),
+        new GazetteerEntry("Aalborg", [], 57.04880, 9.92170, "DK", GeoPlaceType.City, 120_000),
         new GazetteerEntry("Berlin", [], 52.52437, 13.41053, "DE", GeoPlaceType.City, 3_426_354),
     ]);
 
@@ -145,6 +146,41 @@ public sealed class DeduperGazetteerTests
         var group = Assert.Single(result.Merges);
         Assert.Equal(a.Id, group.CanonicalId);
         Assert.Equal(2, group.MergedFromIds.Count);
+    }
+
+    [Fact]
+    public void Deduplicate_CommaSeparated_MultiSite_List_Never_Shares_A_Key_With_One_Of_Its_Sites()
+    {
+        // Caught live (T-013 run-6 audit): Wolt's Aalborg-only posting exact-merged with its
+        // five-city posting because the first-comma cut reduced both keys to "aalborg".
+        var single = Make("wolt", "Grocery Associate (under 18 years old)", "Wolt",
+            "https://wolt.com/jobs/6884794", location: "Aalborg, Denmark");
+        var multi = Make("wolt", "Grocery Associate (under 18 years old)", "Wolt",
+            "https://wolt.com/jobs/6693554",
+            location: "Aalborg, Denmark; Aarhus, Denmark; Copenhagen, Denmark");
+
+        Assert.Equal(2, Deduper.Deduplicate([single, multi], Gaz).Deduped.Count);
+    }
+
+    [Fact]
+    public void Deduplicate_Identical_MultiSite_Lists_Still_Merge_Regardless_Of_Order()
+    {
+        var a = Make("a", "Grocery Associate", "Wolt", "https://a.com/1",
+            location: "Aalborg, Denmark; Copenhagen, Denmark");
+        var b = Make("b", "Grocery Associate", "Wolt", "https://b.com/1",
+            location: "Copenhagen, Denmark; Aalborg, Denmark");
+
+        Assert.Single(Deduper.Deduplicate([a, b], Gaz).Deduped);
+    }
+
+    [Fact]
+    public void NormaliseLocation_SingleSite_CityCountry_Still_Takes_The_Reduced_Path()
+    {
+        // "Copenhagen V, Denmark" must keep reducing to the bare city — the multi-site guard
+        // must not see the country suffix as a second site.
+        Assert.Equal(
+            Deduper.NormaliseLocation("København", Gaz),
+            Deduper.NormaliseLocation("Copenhagen, Denmark", Gaz));
     }
 
     [Fact]

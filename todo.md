@@ -4,17 +4,6 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Shortlist-time grouping of near-duplicate roles (T-012 phase 2).** T-012 phase 1
-  (R-115) fixed the exact-key gaps — the T-011 review's named pairs now merge — but
-  title *variants* of the same ad ("Senior Software Engineer- (C#, APL)" vs
-  "Senior/Lead Software Engineer- (C#, APL)", jobindex's rewritten titles) still
-  survive, and rightly so: SimCorp posts Senior *and* Lead as two real jobs, so the
-  destructive deduper must never fuzzy-match titles. Remaining work is non-destructive:
-  group same-company similar-title entries (null location as wildcard) into one
-  shortlist slot at `BuildShortlist` time, and carry sightings on `ListingMatch` so a
-  Top-jobs card can say "also seen on jobindex". See
-  `docs/tasks/T-012-dedupe-place-key/plan.md`.
-
 - **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
   `react-hooks/set-state-in-effect`: `MarkButton`, `StatusSelect` and `MarkWhy` reset optimistic
@@ -77,7 +66,9 @@ Current status of work on `jobfinder`.
 - **`jobsearch-dk` company/location parser.** Items expose only `title` /
   `description` / `link` — no `pubDate`, no structured company/location.
   Add a parser that extracts company/location from the title or URL slug
-  `/{role}/{city}/{id}`.
+  `/{role}/{city}/{id}`. Bite: the T-013 run-6 audit showed its stripped generic
+  titles ("Revisor i", no company, no location) exact-merging unrelated ads by
+  bare title — the parser is the root fix for that dedupe hazard too.
 - **Remove migration shim.** `PortalsMigrationShim.RunIfNeeded` runs on every
   Gui startup. After all known users have run the new build at least once,
   delete the shim, its tests, and the YAML loader's only remaining caller path.

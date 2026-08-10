@@ -113,13 +113,19 @@ public sealed partial class SearchService : ISearchService
         await foreach (var evt in FetchAll(prep.Enabled, fetchHttp, statuses, rawByProvider, fetched, ct).ConfigureAwait(false))
             yield return evt;
 
-        var dedupeResult = Deduper.Deduplicate(fetched, _gazetteer ?? Gazetteer.LoadBundled());
-        var deduped = dedupeResult.Deduped;
+        // Two dedupe passes before anything is ranked (R-115, R-117): the exact-key merge, then
+        // the probabilistic same-ad merge on its survivors — so no duplicate ad reaches the
+        // scored list, the LLM judge budget, or the shortlist.
+        var gazetteer = _gazetteer ?? Gazetteer.LoadBundled();
+        var exactDedupe = Deduper.Deduplicate(fetched, gazetteer);
+        var probDedupe = ProbabilisticDeduper.Merge(exactDedupe.Deduped, new ProbabilisticMatcher(gazetteer));
+        var deduped = probDedupe.Deduped;
+        var dedupeMerges = exactDedupe.Merges.Concat(probDedupe.Merges).ToList();
         yield return new DedupeEvent(deduped.Count);
         JsonReportWriter.WriteListings(deduped, _ctx.AllListingsPath);
 
         var scoredAll = Ranker.Score(deduped, prep.Skillset, prep.Ranking).ToList();
-        var radiusFilter = RadiusFilter.Create(prep.Skillset, _gazetteer ?? Gazetteer.LoadBundled());
+        var radiusFilter = RadiusFilter.Create(prep.Skillset, gazetteer);
 
         // Optional LLM re-rank layer. Judges the listings that survive the hard filters against the
         // user's skillset + curated examples, then blends LLM and keyword scores — repeating for
@@ -137,7 +143,7 @@ public sealed partial class SearchService : ISearchService
         yield return new RankEvent(shortlist.Count, shortlist.Count > 0 ? shortlist[0].Score : 0.0);
 
         var listingMatches = WriteReportsAndHistory(
-            runId, prep, statuses, rawByProvider, fetched, deduped, dedupeResult.Merges, scoredAll, shortlist, dropped);
+            runId, prep, statuses, rawByProvider, fetched, deduped, dedupeMerges, scoredAll, shortlist, dropped, probDedupe);
         yield return new CompleteEvent(runId, listingMatches);
     }
 

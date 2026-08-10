@@ -32,7 +32,8 @@ export function ViewMenu({
   ]
   const audit: Entry[] = [
     { key: 'raw',    label: t.tabRaw,    count: data.raw?.reduce((n, p) => n + p.listings.length, 0), available: !!data.raw },
-    { key: 'dedupe', label: t.tabDedupe, count: data.dedupeMerges?.length, available: !!data.dedupeMerges },
+    // The count is what the view lists: exact merges plus the matcher's possible pairs (R-117).
+    { key: 'dedupe', label: t.tabDedupe, count: data.dedupeMerges ? data.dedupeMerges.length + (data.possibleDuplicates?.length ?? 0) : undefined, available: !!data.dedupeMerges },
   ]
   const current = [...primary, ...audit].find((e) => e.key === active) ?? primary[0]
 
