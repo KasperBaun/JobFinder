@@ -28,8 +28,7 @@ public sealed partial class SearchService
         double minScore,
         int topN,
         RadiusFilter? radius,
-        int firstPassN,
-        Deduplication.ProbabilisticMatcher? matcher = null)
+        int firstPassN)
     {
         internal const int MaxPasses = 4;
 
@@ -48,7 +47,7 @@ public sealed partial class SearchService
 
             var candidates = Pass == 0
                 ? SelectJudgeCandidates(scored, ranking, radius, firstPassN)
-                : SelectUnjudgedShortlist(scored, ranking, minScore, topN, radius, _attempted, matcher);
+                : SelectUnjudgedShortlist(scored, ranking, minScore, topN, radius, _attempted);
             if (candidates.Count > _remaining) candidates = [.. candidates.Take(_remaining)];
             if (candidates.Count == 0) return [];
 

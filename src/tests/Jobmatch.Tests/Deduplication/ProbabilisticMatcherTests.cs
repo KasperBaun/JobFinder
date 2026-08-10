@@ -10,7 +10,14 @@ public sealed class ProbabilisticMatcherTests
     private static readonly Gazetteer Gaz = Gazetteer.FromEntries(
     [
         new GazetteerEntry("Copenhagen", ["København", "Kbh", "Cph"], 55.67594, 12.56553, "DK", GeoPlaceType.City, 1_153_615),
+        new GazetteerEntry("København Ø", ["2100"], 55.70998, 12.57388, "DK", GeoPlaceType.Postal, 0),
+        new GazetteerEntry("København V", ["1550"], 55.67244, 12.56124, "DK", GeoPlaceType.Postal, 0),
+        new GazetteerEntry("Århus", ["Arhus", "Aarhus"], 56.15674, 10.21076, "DK", GeoPlaceType.City, 285_273),
         new GazetteerEntry("Berlin", [], 52.52437, 13.41053, "DE", GeoPlaceType.City, 3_426_354),
+        new GazetteerEntry("Manila", [], 14.60420, 120.98220, "PH", GeoPlaceType.City, 1_600_000),
+        new GazetteerEntry("Denmark", ["Danmark"], 56.0, 10.0, "DK", GeoPlaceType.Country, 5_800_000),
+        new GazetteerEntry("France", ["Frankrig"], 46.0, 2.0, "FR", GeoPlaceType.Country, 67_000_000),
+        new GazetteerEntry("Lithuania", ["Litauen"], 55.0, 24.0, "LT", GeoPlaceType.Country, 2_800_000),
     ]);
 
     private static readonly ProbabilisticMatcher Matcher = new(Gaz);
@@ -98,6 +105,70 @@ public sealed class ProbabilisticMatcherTests
             Make("Platform Engineer", "Acme", "Copenhagen"),
             Make("Platform Engineer", "Acme", null, portal: "portal-b"));
         Assert.Equal(MatchBand.SameAd, verdict.Band);
+    }
+
+    [Fact]
+    public void Compare_CountryLevel_Location_Is_Compatible_With_A_City_In_It()
+    {
+        // Run-4 audit: Jyske Bank's own site says "Denmark", jobindex says "København V" —
+        // a granularity difference, not a conflict.
+        var verdict = Matcher.Compare(
+            Make("Cloud Sikkerhedsarkitekt", "Jyske Bank", "København V"),
+            Make("Cloud Sikkerhedsarkitekt", "Jyske Bank", "Denmark", "https://b.com/2", portal: "portal-b"));
+        Assert.Equal(MatchBand.SameAd, verdict.Band);
+        Assert.Equal(0, verdict.LocationEvidence);
+    }
+
+    [Fact]
+    public void Compare_MultiSite_List_Is_Compatible_With_One_Of_Its_Sites()
+    {
+        // Run-4 audit: jobindex re-lists the Danske Bank ad as "Indien, Litauen, Aarhus";
+        // the source req says "Aarhus C, Denmark".
+        var verdict = Matcher.Compare(
+            Make("Senior Software Engineer - Cloud Archive", "Danske Bank", "Indien, Litauen, Aarhus"),
+            Make("Senior Software Engineer - Cloud Archive", "Danske Bank", "Aarhus C, Denmark", "https://b.com/2", portal: "portal-b"));
+        Assert.Equal(MatchBand.SameAd, verdict.Band);
+    }
+
+    [Fact]
+    public void Compare_Nearby_Postal_And_City_Are_Compatible()
+    {
+        // Run-4 audit: cBrain's site says "Nordhavn, København Ø, Danmark", jobindex "København Ø".
+        var verdict = Matcher.Compare(
+            Make("Solution Developer", "cBrain", "Nordhavn, København Ø, Danmark"),
+            Make("Solution Developer", "cBrain", "København Ø", "https://b.com/2", portal: "portal-b"));
+        Assert.Equal(MatchBand.SameAd, verdict.Band);
+    }
+
+    [Fact]
+    public void Compare_Genuinely_Conflicting_Cities_Still_Penalise()
+    {
+        // Run-4 audit: SimCorp's Manila req is not the Copenhagen ad, whatever the title says.
+        var verdict = Matcher.Compare(
+            Make("Lead AI Agent", "SimCorp", "København"),
+            Make("Lead AI Agent", "SimCorp", "Manila", "https://b.com/2", portal: "portal-b"));
+        Assert.NotEqual(MatchBand.SameAd, verdict.Band);
+        Assert.True(verdict.LocationEvidence < 0);
+    }
+
+    [Fact]
+    public void Compare_Foreign_Country_Claim_Conflicts_With_A_Danish_City()
+    {
+        // Run-4 audit: jobindex tagged the Danske Bank ad "Frankrig"; oracle says Copenhagen.
+        var verdict = Matcher.Compare(
+            Make("AI Engineer for Agent Development", "Danske Bank", "Frankrig"),
+            Make("AI Engineer for Agent Development", "Danske Bank", "Copenhagen V, Denmark", "https://b.com/2", portal: "portal-b"));
+        Assert.NotEqual(MatchBand.SameAd, verdict.Band);
+    }
+
+    [Fact]
+    public void Compare_Unresolvable_Location_Text_Still_Conflicts()
+    {
+        // "Headquarters (IT)" resolves to nothing — compatibility cannot be established.
+        var verdict = Matcher.Compare(
+            Make("Senior Frontend Developer", "Saxo Bank", "Hellerup"),
+            Make("Senior Frontend Developer", "Saxo Bank", "Headquarters (IT)", "https://b.com/2", portal: "portal-b"));
+        Assert.NotEqual(MatchBand.SameAd, verdict.Band);
     }
 
     [Fact]

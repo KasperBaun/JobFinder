@@ -1,3 +1,4 @@
+using Jobmatch.Deduplication;
 using Jobmatch.Models;
 using Match = Jobmatch.Models.Match;
 
@@ -34,16 +35,16 @@ public sealed partial class SearchService
     }
 
     private static IReadOnlyList<ListingSighting>? ToSightings(
-        Match primary, ShortlistSelection selection, IReadOnlyDictionary<string, string> portalDisplayNames)
+        Match primary, ProbabilisticDedupeResult probDedupe, IReadOnlyDictionary<string, string> portalDisplayNames)
     {
-        if (!selection.SightingsByPrimary.TryGetValue(primary.Listing.Id, out var absorbed)) return null;
+        if (!probDedupe.SightingsByCanonical.TryGetValue(primary.Listing.Id, out var absorbed)) return null;
         return absorbed.Select(s => new ListingSighting(
-            Id: s.Match.Listing.Id,
-            Portal: s.Match.Listing.Portal,
-            PortalDisplayName: portalDisplayNames.TryGetValue(s.Match.Listing.Portal, out var dn) ? dn : s.Match.Listing.Portal,
-            Title: s.Match.Listing.Title,
-            Url: s.Match.Listing.Url.ToString(),
-            Probability: Math.Round(s.Probability, 2))).ToList();
+            Id: s.Listing.Id,
+            Portal: s.Listing.Portal,
+            PortalDisplayName: portalDisplayNames.TryGetValue(s.Listing.Portal, out var dn) ? dn : s.Listing.Portal,
+            Title: s.Listing.Title,
+            Url: s.Listing.Url.ToString(),
+            Probability: s.Probability)).ToList();
     }
 
     private static RawListing ToRawListing(Listing l) => new(

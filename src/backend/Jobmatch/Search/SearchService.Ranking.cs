@@ -1,4 +1,3 @@
-using Jobmatch.Deduplication;
 using Jobmatch.Geo;
 using Jobmatch.Models;
 using Match = Jobmatch.Models.Match;
@@ -82,24 +81,11 @@ public sealed partial class SearchService
         Context: context,
         ContextArgs: args);
 
-    /// <summary>A scored match absorbed into a shortlist slot as a sighting of the same ad.</summary>
-    internal sealed record AbsorbedSighting(Match Match, double Probability);
-
-    /// <summary>The full outcome of shortlist selection: the slots, the classified drops, which
-    /// absorbed matches sit behind which slot, and the pairs the matcher could not settle.</summary>
-    internal sealed record ShortlistSelection(
-        List<Match> Shortlist,
-        List<DroppedEntry> Dropped,
-        IReadOnlyDictionary<string, IReadOnlyList<AbsorbedSighting>> SightingsByPrimary,
-        IReadOnlyList<PossibleDuplicate> PossibleDuplicates);
-
     /// <summary>Splits scored matches into the top-N shortlist (by score) and the dropped remainder
-    /// (classified drops plus everything beyond top-N). With a matcher, a candidate that is the
-    /// same ad as an already-seated slot folds into it as a sighting (R-117) instead of taking a
-    /// slot — or, beyond the cut, instead of a beyond_top_n entry.</summary>
-    internal static ShortlistSelection BuildShortlist(
-        IReadOnlyList<Match> scoredAll, RankingConfig ranking, double minScore, int topN,
-        RadiusFilter? radius, ProbabilisticMatcher? matcher = null)
+    /// (classified drops plus everything beyond top-N). Duplicates never reach this point — both
+    /// dedupe passes (R-115, R-117) run before ranking.</summary>
+    internal static (List<Match> Shortlist, List<DroppedEntry> Dropped) BuildShortlist(
+        IReadOnlyList<Match> scoredAll, RankingConfig ranking, double minScore, int topN, RadiusFilter? radius)
     {
         var dropped = new List<DroppedEntry>();
         var passed = new List<Match>();
@@ -113,78 +99,14 @@ public sealed partial class SearchService
         }
 
         var ordered = passed.OrderByDescending(m => m.Score).ToList();
-        var shortlist = new List<Match>();
-        var overflow = new List<Match>();
-        var sightings = new Dictionary<string, List<AbsorbedSighting>>(StringComparer.Ordinal);
-        var possible = new List<PossibleDuplicate>();
-
-        foreach (var m in ordered)
+        var shortlist = ordered.Take(topN).ToList();
+        for (var i = topN; i < ordered.Count; i++)
         {
-            if (TryAbsorbAsSighting(m, shortlist, matcher, sightings, possible, dropped)) continue;
-            if (shortlist.Count < topN) shortlist.Add(m);
-            else overflow.Add(m);
+            var m = ordered[i];
+            dropped.Add(BuildDroppedEntry(m, "beyond_top_n", $"rank {i + 1} of {ordered.Count} (top {topN} taken)",
+                new Dictionary<string, object> { ["rank"] = i + 1, ["total"] = ordered.Count, ["topN"] = topN }));
         }
 
-        var total = shortlist.Count + overflow.Count;
-        for (var i = 0; i < overflow.Count; i++)
-        {
-            var rank = shortlist.Count + i + 1;
-            dropped.Add(BuildDroppedEntry(overflow[i], "beyond_top_n", $"rank {rank} of {total} (top {topN} taken)",
-                new Dictionary<string, object> { ["rank"] = rank, ["total"] = total, ["topN"] = topN }));
-        }
-
-        return new ShortlistSelection(
-            shortlist,
-            dropped,
-            sightings.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<AbsorbedSighting>)kvp.Value, StringComparer.Ordinal),
-            possible);
-    }
-
-    // A probability groups but never deletes (R-117): SameAd folds the candidate behind the slot
-    // it duplicates — recorded as a drop so the audit trail stays complete — while Possible is
-    // only noted for the duplicates view. Absorption also applies beyond the cut, so an ad seen
-    // through three portals carries all its sightings.
-    private static bool TryAbsorbAsSighting(
-        Match candidate,
-        List<Match> shortlist,
-        ProbabilisticMatcher? matcher,
-        Dictionary<string, List<AbsorbedSighting>> sightings,
-        List<PossibleDuplicate> possible,
-        List<DroppedEntry> dropped)
-    {
-        if (matcher is null) return false;
-        foreach (var slot in shortlist)
-        {
-            var verdict = matcher.Compare(slot.Listing, candidate.Listing);
-            if (verdict.Band == MatchBand.SameAd)
-            {
-                // One ad appears once per portal: when a slot has already absorbed a sighting
-                // from this portal, a second same-portal claimant is that portal's *other* req —
-                // a null-location listing wildcards every city — so it keeps its own candidacy
-                // and the pair is only recorded.
-                if (sightings.TryGetValue(slot.Listing.Id, out var list)
-                    && list.Any(s => s.Match.Listing.Portal == candidate.Listing.Portal))
-                {
-                    possible.Add(new PossibleDuplicate(slot.Listing.Id, candidate.Listing.Id, Math.Round(verdict.Probability, 2)));
-                    continue;
-                }
-                if (list is null)
-                    sightings[slot.Listing.Id] = list = [];
-                list.Add(new AbsorbedSighting(candidate, verdict.Probability));
-                dropped.Add(BuildDroppedEntry(candidate, "duplicate_of_shortlisted",
-                    FormattableString.Invariant(
-                        $"same ad as shortlisted '{slot.Listing.Title}' (probability {verdict.Probability:0.00})"),
-                    new Dictionary<string, object>
-                    {
-                        ["ofId"] = slot.Listing.Id,
-                        ["ofTitle"] = slot.Listing.Title,
-                        ["probability"] = Math.Round(verdict.Probability, 2),
-                    }));
-                return true;
-            }
-            if (verdict.Band == MatchBand.Possible)
-                possible.Add(new PossibleDuplicate(slot.Listing.Id, candidate.Listing.Id, Math.Round(verdict.Probability, 2)));
-        }
-        return false;
+        return (shortlist, dropped);
     }
 }

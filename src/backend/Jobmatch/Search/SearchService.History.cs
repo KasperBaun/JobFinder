@@ -22,9 +22,10 @@ public sealed partial class SearchService
         IReadOnlyList<Listing> deduped,
         IReadOnlyList<DedupeGroup> dedupeMerges,
         IReadOnlyList<Match> scoredAll,
-        ShortlistSelection selection)
+        IReadOnlyList<Match> shortlist,
+        IReadOnlyList<DroppedEntry> dropped,
+        ProbabilisticDedupeResult probDedupe)
     {
-        var shortlist = selection.Shortlist;
         JsonReportWriter.WriteMatches(shortlist, _ctx.RankedListingsPath);
         var mdTitle = $"Top matches — {prep.Skillset.Name} — {prep.StartedAt:yyyy-MM-dd HH:mm} UTC";
         MarkdownReportWriter.WriteMatches(shortlist, _ctx.TopJobsPath, mdTitle);
@@ -34,7 +35,7 @@ public sealed partial class SearchService
             p => string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name : p.DisplayName!,
             StringComparer.Ordinal);
         var listingMatches = shortlist
-            .Select(m => ToListingMatch(m, portalDisplayNames, ToSightings(m, selection, portalDisplayNames)))
+            .Select(m => ToListingMatch(m, portalDisplayNames, ToSightings(m, probDedupe, portalDisplayNames)))
             .ToList();
 
         var rawSection = rawByProvider
@@ -53,8 +54,8 @@ public sealed partial class SearchService
             rawSection,
             dedupeMerges,
             scoredSection,
-            selection.Dropped,
-            selection.PossibleDuplicates);
+            dropped,
+            probDedupe.PossibleDuplicates);
 
         return listingMatches;
     }
