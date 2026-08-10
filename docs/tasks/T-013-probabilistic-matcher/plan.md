@@ -61,7 +61,19 @@ top-25 (scratch harness, not committed):
 
 ## Verification
 
-18 matcher/similarity unit tests, 5 shortlist-grouping tests (fold, beyond-cut
-absorption, possible-pair bookkeeping, seniority separation, no-matcher passthrough),
-6 GUI tests (card sightings link, dedupe-view possible section), catalogs in en+da.
-Full suites green; `tsc -b` clean.
+18 matcher/similarity unit tests, 6 shortlist-grouping tests (fold, beyond-cut
+absorption, possible-pair bookkeeping, seniority separation, per-portal sighting cap,
+no-matcher passthrough), 6 GUI tests (card sightings link, dedupe-view possible
+section), catalogs in en+da. Full suites green; `tsc -b` clean.
+
+**Live runs** (scratch env per the verify skill, real provider fetches, runs
+`20260810-080352` and `20260810-080801`): 2 145 fetched → 1 965 deduped → 25 slots;
+the SimCorp jobindex re-listing folded with a working "Også set på SimCorp (Workday)"
+link, the seeded Aug 6 run still rendered (no sightings row, old shape), and the
+duplicates view showed the possible section in Danish with `dec()`-formatted
+probability. The first live run caught two defects fixed on the spot: **a slot may
+absorb at most one sighting per portal** — a null-location jobindex ad wildcards every
+city and had claimed *both* Workday "Senior Software Engineer" reqs; one ad appears
+once per portal, so the second claimant now demotes to a possible pair and keeps its
+own candidacy — and the drop-context probability now formats invariantly ("0.98", not
+the host culture's "0,98").

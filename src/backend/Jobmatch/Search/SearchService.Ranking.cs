@@ -158,11 +158,22 @@ public sealed partial class SearchService
             var verdict = matcher.Compare(slot.Listing, candidate.Listing);
             if (verdict.Band == MatchBand.SameAd)
             {
-                if (!sightings.TryGetValue(slot.Listing.Id, out var list))
+                // One ad appears once per portal: when a slot has already absorbed a sighting
+                // from this portal, a second same-portal claimant is that portal's *other* req —
+                // a null-location listing wildcards every city — so it keeps its own candidacy
+                // and the pair is only recorded.
+                if (sightings.TryGetValue(slot.Listing.Id, out var list)
+                    && list.Any(s => s.Match.Listing.Portal == candidate.Listing.Portal))
+                {
+                    possible.Add(new PossibleDuplicate(slot.Listing.Id, candidate.Listing.Id, Math.Round(verdict.Probability, 2)));
+                    continue;
+                }
+                if (list is null)
                     sightings[slot.Listing.Id] = list = [];
                 list.Add(new AbsorbedSighting(candidate, verdict.Probability));
                 dropped.Add(BuildDroppedEntry(candidate, "duplicate_of_shortlisted",
-                    $"same ad as shortlisted '{slot.Listing.Title}' (probability {verdict.Probability:0.00})",
+                    FormattableString.Invariant(
+                        $"same ad as shortlisted '{slot.Listing.Title}' (probability {verdict.Probability:0.00})"),
                     new Dictionary<string, object>
                     {
                         ["ofId"] = slot.Listing.Id,
