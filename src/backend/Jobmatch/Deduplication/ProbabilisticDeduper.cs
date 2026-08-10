@@ -43,9 +43,13 @@ public static class ProbabilisticDeduper
                 continue; // No blocking key — never compared, always kept.
             }
 
-            if (!byCompany.TryGetValue(features.CompanyKey, out var block))
+            // Blocked on the first company token, not the whole name, so "Danske Bank" and
+            // "Danske Bank Group" meet — the matcher's company gate decides whether they match.
+            var space = features.CompanyKey.IndexOf(' ');
+            var blockKey = space < 0 ? features.CompanyKey : features.CompanyKey[..space];
+            if (!byCompany.TryGetValue(blockKey, out var block))
             {
-                byCompany[features.CompanyKey] = [new Canonical(features, [])];
+                byCompany[blockKey] = [new Canonical(features, [])];
                 continue;
             }
 
@@ -68,8 +72,11 @@ public static class ProbabilisticDeduper
         }
 
         var deduped = listings.Where(l => !absorbedIds.Contains(l.Id)).ToList();
-        // Strongest hesitation first — the audit view reads top-down.
-        possible.Sort((x, y) => y.Probability.CompareTo(x.Probability));
+        // Cross-portal pairs first (a possible matcher miss), then strongest hesitation —
+        // the audit view reads top-down, and same-portal employer re-posts are its long tail.
+        possible.Sort((x, y) => x.SamePortal != y.SamePortal
+            ? x.SamePortal.CompareTo(y.SamePortal)
+            : y.Probability.CompareTo(x.Probability));
         return new ProbabilisticDedupeResult(deduped, merges, sightings, possible);
     }
 
@@ -92,7 +99,11 @@ public static class ProbabilisticDeduper
             }
             var recordable = verdict.Band == MatchBand.Possible || (verdict.Band == MatchBand.SameAd && portalTaken);
             if (recordable && verdict.Probability >= PossibleRecordFloor)
-                possible.Add(new PossibleDuplicate(canonical.Features.Listing.Id, features.Listing.Id, Math.Round(verdict.Probability, 2)));
+                possible.Add(new PossibleDuplicate(
+                    canonical.Features.Listing.Id,
+                    features.Listing.Id,
+                    Math.Round(verdict.Probability, 2),
+                    SamePortal: canonical.Features.Listing.Portal == features.Listing.Portal));
         }
         return best;
     }

@@ -1,9 +1,15 @@
+import { useState } from 'react'
 import type { RunDetail } from '../../api/types'
 import { dec, useT } from '../../i18n'
 
+// The pairs arrive sorted strongest-first, so the preview is the part worth a human glance.
+const POSSIBLE_PREVIEW = 30
+
 export function DedupeTab({ data }: { data: RunDetail }) {
   const t = useT('history')
+  const [showAllPossible, setShowAllPossible] = useState(false)
   const possible = data.possibleDuplicates ?? []
+  const shownPossible = showAllPossible ? possible : possible.slice(0, POSSIBLE_PREVIEW)
   if (!data.dedupeMerges) {
     return <div className="muted">{t.noDedupeRecorded}</div>
   }
@@ -63,7 +69,7 @@ export function DedupeTab({ data }: { data: RunDetail }) {
           <h3 className="dedupe-possible__heading">{t.possibleHeading(possible.length)}</h3>
           <p className="dedupe-possible__intro muted">{t.possibleIntro}</p>
           <ul className="dedupe-possible__list">
-            {possible.map((p, i) => (
+            {shownPossible.map((p, i) => (
               <li key={`${p.keptId}-${p.candidateId}-${i}`} className="dedupe-possible__pair">
                 <span className="dedupe-possible__side">{title(p.keptId)}{source(p.keptId)}</span>
                 <span className="dedupe-possible__side">{title(p.candidateId)}{source(p.candidateId)}</span>
@@ -71,6 +77,11 @@ export function DedupeTab({ data }: { data: RunDetail }) {
               </li>
             ))}
           </ul>
+          {possible.length > POSSIBLE_PREVIEW && !showAllPossible && (
+            <button type="button" className="btn btn--ghost" onClick={() => setShowAllPossible(true)}>
+              {t.possibleShowAll(possible.length)}
+            </button>
+          )}
         </div>
       )}
     </section>

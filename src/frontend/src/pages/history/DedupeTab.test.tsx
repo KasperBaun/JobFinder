@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { RunDetail } from '../../api/types'
 import { I18nProvider } from '../../i18n'
@@ -62,6 +62,19 @@ describe('DedupeTab possible duplicates', () => {
   it('keeps the empty message when there are neither merges nor possible pairs', () => {
     renderTab(detail({ dedupeMerges: [], possibleDuplicates: [] }))
     expect(screen.getByText(/no duplicates were merged/i)).toBeInTheDocument()
+  })
+
+  it('previews long possible lists and expands on demand', async () => {
+    const many = Array.from({ length: 45 }, (_, i) => ({
+      keptId: 'a',
+      candidateId: 'b',
+      probability: 0.9 - i * 0.001,
+    }))
+    renderTab(detail({ dedupeMerges: [], possibleDuplicates: many }))
+
+    expect(screen.getAllByText(/probability/)).toHaveLength(30)
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 45' }))
+    expect(await screen.findAllByText(/probability/)).toHaveLength(45)
   })
 
   it('renders exact merges alongside possible pairs', () => {

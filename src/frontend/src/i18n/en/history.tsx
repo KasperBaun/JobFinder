@@ -68,6 +68,7 @@ export const history = {
   possibleHeading: (count: number) => count === 1 ? '1 possible duplicate' : `${count} possible duplicates`,
   possibleIntro: 'Same employer, similar wording — kept as separate listings because the match is not certain.',
   possibleProbability: (p: string) => `probability ${p}`,
+  possibleShowAll: (count: number) => `Show all ${count}`,
 
   colRating: 'Rating',
 

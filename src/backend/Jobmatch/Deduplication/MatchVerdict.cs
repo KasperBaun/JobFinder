@@ -10,4 +10,5 @@ public sealed record MatchVerdict(
     double Probability,
     double TitleEvidence,
     double LocationEvidence,
-    double RecencyEvidence);
+    double RecencyEvidence,
+    double DescriptionEvidence = 0);
