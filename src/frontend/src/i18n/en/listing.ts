@@ -4,6 +4,7 @@ export const listing = {
   favoriteBadge: '★ Favorite',
   favoriteTitle: 'One of your favorite companies — rating boosted',
   openPosting: 'Open job posting →',
+  alsoSeenOn: 'Also seen on',
 
   facts: {
     mustHave: 'Must-have',

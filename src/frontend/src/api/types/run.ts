@@ -1,6 +1,7 @@
 import type {
   DedupeGroup,
   ListingMatch,
+  PossibleDuplicate,
   ProviderRaw,
   ScoredEntry,
 } from './listing'
@@ -34,6 +35,8 @@ export type RunDetail = RunSummary & {
   dedupeMerges?: DedupeGroup[]
   scored?: ScoredEntry[]
   timeline?: JobSearchEvent[]
+  /** Shortlist-time pairs the matcher left unsettled (R-117). Absent on older runs. */
+  possibleDuplicates?: PossibleDuplicate[]
 }
 
 export type DeleteHistoryRequest = { runIds: string[] }

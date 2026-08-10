@@ -1449,6 +1449,22 @@ button.pill--active:hover:not(:disabled) {
   margin-bottom: var(--space-4);
 }
 
+.listing-card__sightings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: 0.82rem;
+  color: var(--c-text-subtle);
+}
+.listing-card__sighting {
+  color: var(--c-text-muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.listing-card__sighting:hover { color: var(--c-text); }
+
 .listing-card__footer {
   display: flex;
   justify-content: space-between;
@@ -2642,6 +2658,38 @@ button.pill--active:hover:not(:disabled) {
   padding-left: 1.1rem;
   color: var(--c-text-muted);
   font-size: 0.88rem;
+}
+.dedupe-possible { margin-top: var(--space-5); }
+.dedupe-possible__heading {
+  margin: 0 0 var(--space-1);
+  font-size: 0.95rem;
+  color: var(--c-text);
+}
+.dedupe-possible__intro {
+  margin: 0 0 var(--space-3);
+  font-size: 0.85rem;
+}
+.dedupe-possible__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.dedupe-possible__pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  font-size: 0.88rem;
+  color: var(--c-text);
+}
+.dedupe-possible__side { font-weight: 500; }
+.dedupe-possible__prob {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--c-text-subtle);
 }
 
 /* ------------------------------------------------------------------------

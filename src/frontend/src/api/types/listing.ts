@@ -24,6 +24,28 @@ export type ListingMatch = {
   favoriteCompany?: boolean
   /** Full fetched ad text. Absent on runs recorded before the field existed (T-009). */
   description?: string
+  /** Other portals' copies of this ad, grouped into this slot by the probabilistic matcher
+   * (R-117). Absent when nothing was grouped and on runs recorded before the field existed. */
+  sightings?: ListingSighting[]
+}
+
+/** Another portal's copy of a shortlisted ad, folded into the same slot (R-117). */
+export type ListingSighting = {
+  id: string
+  portal: string
+  portalDisplayName?: string
+  title: string
+  url: string
+  probability: number
+}
+
+/** A pair the matcher could not settle — probably related, kept as separate listings (R-117). */
+export type PossibleDuplicate = {
+  keptId: string
+  candidateId: string
+  probability: number
+  /** An employer re-post the same-portal rule refuses to merge. Absent on older runs. */
+  samePortal?: boolean
 }
 
 export type ScoreBreakdown = {
