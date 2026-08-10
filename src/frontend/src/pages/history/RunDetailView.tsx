@@ -10,7 +10,6 @@ import { useLonglistState } from '../../components/longlist/useLonglistState'
 import { isTerminalState } from '../../api/types'
 import { useT } from '../../i18n'
 import { DedupeTab } from './DedupeTab'
-import { DroppedTab } from './DroppedTab'
 import { buildHash, parseHash, type TabKey } from './hash'
 import { LonglistView } from './LonglistView'
 import { RawFetchTab } from './RawFetchTab'
@@ -82,7 +81,6 @@ export function RunDetailView({ runId }: { runId: string }) {
               {tab === 'longlist'  && <LonglistView data={data} />}
               {tab === 'raw'       && <RawFetchTab data={data} focusProvider={provider} />}
               {tab === 'dedupe'    && <DedupeTab data={data} />}
-              {tab === 'dropped'   && <DroppedTab data={data} />}
             </>
           ) : (
             <section className="progress-panel">

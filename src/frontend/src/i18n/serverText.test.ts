@@ -52,15 +52,8 @@ describe('server catalog', () => {
     )
   })
 
-  it('formats drop context with locale-aware decimals', () => {
-    const args = { score: 0.31, threshold: 0.5 }
-    expect(serverText(en.server.dropContext, 'below_min_score', args, '')).toBe('score 0.31 below threshold 0.50')
-    setActiveLocale('da')
-    expect(serverText(da.server.dropContext, 'below_min_score', args, '')).toBe('score 0,31 under grænsen 0,50')
-  })
-
   it('covers every key the backend can emit, in both locales', () => {
-    for (const group of ['timeline', 'reasoning', 'dropContext'] as const) {
+    for (const group of ['timeline', 'reasoning'] as const) {
       expect(Object.keys(da.server[group]).sort()).toEqual(Object.keys(en.server[group]).sort())
     }
   })

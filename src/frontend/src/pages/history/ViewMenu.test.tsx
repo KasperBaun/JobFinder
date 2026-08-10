@@ -14,7 +14,6 @@ function auditedRun(over: Partial<RunDetail> = {}): RunDetail {
     shortlist: [{ id: 'a' }, { id: 'b' }] as RunDetail['shortlist'],
     raw: [{ provider: 'p1', listings: [rawListing('r1'), rawListing('r2'), rawListing('r3')] }],
     dedupeMerges: [{ canonicalId: 'r1', mergedFromIds: ['r2'] }],
-    dropped: [{ id: 'r3', title: 'r3', score: 0.1, reason: 'below_min_score', context: '' }],
     ...over,
   })
 }
@@ -37,11 +36,11 @@ describe('ViewMenu', () => {
     expect(screen.queryByRole('button', { name: /All fetched/ })).not.toBeInTheDocument()
   })
 
-  it('lists all five views with counts when opened, audit views behind a separator', async () => {
+  it('lists all four views with counts when opened, audit views behind a separator', async () => {
     renderMenu()
     await userEvent.click(screen.getByRole('button', { name: /Top jobs/ }))
     const panel = screen.getByRole('group', { name: /result view/i })
-    for (const name of [/Top jobs 2/, /All rated 3/, /All fetched 3/, /Duplicates 1/, /Removed 1/]) {
+    for (const name of [/Top jobs 2/, /All rated 3/, /All fetched 3/, /Duplicates 1/]) {
       expect(within(panel).getByRole('button', { name })).toBeEnabled()
     }
     expect(panel.querySelector('.view-menu__divider')).toBeInTheDocument()
@@ -69,13 +68,12 @@ describe('ViewMenu', () => {
   })
 
   it('disables a view the run never recorded', async () => {
-    const { onChange } = renderMenu({ data: auditedRun({ dropped: undefined, scored: undefined }) })
+    const { onChange } = renderMenu({ data: auditedRun({ scored: undefined }) })
     await userEvent.click(screen.getByRole('button', { name: /Top jobs/ }))
-    const removed = screen.getByRole('button', { name: /Removed/ })
-    expect(removed).toBeDisabled()
-    expect(removed).toHaveAttribute('title', 'Not recorded for this search.')
-    expect(screen.getByRole('button', { name: /All rated/ })).toBeDisabled()
-    await userEvent.click(removed).catch(() => {})
+    const allRated = screen.getByRole('button', { name: /All rated/ })
+    expect(allRated).toBeDisabled()
+    expect(allRated).toHaveAttribute('title', 'Not recorded for this search.')
+    await userEvent.click(allRated).catch(() => {})
     expect(onChange).not.toHaveBeenCalled()
   })
 

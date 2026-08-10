@@ -1,5 +1,4 @@
 import type { SortKey } from '../../components/longlist/sortState'
-import type { DropReason } from '../../api/types'
 import { n } from '../format'
 
 export const history = {
@@ -48,7 +47,6 @@ export const history = {
   notRecorded: 'Not recorded for this search.',
   tabRaw: 'All fetched',
   tabDedupe: 'Duplicates',
-  tabDropped: 'Removed',
 
   noRatingsRecorded: 'No ratings recorded for this search.',
 
@@ -68,20 +66,7 @@ export const history = {
   dedupeKept: 'kept',
   dedupeAlsoSeen: (count: number) => count === 1 ? 'also seen in 1 other place' : `also seen in ${count} other places`,
 
-  noDroppedRecorded: 'No removed-job data recorded for this search.',
-  nothingRemoved: 'Nothing was removed in this search.',
-  dropFilterAll: 'all',
-  dropReason: {
-    disqualifier: 'deal-breaker',
-    below_min_score: 'rating too low',
-    beyond_top_n: 'outside top list',
-    above_max_age: 'too old',
-    missing_required_primary: 'no must-have skill',
-    outside_radius: 'too far away',
-  } satisfies Record<DropReason, string>,
   colRating: 'Rating',
-  colReason: 'Reason',
-  colWhy: 'Why',
 
   sortBarAria: 'Result count and sorting',
   sortCount: (shown: number, total: number) =>

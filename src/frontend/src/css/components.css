@@ -2719,32 +2719,6 @@ button.pill--active:hover:not(:disabled) {
 .bd-detail__label { color: var(--c-text-muted); }
 
 /* ------------------------------------------------------------------------
-   Dropped tab — filter chips + reason badges
-   ------------------------------------------------------------------------ */
-.dropped-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-.reason-badge {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid;
-}
-.reason-badge--disqualifier             { color: var(--c-bad);   border-color: var(--c-bad-border);   background: var(--c-bad-bg); }
-.reason-badge--below_min_score          { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--beyond_top_n             { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--above_max_age            { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--missing_required_primary { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--outside_radius           { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-
-/* ------------------------------------------------------------------------
    Search progress rows — linkify when complete (T-006h)
    ------------------------------------------------------------------------ */
 .progress-row--link {

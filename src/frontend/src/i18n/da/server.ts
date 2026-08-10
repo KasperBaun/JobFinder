@@ -56,16 +56,4 @@ export const server: Messages['server'] = {
     locationUnknownRemoteMismatch: () => 'Stedet er ikke oplyst; hjemmearbejde passer ikke.',
     agePenalty: (a: ServerArgs) => `Slået op for ${num(a, 'days')} dage siden — scoren er sat ned for alder.`,
   },
-
-  dropContext: {
-    above_max_age: (a: ServerArgs) => `slået op for ${num(a, 'days')} dage siden, maks. ${num(a, 'maxAge')}`,
-    missing_required_primary: () => 'ingen skal-have-kompetence nævnt i titel eller beskrivelse',
-    disqualifier: (a: ServerArgs) => `matchede dealbreaker: ${list(a, 'hits').join(', ')}`,
-    below_min_score: (a: ServerArgs) =>
-      `score ${dec(num(a, 'score'), 2)} under grænsen ${dec(num(a, 'threshold'), 2)}`,
-    beyond_top_n: (a: ServerArgs) =>
-      `nr. ${num(a, 'rank')} af ${num(a, 'total')} (de ${num(a, 'topN')} bedste blev taget)`,
-    outside_radius: (a: ServerArgs) =>
-      `ligger ca. ${n(num(a, 'km'))} km væk (${str(a, 'place')}), maks. ${n(num(a, 'maxKm'))} km`,
-  },
 }

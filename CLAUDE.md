@@ -144,13 +144,14 @@ returns the namespace object, so call sites are property accesses, not string ke
   setup request or `PUT /api/settings/language`), with a `localStorage` copy used only as
   a boot hint so reloads don't flash English.
 - **Backend prose travels as `key + args`, never as finished sentences.** Timeline entries
-  (`Jobs/JobSearch.cs`, `Jobmatch.Api/Jobs/SearchJob.Events.cs`), match rationale
-  (`Ranking/Ranker.Notes.cs`) and drop reasons (`Search/SearchService.Ranking.cs`) emit a
-  stable key plus the values it interpolates; the frontend's `server` namespace owns the
-  wording. Each also keeps its English string (`Message`, `Notes`, `Context`) — that is
-  what logs, `top-jobs.md` and runs recorded before the keys show. **Keys are persisted in
-  run history, so they are additive only: never rename or repurpose one.** Add a key to
-  both `en/server.ts` and `da/server.ts` in the same change.
+  (`Jobs/JobSearch.cs`, `Jobmatch.Api/Jobs/SearchJob.Events.cs`) and match rationale
+  (`Ranking/Ranker.Notes.cs`) emit a stable key plus the values it interpolates; the
+  frontend's `server` namespace owns the wording. Each also keeps its English string
+  (`Message`, `Notes`) — that is what logs, `top-jobs.md` and runs recorded before the keys
+  show. Drop reasons (`Search/SearchService.Ranking.cs`) still emit key + args + English
+  context into run history, but nothing renders them since the removed view was retired.
+  **Keys are persisted in run history, so they are additive only: never rename or repurpose
+  one.** Add a key to both `en/server.ts` and `da/server.ts` in the same change.
 - **The English wording exists twice on purpose** — `Ranker.Notes.cs` renders `top-jobs.md`
   and the persisted prose, `i18n/en/server.ts` renders the UI. They cannot both be dropped,
   so `src/tests/fixtures/reasoning-en.json` pins them: a C# test and a Vitest test assert
