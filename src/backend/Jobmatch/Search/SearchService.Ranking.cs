@@ -82,8 +82,9 @@ public sealed partial class SearchService
         ContextArgs: args);
 
     /// <summary>Splits scored matches into the top-N shortlist (by score) and the dropped remainder
-    /// (classified drops plus everything beyond top-N).</summary>
-    private static (List<Match> Shortlist, List<DroppedEntry> Dropped) BuildShortlist(
+    /// (classified drops plus everything beyond top-N). Duplicates never reach this point — both
+    /// dedupe passes (R-115, R-117) run before ranking.</summary>
+    internal static (List<Match> Shortlist, List<DroppedEntry> Dropped) BuildShortlist(
         IReadOnlyList<Match> scoredAll, RankingConfig ranking, double minScore, int topN, RadiusFilter? radius)
     {
         var dropped = new List<DroppedEntry>();

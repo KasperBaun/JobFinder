@@ -23,7 +23,8 @@ public sealed partial class SearchService
         IReadOnlyList<DedupeGroup> dedupeMerges,
         IReadOnlyList<Match> scoredAll,
         IReadOnlyList<Match> shortlist,
-        IReadOnlyList<DroppedEntry> dropped)
+        IReadOnlyList<DroppedEntry> dropped,
+        ProbabilisticDedupeResult probDedupe)
     {
         JsonReportWriter.WriteMatches(shortlist, _ctx.RankedListingsPath);
         var mdTitle = $"Top matches — {prep.Skillset.Name} — {prep.StartedAt:yyyy-MM-dd HH:mm} UTC";
@@ -33,7 +34,9 @@ public sealed partial class SearchService
             p => p.Name,
             p => string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name : p.DisplayName!,
             StringComparer.Ordinal);
-        var listingMatches = shortlist.Select(m => ToListingMatch(m, portalDisplayNames)).ToList();
+        var listingMatches = shortlist
+            .Select(m => ToListingMatch(m, portalDisplayNames, ToSightings(m, probDedupe, portalDisplayNames)))
+            .ToList();
 
         var rawSection = rawByProvider
             .Select(kvp => new ProviderRaw(kvp.Key, kvp.Value.Select(ToRawListing).ToList()))
@@ -51,7 +54,8 @@ public sealed partial class SearchService
             rawSection,
             dedupeMerges,
             scoredSection,
-            dropped);
+            dropped,
+            probDedupe.PossibleDuplicates);
 
         return listingMatches;
     }
@@ -67,7 +71,8 @@ public sealed partial class SearchService
         IReadOnlyList<ProviderRaw> raw,
         IReadOnlyList<DedupeGroup> dedupeMerges,
         IReadOnlyList<ScoredEntry> scored,
-        IReadOnlyList<DroppedEntry> dropped)
+        IReadOnlyList<DroppedEntry> dropped,
+        IReadOnlyList<PossibleDuplicate> possibleDuplicates)
     {
         Directory.CreateDirectory(_ctx.HistoryDir);
 
@@ -90,7 +95,8 @@ public sealed partial class SearchService
             Raw: raw,
             DedupeMerges: dedupeMerges,
             Scored: scored,
-            Dropped: dropped);
+            Dropped: dropped,
+            PossibleDuplicates: possibleDuplicates.Count > 0 ? possibleDuplicates : null);
 
         var path = Path.Combine(_ctx.HistoryDir, $"{runId}.json");
         var json = JsonSerializer.Serialize(detail, HistoryJsonOptions);

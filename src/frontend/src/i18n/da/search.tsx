@@ -78,8 +78,4 @@ export const search: Messages['search'] = {
   topScore: score => `højeste ${score}`,
 
   activityLog: count => `Aktivitetslog (${count} hændelser)`,
-
-  topJobs: 'Topjob',
-  loadingResults: 'Indlæser resultater…',
-  noJobsMetMinimum: 'Ingen job kom over den mindste score.',
 }

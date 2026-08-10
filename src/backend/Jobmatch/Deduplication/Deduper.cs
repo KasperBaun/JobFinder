@@ -1,4 +1,6 @@
+using System.Net;
 using System.Text.RegularExpressions;
+using Jobmatch.Geo;
 using Jobmatch.Models;
 
 namespace Jobmatch.Deduplication;
@@ -38,7 +40,7 @@ public static class Deduper
             ["dr"] = "danmarks radio",
         };
 
-    public static DedupeResult Deduplicate(IEnumerable<Listing> listings)
+    public static DedupeResult Deduplicate(IEnumerable<Listing> listings, Gazetteer? gazetteer = null)
     {
         var byUrl = new Dictionary<string, string>(StringComparer.Ordinal);
         var byTcl = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -48,16 +50,21 @@ public static class Deduper
         foreach (var listing in listings)
         {
             var urlKey = NormaliseUrl(listing.Url);
+            var tclKey = $"{Normalise(listing.Title)}|{NormaliseCompany(listing.Company)}|{NormaliseLocation(listing.Location, gazetteer)}";
+
+            // An absorbed listing still registers its other key: portal B's spelling of an ad
+            // already collapsed by URL would otherwise stay invisible to portal C's copy.
             if (byUrl.TryGetValue(urlKey, out var canonicalByUrl))
             {
                 mergedInto[canonicalByUrl].Add(listing.Id);
+                byTcl.TryAdd(tclKey, canonicalByUrl);
                 continue;
             }
 
-            var tclKey = $"{Normalise(listing.Title)}|{NormaliseCompany(listing.Company)}|{NormaliseLocation(listing.Location)}";
             if (byTcl.TryGetValue(tclKey, out var canonicalByTcl))
             {
                 mergedInto[canonicalByTcl].Add(listing.Id);
+                byUrl.TryAdd(urlKey, canonicalByTcl);
                 continue;
             }
 
@@ -90,7 +97,16 @@ public static class Deduper
     internal static string Normalise(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;
-        var lowered = input.Trim().ToLowerInvariant();
+        // Runs before ListingTextDecoder existed for older payloads, and portals disagree on
+        // encoding depth ("&amp;amp;" vs "&amp;" vs "&"), so decode until stable.
+        var decoded = input;
+        while (decoded.Contains('&'))
+        {
+            var next = WebUtility.HtmlDecode(decoded);
+            if (next == decoded) break;
+            decoded = next;
+        }
+        var lowered = decoded.Trim().ToLowerInvariant();
         return WhitespaceRegex.Replace(lowered, " ");
     }
 
@@ -104,13 +120,38 @@ public static class Deduper
             : normalised;
     }
 
-    internal static string NormaliseLocation(string? input)
+    internal static string NormaliseLocation(string? input, Gazetteer? gazetteer = null)
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;
         var t = LocationDanishRemoteSuffix.Replace(input.Trim(), string.Empty);
+
+        // A multi-site string must never share a key with one of its sites: "Aalborg, Denmark;
+        // Aarhus, …" is a different posting than "Aalborg, Denmark", and the first-segment cut
+        // below would reduce both to the same city (caught live in the T-013 run-6 audit). The
+        // full string is resolved first; only a single-site string takes the reduction path.
+        var fullSites = gazetteer?.ResolveSites(t, null);
+        if (fullSites is { Count: > 1 }) return SiteSetKey(fullSites);
+
         var commaIdx = t.IndexOf(',');
         if (commaIdx > 0) t = t[..commaIdx];
         t = LocationDistrictSuffix.Replace(t, string.Empty);
+
+        // "Copenhagen V, Denmark" (oracle) and "København" (jobindex) are the same place spelled
+        // in two languages — string normalisation can never make them meet, so the reduced city
+        // string is resolved through the gazetteer and the canonical places become the key. The
+        // key is the *sorted set* of resolved sites: "Noida / Hyderabad" must match
+        // "Hyderabad / Noida" but never a bare "Noida" — a destructive merge cannot ride on
+        // whichever site a portal happened to list first. The '#' suffix keeps a resolved key
+        // from ever colliding with an unresolved raw string.
+        var sites = gazetteer?.ResolveSites(t, null);
+        if (sites is { Count: > 0 }) return SiteSetKey(sites);
+
         return Normalise(t);
     }
+
+    private static string SiteSetKey(IReadOnlyList<Geo.GeoPlace> sites) =>
+        string.Join("+", sites
+            .Select(p => $"{Normalise(p.Name)} #{p.CountryCode.ToLowerInvariant()}")
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal));
 }

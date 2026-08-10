@@ -1,4 +1,5 @@
-import type { DropReason } from '../../api/types'
+import type { SortKey } from '../../components/longlist/sortState'
+import { n } from '../format'
 
 export const history = {
   eyebrow: '04 / history',
@@ -44,11 +45,8 @@ export const history = {
   tabAllRated: 'All rated',
   tabAllRatedTitle: 'All rated jobs — including those outside the top',
   notRecorded: 'Not recorded for this search.',
-  detailsAria: 'Details',
-  showLabel: 'show:',
-  tabRaw: 'all fetched',
-  tabDedupe: 'duplicates',
-  tabDropped: 'removed',
+  tabRaw: 'All fetched',
+  tabDedupe: 'Duplicates',
 
   noRatingsRecorded: 'No ratings recorded for this search.',
 
@@ -66,25 +64,27 @@ export const history = {
   noDedupeRecorded: 'No duplicate data recorded for this search.',
   noDuplicatesMerged: 'No duplicates were merged in this search.',
   dedupeKept: 'kept',
-  dedupeAlsoSeen: (count: number) => `also seen on ${count}`,
+  dedupeAlsoSeen: (count: number) => count === 1 ? 'also seen in 1 other place' : `also seen in ${count} other places`,
+  possibleHeading: (count: number) => count === 1 ? '1 possible duplicate' : `${count} possible duplicates`,
+  possibleIntro: 'Same employer, similar wording — kept as separate listings because the match is not certain.',
+  possibleProbability: (p: string) => `probability ${p}`,
+  possibleShowAll: (count: number) => `Show all ${count}`,
 
-  noDroppedRecorded: 'No removed-job data recorded for this search.',
-  nothingRemoved: 'Nothing was removed in this search.',
-  dropFilterAll: 'all',
-  dropReason: {
-    disqualifier: 'deal-breaker',
-    below_min_score: 'rating too low',
-    beyond_top_n: 'outside top list',
-    above_max_age: 'too old',
-    missing_required_primary: 'no must-have skill',
-    outside_radius: 'too far away',
-  } satisfies Record<DropReason, string>,
   colRating: 'Rating',
-  colReason: 'Reason',
-  colWhy: 'Why',
 
-  longlistStrip: (shown: number, total: number, sortedBy: string, dir: string) =>
-    `${shown} of ${total} · sorted by ${sortedBy} ${dir}`,
+  sortBarAria: 'Result count and sorting',
+  sortCount: (shown: number, total: number) =>
+    shown === total ? `${n(total)} jobs` : `${n(shown)} of ${n(total)} jobs`,
+  sortByLabel: 'sort by',
+  sortDirAsc: 'ascending',
+  sortDirDesc: 'descending',
+  sortDirToggleAria: (dir: string) => `Sort direction: ${dir}. Click to reverse.`,
+  resetSort: 'Reset sort',
+  perPage: 'per page',
+  pageOf: (page: string, count: string) => `page ${page} of ${count}`,
+  prevPageAria: 'Previous page',
+  nextPageAria: 'Next page',
+  longlistTableAria: 'All rated jobs',
   sortKey: {
     title: 'title',
     company: 'company',
@@ -92,13 +92,13 @@ export const history = {
     location: 'location',
     posted: 'posted',
     score: 'rating',
-  },
+    mark: 'your rating',
+  } satisfies Record<SortKey, string>,
   colSource: 'Source',
   colYourRating: 'Your rating',
   expand: 'expand',
   collapse: 'collapse',
   noJobsMatchFilters: 'No jobs match these filters.',
-  reset: 'Reset',
   resetFilters: 'Reset filters',
   searchTitleOrCompany: 'Search title or company…',
   filterSource: 'source',
@@ -106,10 +106,14 @@ export const history = {
   filterPostedAny: 'any',
   filterSkillMatch: 'skill match',
   filterYourRating: 'your rating',
+  filterScore: 'rating',
+  filterClear: 'Clear',
+  filterSourceSearch: 'Search sources…',
+  filterNoSourceMatch: 'No sources match.',
+  ratingMinAria: 'Minimum rating',
+  ratingMaxAria: 'Maximum rating',
   markAll: 'all',
   markGood: 'good',
   markBad: 'bad',
   markUnmarked: 'not rated',
-  ratingRange: (min: string, max: string) => `rating ${min}–${max}`,
-  topJobsOnly: 'top jobs only',
 }

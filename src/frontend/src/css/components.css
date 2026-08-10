@@ -398,6 +398,34 @@ a.btn--danger:hover {
   border: 1px solid var(--c-slate-200);
 }
 
+/* Most pills are display-only <span>s; only the longlist filter bar renders them as buttons, so the
+   interactive affordances are scoped to that form rather than added to .pill wholesale. */
+button.pill {
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+button.pill:hover:not(:disabled) {
+  border-color: var(--c-navy-400);
+  color: var(--c-navy-700);
+}
+
+/* The filter bar marks the selected pill with .pill--active, which was never defined anywhere — so
+   all five "posted" pills and all four "your rating" pills looked identical whichever was chosen.
+   Mirrors .chip--active, including the rule that keeps the label legible on its own dark fill. */
+.pill--active {
+  background: var(--c-navy-800);
+  color: #fff;
+  border-color: var(--c-navy-800);
+  font-weight: 500;
+}
+
+button.pill--active:hover:not(:disabled) {
+  background: var(--c-navy-900);
+  border-color: var(--c-navy-900);
+  color: #fff;
+}
+
 .pill--primary {
   background: var(--c-action-soft);
   color: var(--c-navy-700);
@@ -491,7 +519,7 @@ a.btn--danger:hover {
   margin-bottom: var(--space-4);
   background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
 }
 .selection-bar__count {
   font-family: var(--font-mono);
@@ -880,6 +908,14 @@ a.btn--danger:hover {
   color: #fff;
   background: var(--c-navy-900);
   border-color: var(--c-navy-900);
+}
+
+/* Referenced by the longlist's source and skill-match chips and never defined. */
+.chip__count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  opacity: 0.65;
+  margin-left: 0.15rem;
 }
 
 .hint-card {
@@ -1413,6 +1449,22 @@ a.btn--danger:hover {
   margin-bottom: var(--space-4);
 }
 
+.listing-card__sightings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: 0.82rem;
+  color: var(--c-text-subtle);
+}
+.listing-card__sighting {
+  color: var(--c-text-muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.listing-card__sighting:hover { color: var(--c-text); }
+
 .listing-card__footer {
   display: flex;
   justify-content: space-between;
@@ -1429,13 +1481,15 @@ a.btn--danger:hover {
 
 .mark-button-wrap { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
-.mark-button {
+.mark-toggle-group { display: inline-flex; }
+
+.mark-toggle {
   position: relative;
   font-family: var(--font-mono);
   font-size: 0.78rem;
   letter-spacing: 0.04em;
+  white-space: nowrap;
   padding: 0.32rem 0.85rem;
-  border-radius: 999px;
   border: 1px solid var(--c-slate-300);
   background: var(--c-surface);
   color: var(--c-text-muted);
@@ -1443,21 +1497,26 @@ a.btn--danger:hover {
   transition: border-color var(--transition), background var(--transition), color var(--transition);
 }
 
-.mark-button:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+.mark-toggle--good { border-radius: 999px 0 0 999px; border-right-width: 0; }
+.mark-toggle--bad { border-radius: 0 999px 999px 0; }
 
-.mark-button--good {
+.mark-toggle:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
+
+.mark-toggle--good.mark-toggle--active {
   background: var(--c-good-bg);
   color: var(--c-good);
   border-color: var(--c-good-border);
 }
 
-.mark-button--bad {
+.mark-toggle--bad.mark-toggle--active {
   background: var(--c-bad-bg);
   color: var(--c-bad);
   border-color: var(--c-bad-border);
 }
 
-.mark-button:disabled { opacity: 0.6; }
+.mark-toggle:disabled { opacity: 0.6; }
+
+.mark-toggle--compact { padding: 0.14rem 0.5rem; font-size: 0.72rem; line-height: 1.4; }
 
 .mark-button__error {
   font-size: 0.72rem;
@@ -1525,6 +1584,11 @@ a.btn--danger:hover {
 }
 
 .status-select--compact { font-size: 0.72rem; padding: 0.15rem 0.45rem; }
+
+/* Unset status in a table row: quiet text until hovered, so 100 rows of
+   "Status…" don't compete with the data. */
+.status-select--ghost { border-color: transparent; background: transparent; color: var(--c-text-subtle); }
+.status-select--ghost:hover:not(:disabled) { border-color: var(--c-slate-300); }
 
 .status-select:hover:not(:disabled) { border-color: var(--c-navy-400); color: var(--c-navy-700); }
 .status-select:disabled { opacity: 0.6; }
@@ -1688,12 +1752,14 @@ a.btn--danger:hover {
   letter-spacing: 0.04em;
 }
 
+/* A grid rather than a wrapping flex row: when the card gets narrow the stats
+   re-flow as aligned columns instead of one orphan dropping under the others. */
 .run-stat-bar__metrics {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   align-items: stretch;
   flex: 1;
-  gap: 0;
+  gap: var(--space-3) 0;
   margin: 0;
 }
 
@@ -1702,7 +1768,7 @@ a.btn--danger:hover {
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-4);
   border-right: 1px solid var(--c-slate-200);
   min-width: max-content;
 }
@@ -1838,7 +1904,7 @@ a.btn--danger:hover {
   color: var(--c-warn);
   background: var(--c-warn-bg);
   border: 1px solid var(--c-warn-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   padding: var(--space-2) var(--space-3);
 }
 
@@ -2405,109 +2471,102 @@ a.btn--danger:hover {
 .tab--active .tab__count { color: var(--c-action); }
 
 /* ------------------------------------------------------------------------
-   Results view toggle — primary segmented control (Shortlist | Longlist)
+   Run-detail toolbar — one row holding the view chooser and (on the
+   longlist) the filter bar. Stacked, these controls cost ~150px above the
+   listings; as one row they cost one control height.
    ------------------------------------------------------------------------ */
-.view-toggle {
-  display: inline-flex;
-  margin: 1.5rem 0 0.6rem;
-  border: 1px solid var(--c-slate-300);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--c-surface);
-  box-shadow: var(--shadow-1);
+.run-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 var(--space-4);
 }
-.view-toggle__seg {
+
+/* ------------------------------------------------------------------------
+   View chooser — the one control selecting which of the run's five datasets
+   is on screen. Always filled: it always holds a value, and the fill marks
+   it as navigation rather than one more filter chip.
+   ------------------------------------------------------------------------ */
+.view-switch {
   appearance: none;
-  background: transparent;
-  border: 0;
-  padding: 0.65rem 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--c-navy-800);
+  border-radius: var(--radius);
+  background: var(--c-navy-800);
+  color: #fff;
   font: inherit;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 1.02rem;
+  font-size: 0.88rem;
   letter-spacing: -0.005em;
-  color: var(--c-text-muted);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  transition: background var(--transition), color var(--transition);
-  border-right: 1px solid var(--c-slate-200);
+  box-shadow: var(--shadow-1);
+  transition: background var(--transition), border-color var(--transition);
 }
-.view-toggle__seg:last-child { border-right: 0; }
-.view-toggle__seg:hover:not(:disabled):not(.view-toggle__seg--active) {
-  background: var(--c-action-soft);
-  color: var(--c-text);
+.view-switch:hover {
+  background: var(--c-navy-900);
+  border-color: var(--c-navy-900);
 }
-.view-toggle__seg--active {
-  background: var(--c-navy-800);
-  color: #fff;
-}
-.view-toggle__seg:disabled { opacity: 0.4; cursor: not-allowed; }
-.view-toggle__count {
+.view-switch__count {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  padding: 0.08rem 0.45rem;
+  padding: 0.05rem 0.4rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   color: inherit;
 }
-.view-toggle__seg:not(.view-toggle__seg--active) .view-toggle__count {
-  background: var(--c-action-soft);
-  color: var(--c-text-subtle);
-}
 
 /* ------------------------------------------------------------------------
-   Audit tabs — secondary, muted (raw fetch · dedupe · dropped)
+   View menu — the chooser's panel: two primary views, a rule, three audit
+   views
    ------------------------------------------------------------------------ */
-.audit-tabs {
+.view-menu {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.15rem;
-  margin: 0 0 1.25rem;
-  font-size: 0.78rem;
+  flex-direction: column;
 }
-.audit-tabs__label {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--c-text-subtle);
-  margin-right: 0.4rem;
-}
-.audit-tab {
+.view-menu__item {
   appearance: none;
   background: transparent;
   border: 0;
-  padding: 0.3rem 0.7rem;
+  padding: 0.3rem 0.4rem;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: var(--c-text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
+  text-align: left;
   transition: background var(--transition), color var(--transition);
 }
-.audit-tab:hover:not(:disabled) { background: var(--c-action-soft); color: var(--c-text); }
-.audit-tab--active {
-  background: var(--c-action-soft);
+.view-menu__item:hover:not(:disabled) { background: var(--c-action-soft); color: var(--c-text); }
+.view-menu__item--active {
   color: var(--c-action);
   font-weight: 500;
 }
-.audit-tab--disabled { opacity: 0.4; cursor: not-allowed; }
-.audit-tab__count {
+.view-menu__item:disabled { opacity: 0.4; cursor: not-allowed; }
+.view-menu__count {
+  margin-left: auto;
+  padding-left: var(--space-3);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   color: var(--c-text-subtle);
 }
-.audit-tab--active .audit-tab__count { color: var(--c-action); }
+.view-menu__item--active .view-menu__count { color: var(--c-action); }
+.view-menu__divider {
+  height: 1px;
+  background: var(--c-slate-200);
+  margin: 0.25rem 0;
+}
 
 /* ------------------------------------------------------------------------
    Raw fetch tab — provider groups
@@ -2586,12 +2645,51 @@ a.btn--danger:hover {
   color: var(--c-text-subtle);
 }
 .dedupe-group__title { color: var(--c-text); font-weight: 500; }
+.dedupe-group__source {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--c-text-subtle);
+}
 .dedupe-group__merges ul {
   list-style: disc;
   margin: 0;
   padding-left: 1.1rem;
   color: var(--c-text-muted);
   font-size: 0.88rem;
+}
+.dedupe-possible { margin-top: var(--space-5); }
+.dedupe-possible__heading {
+  margin: 0 0 var(--space-1);
+  font-size: 0.95rem;
+  color: var(--c-text);
+}
+.dedupe-possible__intro {
+  margin: 0 0 var(--space-3);
+  font-size: 0.85rem;
+}
+.dedupe-possible__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.dedupe-possible__pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  font-size: 0.88rem;
+  color: var(--c-text);
+}
+.dedupe-possible__side { font-weight: 500; }
+.dedupe-possible__prob {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--c-text-subtle);
 }
 
 /* ------------------------------------------------------------------------
@@ -2617,6 +2715,14 @@ a.btn--danger:hover {
   overflow: hidden;
   background: var(--c-surface-alt, #f7f8fa);
   vertical-align: middle;
+}
+/* The bar's length is the score; the shaded segments split that length by component. */
+.bd-bar__fill {
+  position: relative;
+  display: inline-flex;
+  height: 100%;
+  min-width: 3px;
+  overflow: hidden;
 }
 .bd-bar__seg { display: block; height: 100%; }
 .bd-bar__seg--0 { background: var(--c-navy-800); }
@@ -2659,32 +2765,6 @@ a.btn--danger:hover {
   color: var(--c-navy-900);
 }
 .bd-detail__label { color: var(--c-text-muted); }
-
-/* ------------------------------------------------------------------------
-   Dropped tab — filter chips + reason badges
-   ------------------------------------------------------------------------ */
-.dropped-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-.reason-badge {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid;
-}
-.reason-badge--disqualifier             { color: var(--c-bad);   border-color: var(--c-bad-border);   background: var(--c-bad-bg); }
-.reason-badge--below_min_score          { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--beyond_top_n             { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--above_max_age            { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--missing_required_primary { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
-.reason-badge--outside_radius           { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-action-soft); }
 
 /* ------------------------------------------------------------------------
    Search progress rows — linkify when complete (T-006h)
@@ -2779,22 +2859,29 @@ a.btn--danger:hover {
   padding: var(--space-5) 0 var(--space-8);
 }
 
+/* The filter groups, one trigger each, right-aligned on the run toolbar's single row after the
+   search and the view chooser. Expanded inline these groups ran to ~215px — and before the
+   source list was capped, ~490px — which pushed the listings off the first screen entirely.
+   Deliberately not sticky: what needs pinning while you scroll 2 000 rows is the sort, which
+   .longlist__sortbar does. */
 .longlist__filter-bar {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--c-bg);
-  border-bottom: 1px solid var(--c-slate-200);
-  padding: var(--space-3) 0;
+  margin-left: auto;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
+/* Shrinks before the row wraps: the search keeps working at 110px, whereas a wrapped second
+   line costs exactly the vertical space the single-row toolbar exists to save. */
+/* Never narrower than its placeholder: below this the toolbar wraps the filter
+   pills to a second row instead of squeezing the page's primary input. */
 .longlist__search {
-  min-width: 240px;
+  flex: 1 1 200px;
+  min-width: 200px;
+  max-width: 280px;
 }
 
 .longlist__chips,
@@ -2805,18 +2892,209 @@ a.btn--danger:hover {
   align-items: center;
 }
 
-.longlist__score {
+/* ---- collapsed filter groups ---- */
+
+.filter-pop {
+  position: relative;
+  display: inline-flex;
+}
+
+.filter-pop__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.filter-pop__summary {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.filter-pop__caret {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+/* Above the sort bar (z-index 3), which it opens across, but below the top nav. */
+.filter-pop__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-width: min(340px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-3);
+}
+
+/* Set by FilterPopover when opening leftward would run off screen. */
+.filter-pop__panel--end {
+  left: auto;
+  right: 0;
+}
+
+.filter-pop__list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-pop__option {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
   font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-pop__option:hover { background: var(--c-action-soft); }
+
+.filter-pop__option input[type="checkbox"] {
+  accent-color: var(--c-action);
+  cursor: pointer;
+  flex: none;
+}
+
+.filter-pop__option-count {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--c-text-subtle);
+}
+
+.filter-pop__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter-pop__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--c-slate-200);
+}
+
+.longlist__score {
+  width: 236px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The run's score distribution behind the window: in-window bins take the accent, the rest stay
+   recessive. A control aid, not a chart — no axes, no labels, hidden from assistive tech. */
+.score-hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 44px;
+}
+.score-hist__bar {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px 2px 0 0;
+  background: var(--c-slate-200);
+}
+.score-hist__bar--in { background: var(--c-navy-400); }
+
+.score-ends {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
   color: var(--c-text-muted);
 }
 
-.longlist__score input[type="range"] {
-  width: 100px;
-  accent-color: var(--c-action);
+/* Two native ranges stacked on one track. The inputs themselves are inert so the shared track stays
+   visible and a click lands on whichever thumb is under the pointer; only the thumbs take events. */
+.range-dual {
+  position: relative;
+  width: 100%;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
 }
+
+.range-dual__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--c-slate-300);
+}
+
+.range-dual__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--c-action);
+  border-radius: 999px;
+}
+
+.range-dual__input {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.range-dual__input::-webkit-slider-runnable-track { background: transparent; height: 4px; }
+.range-dual__input::-moz-range-track { background: transparent; height: 4px; }
+
+.range-dual__input::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 2px solid var(--c-action);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+
+.range-dual__input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 2px solid var(--c-action);
+  cursor: pointer;
+}
+
+.range-dual__input:focus-visible { outline: none; }
+.range-dual__input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--c-action); outline-offset: 2px; }
+.range-dual__input:focus-visible::-moz-range-thumb { outline: 2px solid var(--c-action); outline-offset: 2px; }
+
+/* Stacking order decides which thumb wins when the two values meet and the thumbs overlap. Default
+   puts the maximum on top (so a pair pinned at 0.00 can be opened upward); the modifier flips it
+   for a pair pinned at the top, where only the minimum has anywhere to go. */
+.range-dual__input--min { z-index: 1; }
+.range-dual__input--max { z-index: 2; }
+.range-dual--min-on-top .range-dual__input--min { z-index: 3; }
 
 .longlist__toggle {
   display: inline-flex;
@@ -2833,12 +3111,108 @@ a.btn--danger:hover {
   cursor: pointer;
 }
 
-.longlist__strip {
+/* Replaces the old .longlist__strip, which stated the sort in words but was never actually on
+   screen: below the fold at page top, and painted over by the sticky filter bar once you scrolled.
+   Styled as the table's own toolbar — top corners, no shadow, sharing the card's border — rather
+   than a floating card. As its own card it was the heaviest element in the control stack, which
+   inverted the hierarchy: sort is chrome, the table is the content. */
+.longlist__sortbar {
+  position: sticky;
+  top: var(--h-top-nav);
+  z-index: 3;
+  min-height: var(--h-longlist-sortbar);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: 0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* The toolbar and the table are one card, so the table gives up the edge they share. */
+.longlist .table-wrap {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.longlist__sortbar-count {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+  margin-right: auto;
+}
+
+/* Auto margins on both neighbours split the bar's free space evenly, which is what centres the
+   pager between the count and the sort controls. */
+.longlist__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.longlist__pager .select--inline { min-width: 4.5rem; }
+
+.longlist__pager-status {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.longlist__sortbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.longlist__sortbar-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--c-text-subtle);
-  margin-bottom: var(--space-3);
+}
+
+/* Rounded like the filter pills beside them, so the toolbar's native selects and the
+   custom triggers read as one control family. */
+.select--inline {
+  width: auto;
+  min-width: 7rem;
+  padding: 0.3rem 2rem 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
+}
+
+.sort-dir {
+  appearance: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-300);
+  border-radius: 999px;
+  color: var(--c-text);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.sort-dir:hover {
+  background: var(--c-action-soft);
+  border-color: var(--c-navy-400);
+  color: var(--c-action);
 }
 
 .longlist__table {
@@ -2848,12 +3222,24 @@ a.btn--danger:hover {
   color: var(--c-text);
 }
 
+/* Eight columns have to fit .page--wide's 1132px content box, and horizontal cell padding is the
+   cheapest 128px on the table: at var(--space-4) the columns measured 1178px and the rows spilled
+   47px past the card's own right border. --space-3 brings the table to 1130px, inside the card, and
+   pays for a wider rating breakdown bar than the alternative of shrinking that instead. */
 .longlist__table th,
 .longlist__table td {
   text-align: left;
-  padding: 0.55rem var(--space-4);
+  padding: 0.55rem var(--space-3);
   border-bottom: 1px solid var(--c-slate-200);
   vertical-align: middle;
+}
+
+/* Consumed by .sort-header, whose padding has to match the host table's cells rather than the
+   longlist's — .table (Applications) pads 0.85rem/--space-5, which the fallback in .sort-header
+   keeps, and this overrides for the denser longlist. */
+.longlist__table {
+  --sort-header-pad-y: 0.55rem;
+  --sort-header-pad-x: var(--space-3);
 }
 
 .longlist__table th {
@@ -2867,9 +3253,47 @@ a.btn--danger:hover {
   border-bottom: 1px solid var(--c-slate-200);
 }
 
+/* Sticky has to sit on <thead>, not on <th>: browsers ignore it on cells under
+   border-collapse: collapse, and switching to `separate` doesn't rescue it. It also only engages
+   when the nearest scrollport is the document — .table-wrap's overflow-x makes the wrapper a
+   scrollport whose vertical scrollHeight equals its clientHeight, pinning the header to a box that
+   never moves — hence handing scrolling back to the document here.
+   The eight columns don't compress below 1130px, so this only holds while the page is wide enough
+   to contain them; see the narrow-window fallback below. */
+.longlist .table-wrap { overflow: visible; }
+
+.longlist__table thead {
+  position: sticky;
+  top: calc(var(--h-top-nav) + var(--h-longlist-sortbar));
+  z-index: 2;
+}
+
+/* Narrower than the table's 1130px plus .page--wide's 2 × 24px padding, give horizontal scrolling
+   back to the card. Letting the document scroll sideways instead would drag the sticky nav and sort
+   bar out of view with it. Sticky headers are what gives way, because a header pinned inside a box
+   that can't scroll vertically does nothing anyway. */
+@media (max-width: 1178px) {
+  .longlist .table-wrap { overflow-x: auto; overflow-y: hidden; }
+  .longlist__table thead { position: static; }
+}
+
+/* The breakdown bar's default 200px made Rating the widest column in the table at 272px while Title,
+   the column that identifies the row, got 189. 96px is the widest that still fits alongside the
+   tightened cell padding above. */
+.longlist__table .bd-bar { width: 96px; }
+
 .longlist__table tbody tr:last-child td { border-bottom: none; }
 .longlist__table tbody tr { transition: background var(--transition); }
 .longlist__table tbody tr:hover { background: var(--c-action-soft); }
+
+/* A label, not a control: the badge pill read as an input and repeated a hundred
+   times per page once a portal filter was applied. */
+.longlist__portal {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  color: var(--c-text-subtle);
+}
 
 .longlist__score-cell {
   display: flex;
@@ -2902,23 +3326,67 @@ a.btn--danger:hover {
    ============================================================ */
 
 .sortable {
-  cursor: pointer;
   user-select: none;
   white-space: nowrap;
 }
 
-.sortable--active {
-  color: var(--c-text);
-  font-weight: 600;
+/* The <button> inside is the click target and carries the padding, so the cell gives up its own —
+   otherwise the hover tint and the active underline stop short of the cell edges. Both table
+   variants set th padding at a higher specificity than .sortable, so both are named here. */
+.table th.sortable,
+.longlist__table th.sortable { padding: 0; }
+
+/* A real focusable control, not a <th onClick>: that was reachable by mouse only. */
+.sort-header {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  /* The cell gave up its padding to this button, so the button has to reproduce the host table's
+     exactly or the sorted column's label sits out of line with its neighbours. The fallbacks are
+     .table's own values; .longlist__table overrides them. */
+  padding: var(--sort-header-pad-y, 0.85rem) var(--sort-header-pad-x, var(--space-5));
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background var(--transition), color var(--transition);
 }
 
-/* ============================================================
-   mark-button compact variant
-   ============================================================ */
+.sort-header:hover {
+  background: var(--c-action-soft);
+  color: var(--c-action);
+}
 
-.mark-button--compact {
-  padding: 0.18rem 0.55rem;
-  font-size: 0.72rem;
+/* Ghost caret until the column is the active one — it advertises that the header is a control
+   before the first click, which nothing in the old header did. */
+.sort-header__glyph {
+  font-family: var(--font-mono);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.sort-header:hover .sort-header__glyph,
+.sort-header:focus-visible .sort-header__glyph { opacity: 0.45; }
+
+/* The active state has to survive 0.64rem uppercase mono at 0.16em tracking, where the old
+   font-weight bump was invisible: a filled underline and a tinted cell instead. */
+.sortable--active .sort-header,
+.sortable--active .sort-header:hover {
+  color: var(--c-navy-900);
+  font-weight: 600;
+  background: var(--c-action-soft);
+  box-shadow: inset 0 -2px 0 var(--c-action);
+}
+
+.sortable--active .sort-header__glyph {
+  opacity: 1;
+  color: var(--c-action);
 }
 
 /* ============================================================
