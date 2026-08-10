@@ -36,17 +36,25 @@ field contributes hand-set log₂-odds evidence; the sum becomes a probability a
 
 ## Where the verdicts act
 
-`BuildShortlist` (`SearchService.Ranking.cs`), not the deduper. Walking candidates in
-score order: a `SameAd` match against an already-seated slot folds in as a **sighting**
-(`ListingMatch.Sightings`, R-117) — freeing the slot for the next distinct role, applied
-beyond the cut too, and recorded as a `duplicate_of_shortlisted` drop for the audit
-trail (history-only; the removed view is retired). A `Possible` verdict is recorded on
-`RunDetail.PossibleDuplicates` and costs nobody a slot. The matcher threads through
-`JudgePlanner` so the LLM judge budget is spent on the grouped shortlist, not on
-duplicates about to be absorbed.
+`ProbabilisticDeduper` (`Deduplication/ProbabilisticDeduper.cs`), run on the exact-key
+deduper's survivors **before ranking** — so no duplicate reaches the scored list, the
+LLM judge budget, or the shortlist. (The first iteration grouped at shortlist time,
+defending only the top-N; product direction was explicit that duplicates are removed
+during dedupe, not merely kept off the shortlist, and the persisted raw sections plus
+the duplicates audit view make the destructive step recoverable and inspectable.)
 
-GUI: shortlist cards render "Also seen on <portal>" links; the Duplicates view gains a
-"possible duplicates" section (both locales).
+Listings are processed most-informative first (located beats location-less, fuller text
+beats a stub) so the copy the ranker can do the most with survives; `SameAd` absorbs
+into the canonical as a **sighting** (`ListingMatch.Sightings`, probability kept), a
+`Possible` verdict never merges and is recorded on `RunDetail.PossibleDuplicates` only
+at p ≥ 0.5 — below that the band is dominated by same-title/other-city postings, real
+distinct roles that would drown the audit view. Two rules bound the destructive step:
+same-portal pairs never reach SameAd, and a canonical absorbs at most one listing per
+portal (a second same-portal claimant is that portal's other req and survives).
+
+GUI: shortlist cards render "Also seen on <portal>" links; the Duplicates view lists
+probabilistic merge groups beside the exact ones plus the "possible duplicates" section
+(both locales).
 
 ## Validation on run 20260806-113247-dd3dc6
 
@@ -70,14 +78,21 @@ absorption, possible-pair bookkeeping, seniority separation, per-portal sighting
 no-matcher passthrough), 6 GUI tests (card sightings link, dedupe-view possible
 section), catalogs in en+da. Full suites green; `tsc -b` clean.
 
-**Live runs** (scratch env per the verify skill, real provider fetches, runs
-`20260810-080352` and `20260810-080801`): 2 145 fetched → 1 965 deduped → 25 slots;
-the SimCorp jobindex re-listing folded with a working "Også set på SimCorp (Workday)"
-link, the seeded Aug 6 run still rendered (no sightings row, old shape), and the
-duplicates view showed the possible section in Danish with `dec()`-formatted
-probability. The first live run caught two defects fixed on the spot: **a slot may
-absorb at most one sighting per portal** — a null-location jobindex ad wildcards every
-city and had claimed *both* Workday "Senior Software Engineer" reqs; one ad appears
-once per portal, so the second claimant now demotes to a possible pair and keeps its
-own candidacy — and the drop-context probability now formats invariantly ("0.98", not
-the host culture's "0,98").
+**Live runs** (scratch env per the verify skill, real provider fetches). Runs
+`20260810-080352`/`-080801` exercised the original shortlist-time grouping and caught
+two defects fixed on the spot: the one-sighting-per-portal rule (a null-location
+jobindex ad had claimed *both* Workday "Senior Software Engineer" reqs) and invariant
+formatting of the drop-context probability. Runs `20260810-084837`/`-085714` exercised
+the dedupe-phase pass with a full manual audit of every slot, sighting, possible pair
+and a same-company title-overlap sweep of the ranked list. The audit drove two more
+changes: **location compatibility** — differing keys were −7 even when one side merely
+spoke coarser ("Denmark" vs "København V"; "Indien, Litauen, Aarhus" vs "Aarhus C";
+"Nordhavn, København Ø" vs "København Ø"), so resolved sites within 30 km, or a
+country-only claim covering the other side's country, are now neutral instead of
+penalised — and the **possible floor moved 0.5 → 0.6** because recency agreement had
+lifted same-title/other-city postings to exactly 0.5, flooding the audit list (354
+rows → 146, now sorted strongest-first). After both: cross-portal same-title
+duplicates in the *whole ranked list* fell 10 → 5, and each survivor is a deliberate
+keep — contradictory locations (jobindex's "Frankrig" vs Copenhagen, Manila vs
+København, Suzhou vs Bjerringbro) or unresolvable text ("Udlandet",
+"Headquarters (IT)") where merging would be a guess.

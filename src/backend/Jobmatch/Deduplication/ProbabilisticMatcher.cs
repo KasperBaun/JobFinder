@@ -37,57 +37,94 @@ public sealed class ProbabilisticMatcher(Gazetteer? gazetteer = null)
     private const double LocationDiffers = -7;
     private const double RecencyClose = 1;
     private const double RecencyFar = -2;
+    private const double CompatibleKm = 30;
     private const double CloseDays = 14;
     private const double FarDays = 60;
     private const double SameAdProbability = 0.90;
     private const double PossibleProbability = 0.30;
 
-    public MatchVerdict Compare(Listing a, Listing b)
+    /// <summary>Precomputes a listing's comparison features once, so a caller comparing one
+    /// listing against many (the dedupe pass) does not re-normalise per pair.</summary>
+    public MatchFeatures Extract(Listing listing)
     {
-        var company = Deduper.NormaliseCompany(a.Company);
-        if (company.Length == 0 || company != Deduper.NormaliseCompany(b.Company))
+        var title = Deduper.Normalise(listing.Title);
+        return new MatchFeatures(
+            listing,
+            Deduper.NormaliseCompany(listing.Company),
+            title,
+            TitleSimilarity.Tokenise(title),
+            Deduper.NormaliseLocation(listing.Location, gazetteer),
+            gazetteer?.ResolveSites(listing.Location, null) ?? []);
+    }
+
+    public MatchVerdict Compare(Listing a, Listing b) => Compare(Extract(a), Extract(b));
+
+    public MatchVerdict Compare(MatchFeatures a, MatchFeatures b)
+    {
+        if (a.CompanyKey.Length == 0 || a.CompanyKey != b.CompanyKey)
             return new MatchVerdict(MatchBand.Distinct, 0, 0, 0, 0);
 
-        var title = TitleEvidence(a.Title, b.Title);
-        var location = LocationEvidence(a.Location, b.Location);
-        var recency = RecencyEvidence(a.PostedAt, b.PostedAt);
+        var title = TitleEvidence(a, b);
+        var location = LocationEvidence(a, b);
+        var recency = RecencyEvidence(a.Listing.PostedAt, b.Listing.PostedAt);
         var probability = ToProbability(Prior + title + location + recency);
         var band = BandOf(probability);
 
         // Within one portal the exact-key deduper (R-115) has already merged true duplicates by
         // URL; two distinct URLs on the same source are almost always two ads — "Senior X" and
         // "X" as separate reqs — so a same-portal pair can reach Possible but never SameAd.
-        if (band == MatchBand.SameAd && a.Portal == b.Portal) band = MatchBand.Possible;
+        if (band == MatchBand.SameAd && a.Listing.Portal == b.Listing.Portal) band = MatchBand.Possible;
         return new MatchVerdict(band, probability, title, location, recency);
     }
 
-    private static double TitleEvidence(string a, string b)
+    private static double TitleEvidence(MatchFeatures a, MatchFeatures b)
     {
-        var normalisedA = Deduper.Normalise(a);
-        var normalisedB = Deduper.Normalise(b);
-        if (normalisedA == normalisedB) return TitleExact;
+        if (a.TitleKey == b.TitleKey) return TitleExact;
 
-        var tokensA = TitleSimilarity.Tokenise(normalisedA);
-        var tokensB = TitleSimilarity.Tokenise(normalisedB);
-        var evidence = TitleSimilarity.Jaccard(tokensA, tokensB) switch
+        var evidence = TitleSimilarity.Jaccard(a.TitleTokens, b.TitleTokens) switch
         {
             >= NearIdenticalJaccard => TitleNearIdentical,
             >= SimilarJaccard => TitleSimilar,
             >= WeakJaccard => TitleWeak,
             _ => TitleDifferent,
         };
-        if (TitleSimilarity.SeniorityConflicts(tokensA, tokensB)) evidence += SeniorityConflictPenalty;
-        if (TitleSimilarity.StackConflicts(tokensA, tokensB)) evidence += StackConflictPenalty;
+        if (TitleSimilarity.SeniorityConflicts(a.TitleTokens, b.TitleTokens)) evidence += SeniorityConflictPenalty;
+        if (TitleSimilarity.StackConflicts(a.TitleTokens, b.TitleTokens)) evidence += StackConflictPenalty;
         return evidence;
     }
 
-    private double LocationEvidence(string? a, string? b)
+    private static double LocationEvidence(MatchFeatures a, MatchFeatures b)
     {
-        var keyA = Deduper.NormaliseLocation(a, gazetteer);
-        var keyB = Deduper.NormaliseLocation(b, gazetteer);
         // A missing location is a wildcard, not a mismatch — jobindex re-listings often omit it.
-        if (keyA.Length == 0 || keyB.Length == 0) return 0;
-        return keyA == keyB ? LocationAgrees : LocationDiffers;
+        if (a.LocationKey.Length == 0 || b.LocationKey.Length == 0) return 0;
+        if (a.LocationKey == b.LocationKey) return LocationAgrees;
+
+        // Differing keys are a *conflict* (Manila vs København) only when the places genuinely
+        // disagree. A granularity difference — "Denmark" vs "København V", a multi-country site
+        // list vs one of its cities, "Nordhavn, København Ø" vs "København Ø" — is neutral:
+        // any resolved site within CompatibleKm of the other side's, or a country-only claim
+        // covering the other side's country, is compatible with being the same ad.
+        return SitesCompatible(a.Sites, b.Sites) ? 0 : LocationDiffers;
+    }
+
+    private static bool SitesCompatible(IReadOnlyList<GeoPlace> a, IReadOnlyList<GeoPlace> b)
+    {
+        if (a.Count == 0 || b.Count == 0) return false;
+        foreach (var siteA in a)
+        {
+            foreach (var siteB in b)
+            {
+                if (siteA.Type == GeoPlaceType.Country || siteB.Type == GeoPlaceType.Country)
+                {
+                    if (string.Equals(siteA.CountryCode, siteB.CountryCode, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    continue;
+                }
+                if (GeoDistance.HaversineKm(siteA.Latitude, siteA.Longitude, siteB.Latitude, siteB.Longitude) <= CompatibleKm)
+                    return true;
+            }
+        }
+        return false;
     }
 
     private static double RecencyEvidence(DateTimeOffset? a, DateTimeOffset? b)
