@@ -113,7 +113,7 @@ public sealed partial class SearchService : ISearchService
         await foreach (var evt in FetchAll(prep.Enabled, fetchHttp, statuses, rawByProvider, fetched, ct).ConfigureAwait(false))
             yield return evt;
 
-        var dedupeResult = Deduper.Deduplicate(fetched);
+        var dedupeResult = Deduper.Deduplicate(fetched, _gazetteer ?? Gazetteer.LoadBundled());
         var deduped = dedupeResult.Deduped;
         yield return new DedupeEvent(deduped.Count);
         JsonReportWriter.WriteListings(deduped, _ctx.AllListingsPath);
