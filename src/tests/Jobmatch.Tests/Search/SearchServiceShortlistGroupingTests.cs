@@ -99,6 +99,30 @@ public sealed class SearchServiceShortlistGroupingTests
     }
 
     [Fact]
+    public void A_Slot_Absorbs_At_Most_One_Sighting_Per_Portal()
+    {
+        // Seen live (run 20260810-080352): a null-location jobindex re-listing wildcards every
+        // city, so it claimed BOTH Workday reqs of the same title. One ad appears once per
+        // portal — the second claimant is the portal's other req and keeps its own candidacy.
+        var jobindex = Scored("jx", 0.9, "Senior Software Engineer", company: "SimCorp", location: null);
+        var workday1 = MakePortal("w1", 0.85, "Senior Software Engineer", "workday-simcorp", "Copenhagen");
+        var workday2 = MakePortal("w2", 0.84, "Senior Software Engineer", "workday-simcorp", "Bad Homburg");
+
+        var selection = Build([jobindex, workday1, workday2], topN: 5);
+
+        Assert.Equal(["jx", "w2"], selection.Shortlist.Select(m => m.Listing.Id));
+        Assert.Equal("w1", Assert.Single(selection.SightingsByPrimary["jx"]).Match.Listing.Id);
+        var pair = Assert.Single(selection.PossibleDuplicates);
+        Assert.Equal(("jx", "w2"), (pair.KeptId, pair.CandidateId));
+    }
+
+    private static Match MakePortal(string id, double score, string title, string portal, string? location)
+    {
+        var m = Scored(id, score, title, company: "SimCorp", location: location);
+        return m with { Listing = m.Listing with { Portal = portal } };
+    }
+
+    [Fact]
     public void Possible_Pair_Is_Recorded_And_Both_Keep_Their_Slots()
     {
         var selection = Build(
