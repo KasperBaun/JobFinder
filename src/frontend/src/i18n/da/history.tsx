@@ -65,6 +65,9 @@ export const history: Messages['history'] = {
   noDuplicatesMerged: 'Der blev ikke slået dubletter sammen i denne søgning.',
   dedupeKept: 'beholdt',
   dedupeAlsoSeen: count => count === 1 ? 'også set 1 andet sted' : `også set ${count} andre steder`,
+  possibleHeading: count => count === 1 ? '1 mulig dublet' : `${count} mulige dubletter`,
+  possibleIntro: 'Samme arbejdsgiver, lignende ordlyd — beholdt som separate opslag, fordi matchet ikke er sikkert.',
+  possibleProbability: p => `sandsynlighed ${p}`,
 
   colRating: 'Score',
 

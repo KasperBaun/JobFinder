@@ -4,6 +4,7 @@ export const listing: Messages['listing'] = {
   favoriteBadge: '★ Favorit',
   favoriteTitle: 'En af dine favoritvirksomheder — scoren er løftet',
   openPosting: 'Åbn jobopslaget →',
+  alsoSeenOn: 'Også set på',
 
   facts: {
     mustHave: 'Skal-have',
