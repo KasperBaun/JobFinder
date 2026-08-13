@@ -6,6 +6,12 @@ directories:
   output: release
   buildResources: build
 
+# This package has no production dependencies and no native modules, so there is nothing to
+# install or rebuild here — and letting electron-builder try is actively harmful under npm
+# workspaces: its `npm install --omit=dev` in this directory resolves to the workspace ROOT
+# and prunes every devDependency, deleting electron-builder's own app-builder-bin mid-build.
+npmRebuild: false
+
 # What goes inside the app (asar). The 204 MB self-contained backend is NOT here — it rides along
 # as per-platform extraResources so it stays outside asar and isn't double-packed. Each OS block
 # below bundles only its own publish/<rid> output.

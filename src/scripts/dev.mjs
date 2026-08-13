@@ -74,7 +74,7 @@ process.on('SIGTERM', cleanup)
 process.on('exit',    () => { for (const { child } of children) killTree(child.pid) })
 
 start('server', 'dotnet', ['watch', '--project', 'src/backend/Jobmatch.Api', 'run'])
-start('client', 'npm',    ['--prefix', 'src/frontend', 'run', 'dev'])
+start('client', 'npm',    ['run', 'dev', '-w', 'jobfinder-gui'])
 
 const [apiReady, viteReady] = await Promise.all([
   waitForPort(apiPort,  { timeoutMs: 90000 }),  // first dotnet build can be slow

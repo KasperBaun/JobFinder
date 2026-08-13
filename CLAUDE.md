@@ -30,7 +30,10 @@ data/                                GITIGNORED — per-user state under data/<e
     examples/                        user-curated seed listings (liked / disliked archetypes)
     history/<run-id>.json, jobsearch/<id>.json, hangfire.db
     marks.json
-package.json                         root npm wrapper — convenience scripts around dotnet + npm (build/dev/test/package/tool)
+package.json                         root npm wrapper — npm workspaces root (src/frontend, src/desktop,
+                                     src/tests/playwright) plus convenience scripts around dotnet + npm
+                                     (build/dev/test/package/tool). One `npm install` at the root installs
+                                     every workspace; there is a single `package-lock.json`, at the root.
 publish/                             GITIGNORED — self-contained win-x64 publish output
 pkg/                                 GITIGNORED — local NuGet tool package (npm run package)
 .claude/skills/                      project skills — dotnet-backend-standards owns the backend conventions (replaced src/backend/rules/), plus frontend-standards, developer-documentation, business-analysis, verify
@@ -87,7 +90,7 @@ Everything else in the skill's `reference/` applies without carve-out: Endpoint 
 ## Entry point
 
 - One backend, two front-end shells. The backbone is the self-contained `Jobmatch.Host`: launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. This browser experience ships as the `jobfinder` .NET tool (`npm run package` / `install:tool`) and runs via `npm run dev` / `dev:bundled`. It is being retired in favour of the desktop app but stays functional; it no longer has its own Windows installer.
-- The Electron desktop shell (`src/desktop/`, tracked TypeScript source) is the second front-end and **the** Windows installer going forward (`npm run package:win` → electron-builder NSIS installer, artifact under `src/desktop/release/`; also built by CI `release.yml`). It spawns that same `Jobmatch.Host.exe` on an ephemeral loopback port (`JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`, `windowsHide`) and renders the SPA in a native `BrowserWindow` (single-instance lock, graceful backend shutdown, startup-error window, remembered window size/position).
+- The Electron desktop shell (`src/desktop/`, tracked TypeScript source) is the second front-end and **the** Windows installer going forward (`npm run package:win` → electron-builder NSIS installer, artifact under `src/desktop/release/`; also built by CI `release.yml`). It spawns that same `Jobmatch.Host.exe` on an ephemeral loopback port (`JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`, `windowsHide`) and renders the SPA in a native `BrowserWindow` (single-instance lock, graceful backend shutdown, startup-error window, remembered window size/position). Two settings there exist because of npm workspaces and must not be "tidied": `electron` is pinned to an exact version (electron-builder resolves it from `src/desktop/node_modules`, which hoisting empties, so a range makes the build fail), and `npmRebuild: false` in `electron-builder.yml` stops its app-dir `npm install --omit=dev` from pruning the whole root tree mid-build. Electron 43 needs Node ≥ 22.12 — that is the floor for local builds and for `release.yml`'s `setup-node`.
 - There is no separate CLI; headless operation is not part of v1.
 - The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
 - API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
@@ -100,7 +103,7 @@ through a pull request merged with a merge commit (`Merge pull request #N from K
 
 1. **Verify functional first** — `dotnet test src/Jobmatch.slnx -c Release`
    (with `JOBFINDER_USER` set; the runner has no `git config user.email`),
-   `npm --prefix src/frontend run test`, and `npm --prefix src/frontend run build`
+   `npm run test -w jobfinder-gui`, and `npm run build -w jobfinder-gui`
    (`tsc -b` is what catches a missing Danish catalog key). CI reruns all three on
    Windows *and* Linux, so a red suite here is a failed release there.
 2. **Housekeeping** — `todo.md` forward-looking only (closed items dropped, "In progress"
@@ -109,11 +112,13 @@ through a pull request merged with a merge commit (`Merge pull request #N from K
    every behaviour change. Task plan docs under `docs/tasks/` stay after shipping — they
    are design rationale, like `T-007/`.
 3. **Version bump commit** on `dev` — `chore(release): bump to X.Y`, touching exactly four
-   files: `package.json`, `src/desktop/package.json`, `src/desktop/package-lock.json`
-   (CI runs `npm ci` there before `npm version`, so a stale lock fails the build), and the
-   `VERSION:` prefix in `.github/workflows/release.yml`. Use
-   `npm version X.Y.0 --no-git-tag-version` so package and lock stay in sync. Only the
-   minor is bumped by hand — the patch is `${{ github.run_number }}`.
+   files: `package.json`, `package-lock.json` (CI runs `npm ci` at the root before
+   `npm version`, so a stale lock fails the build), `src/desktop/package.json`, and the
+   `VERSION:` prefix in `.github/workflows/release.yml`. Run
+   `npm version X.Y.0 --no-git-tag-version` then
+   `npm version X.Y.0 -w jobfinder-desktop --no-git-tag-version` — both write the single
+   root lock, so packages and lock stay in sync. Only the minor is bumped by hand — the
+   patch is `${{ github.run_number }}`.
 4. **PR `dev` → `main`**, titled like the release (`Release 0.4 — <headline>`), merged with
    a merge commit.
 5. **The merge is the release.** CI tests both platforms, publishes the self-contained
