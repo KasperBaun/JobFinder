@@ -14,10 +14,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
+    "electron": "43.4.0",
+    "electron-builder": "^26.15.3",
     "png-to-ico": "^2.1.8",
-    "sharp": "^0.33.5",
+    "sharp": "^0.35.3",
     "typescript": "^5.7.2"
   }
 }

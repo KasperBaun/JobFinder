@@ -30,11 +30,13 @@
   <Target Name="BuildFrontend"
           BeforeTargets="Build;Publish"
           Condition="'$(BuildGui)' == 'true'"
-          Inputs="..\..\frontend\package.json;..\..\frontend\package-lock.json;..\..\frontend\src\**\*;..\..\frontend\index.html;..\..\frontend\vite.config.ts"
+          Inputs="..\..\frontend\package.json;..\..\..\package-lock.json;..\..\frontend\src\**\*;..\..\frontend\index.html;..\..\frontend\vite.config.ts"
           Outputs="..\..\frontend\dist\index.html">
     <Message Importance="high" Text="Building frontend..." />
-    <Exec Command="npm install" WorkingDirectory="..\..\frontend" />
-    <Exec Command="npm run build" WorkingDirectory="..\..\frontend" />
+    <!-- npm workspaces: install/run from the repo root. `-w jobfinder-gui` keeps a backend
+         build from pulling Electron, and is additive — it never prunes the other workspaces. -->
+    <Exec Command="npm install -w jobfinder-gui" WorkingDirectory="..\..\.." />
+    <Exec Command="npm run build -w jobfinder-gui" WorkingDirectory="..\..\.." />
   </Target>
 
   <Target Name="CopyFrontendToOutput"
