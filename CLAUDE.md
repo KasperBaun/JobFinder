@@ -8,8 +8,17 @@ Working notes for agents (Claude Code, sub-agents) operating in this repo.
 docs/                                prd.md, requirements.md, tasks/T-007/ (portal reference), screenshots/
 src/                                 ALL source, tests, configs, build infra
   backend/
-    Jobmatch/                        class library — models, parsing, adapters, ranking, dedupe, output, verification, services
-    Jobmatch.Api/                    Minimal API server (runnable). Endpoints/, Handlers/, Models/, Routes.cs, Infrastructure/
+    Jobmatch/                        class library — four top-level concerns, namespaces follow folders:
+      Domain/                        the entities everything shares; Runs/ holds the run record + state machine
+      Pipeline/                      the search engine — Adapters/, Deduplication/, Geo/, Llm/, Output/,
+                                     Ranking/, Stages/ (one type per step), and SearchPipeline over them
+      Features/                      user-facing capabilities — Providers/, Skillsets/, History/,
+                                     Applications/, Cv/, Jobs/, Transfer/, Identity/
+      Platform/                      cross-cutting — Paths/, Json/, IO/ (AtomicFile); Exceptions.cs at the root
+    Jobmatch.Api/                    Minimal API server (runnable). Features/<Name>/ holds that feature's
+                                     endpoints, handler, DTOs, mappings and <Name>Module.cs (its Add*/Map*);
+                                     Infrastructure/ (HandlerBase, IEndpointRegistration, middleware, setup);
+                                     Contracts/ (shared wire types); central Routes.cs
     config/                          committed example/default configs (skillset.example.md, ranking.yml)
   frontend/                          React 19 + Vite app (runnable independently against Jobmatch.Api)
   desktop/                           Electron shell (TS) — spawns Jobmatch.Host.exe on a loopback port, renders the SPA in a BrowserWindow (see "Entry point"). src/ is tracked; dist/, node_modules/, release/ are gitignored build output.
@@ -17,7 +26,8 @@ src/                                 ALL source, tests, configs, build infra
     Jobmatch.Host/                   bundle (runnable + .NET tool). Ephemeral Kestrel + browser-open + serves bundled SPA + jobfinder tool packaging
   scripts/                           Node build/dev wrappers (dev.mjs, package*.mjs, *-tool.mjs, clean/refresh) — driven by root package.json.
   tests/
-    Jobmatch.Tests/                  xUnit
+    Jobmatch.Tests/                  xUnit — mirrors the source tree (Domain/, Pipeline/, Features/,
+                                     Platform/, and Api/Features/<Name>/ for the HTTP layer)
     playwright/                      Playwright e2e (bootstrap; specs added incrementally)
   Directory.Build.props
   Directory.Packages.props
@@ -58,14 +68,17 @@ When changing behaviour, update the relevant requirement(s) before or with the c
 
 ## Backend rules: adopted vs. exceptions
 
-The backend conventions live in the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md)), which replaced the former `src/backend/rules/` tree — do not recreate that folder. The skill's `reference/` files were written for a multi-tenant SaaS (JWT auth, EF Core + SQL Server, GUID IDs); jobfinder is local, single-user, file-based, no-auth, and the skill's *"Jobfinder deviations from the generic rules"* table enumerates every carve-out. The deviations are codified design decisions, not violations to "fix" — the headline ones:
+The backend conventions live in the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md)), which replaced the former `src/backend/rules/` tree — do not recreate that folder. The skill's `reference/` files were written for a multi-tenant SaaS (JWT auth, EF Core + SQL Server, GUID IDs); jobfinder is local, single-user, file-based, no-auth, so the carve-outs below are the ones that matter. They are codified design decisions, not violations to "fix":
 
 - **No auth / no `.RequirePermission()`.** Deferred; may be added later. (See "No auth" under *Things to avoid*.)
 - **No EF Core / migrations.** State is JSON files under `data/<email>/`.
 - **SQLite, not SQL Server**, for Hangfire storage (`data/<email>/hangfire.db`).
 - **String timestamp run-ids, not GUID primary keys** (id == the history run id).
 - **Hangfire dashboard local-only / unsecured by design** (no auth provider).
-- **Retry policy (intentional):** the search job uses `[AutomaticRetry(Attempts = 1)]`, not the rule's default of 3. A full re-run is expensive, and per-provider failures are already handled gracefully inside the `SearchService` pipeline (each adapter wrapped in try/catch, logged, skipped). Do **not** "fix" this back to 3.
+- **Retry policy (intentional):** the search job uses `[AutomaticRetry(Attempts = 1)]`, not the rule's default of 3. A full re-run is expensive, and per-provider failures are already handled gracefully inside the `SearchPipeline` (each adapter wrapped in try/catch, logged, skipped). Do **not** "fix" this back to 3.
+- **`Routes.cs` stays central**, not one per feature as the skill's `<Module>/Endpoints/Routes.cs` suggests. With twelve small features the single file is the API's table of contents — the thing you open to answer "what URLs exist?" — and splitting it would scatter that answer without making any feature more self-contained.
+- **`JobSearchHandler.Stream` does not use `HandlerBase.ExecuteAsync`.** Every other handler method does. An SSE feed writes its own status and headers and then streams for the life of the run, so there is no single `IResult` for the base wrapper to map an exception onto. The method says so in place.
+- **Two folder names are plural to avoid shadowing a type**: `Features/Skillsets` (the `Skillset` domain type) in both projects, and `Api/Features/Health` rather than `System` (the global `System` namespace). Renaming either back breaks every file inside it.
 
 Everything else in the skill's `reference/` applies without carve-out: Endpoint → Handler → Service layering, `HandlerBase` + `ExecuteAsync`, `IEndpointRegistration`, typed `Routes.*`, centralised OpenAPI metadata, custom exceptions, the module pattern, the 300-line file / 50-line method limits and partial-class refactoring strategy, and the coding + testing conventions.
 
@@ -92,8 +105,14 @@ Everything else in the skill's `reference/` applies without carve-out: Endpoint 
 - One backend, two front-end shells. The backbone is the self-contained `Jobmatch.Host`: launching it starts an ephemeral Kestrel server, opens the default browser, and serves the bundled React SPA from `gui/`. This browser experience ships as the `jobfinder` .NET tool (`npm run package` / `install:tool`) and runs via `npm run dev` / `dev:bundled`. It is being retired in favour of the desktop app but stays functional; it no longer has its own Windows installer.
 - The Electron desktop shell (`src/desktop/`, tracked TypeScript source) is the second front-end and **the** Windows installer going forward (`npm run package:win` → electron-builder NSIS installer, artifact under `src/desktop/release/`; also built by CI `release.yml`). It spawns that same `Jobmatch.Host.exe` on an ephemeral loopback port (`JOBFINDER_PORT` + `JOBFINDER_NO_BROWSER=1`, `windowsHide`) and renders the SPA in a native `BrowserWindow` (single-instance lock, graceful backend shutdown, startup-error window, remembered window size/position). Two settings there exist because of npm workspaces and must not be "tidied": `electron` is pinned to an exact version (electron-builder resolves it from `src/desktop/node_modules`, which hoisting empties, so a range makes the build fail), and `npmRebuild: false` in `electron-builder.yml` stops its app-dir `npm install --omit=dev` from pruning the whole root tree mid-build. Electron 43 needs Node ≥ 22.12 — that is the floor for local builds and for `release.yml`'s `setup-node`.
 - There is no separate CLI; headless operation is not part of v1.
-- The `Jobmatch/` library is the single backbone (services, ranking, parsing, adapters). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
-- API layout: `src/backend/Jobmatch.Api/Endpoints/`, `Handlers/`, `Models/`, `Infrastructure/` (HandlerBase, IEndpointRegistration), centralised `Routes.cs` with `ApiConstants.RouteBase` prefix, `/api/system/ping` heartbeat, `/api/system/shutdown` (host-only), SSE for long-running operations, Vite + React 19 + React Query.
+- The `Jobmatch/` library is the single backbone (domain, pipeline, features, platform). The `Jobmatch.Api` project owns the HTTP layer. `Jobmatch.Host` is the deployment-time composition root.
+- API layout: one folder per feature under `src/backend/Jobmatch.Api/Features/`, each owning its endpoints,
+  handler, DTOs, mappings and a `<Name>Module.cs` that registers them. `JobmatchApiExtensions` is a list of
+  `services.Add<Feature>()` / `app.Map<Feature>()` calls — adding a feature is one line in each, not edits in
+  three separate blocks. `Infrastructure/` holds what every feature shares (HandlerBase, IEndpointRegistration,
+  SetupRequiredMiddleware, HangfireStorage, the JSON policy). `Routes.cs` stays central, with `Routes.Prefix`
+  — it is the table of contents for the HTTP surface. `/api/system/ping` heartbeat, `/api/system/shutdown`
+  (host-only), SSE for long-running operations, Vite + React 19 + React Query.
 
 ## Releasing (dev → main)
 
@@ -177,11 +196,11 @@ returns the namespace object, so call sites are property accesses, not string ke
   setup request or `PUT /api/settings/language`), with a `localStorage` copy used only as
   a boot hint so reloads don't flash English.
 - **Backend prose travels as `key + args`, never as finished sentences.** Timeline entries
-  (`Jobs/JobSearch.cs`, `Jobmatch.Api/Jobs/SearchJob.Events.cs`) and match rationale
-  (`Ranking/Ranker.Notes.cs`) emit a stable key plus the values it interpolates; the
+  (`Domain/Runs/JobSearch.cs`, `Jobmatch.Api/Features/Search/SearchJob.Events.cs`) and match rationale
+  (`Pipeline/Ranking/Ranker.Notes.cs`) emit a stable key plus the values it interpolates; the
   frontend's `server` namespace owns the wording. Each also keeps its English string
   (`Message`, `Notes`) — that is what logs, `top-jobs.md` and runs recorded before the keys
-  show. Drop reasons (`Search/SearchService.Ranking.cs`) still emit key + args + English
+  show. Drop reasons (`Pipeline/Ranking/ShortlistBuilder.cs`) still emit key + args + English
   context into run history, but nothing renders them since the removed view was retired.
   **Keys are persisted in run history, so they are additive only: never rename or repurpose
   one.** Add a key to both `en/server.ts` and `da/server.ts` in the same change.
@@ -211,9 +230,9 @@ A search runs as a **Hangfire background job** (durable SQLite storage at `data/
 decoupled from the HTTP request, so it survives navigation, reload, and host restart (R-036/R-037/R-038/R-055).
 Do **not** "fix" this back to a synchronous in-request run.
 
-- Domain model: `Jobmatch/Jobs/JobSearch.cs` (immutable record + state machine), persisted per-run via
-  `JobSearchStore` under `data/<email>/jobsearch/<id>.json`. Id == the history run id.
-- Execution: `Jobmatch.Api/Jobs/SearchJob.cs` (the Hangfire job) drives the `SearchService` pipeline,
+- Domain model: `Jobmatch/Domain/Runs/JobSearch.cs` (immutable record + state machine), persisted per-run via
+  `Features/Jobs/JobSearchStore.cs` under `data/<email>/jobsearch/<id>.json`. Id == the history run id.
+- Execution: `Jobmatch.Api/Features/Search/SearchJob.cs` (the Hangfire job) drives the `SearchPipeline`,
   projects progress onto the `JobSearch` + timeline, and publishes snapshots to `JobSearchBus` for SSE.
 - API: `POST /api/search` enqueues and returns `{ id }`; `GET /api/search/{id}/stream` is the SSE feed;
   `/api/search/active` for reconnect; `POST /api/search/{id}/cancel`.
