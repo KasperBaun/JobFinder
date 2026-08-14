@@ -12,5 +12,7 @@ public interface ISystemHandler
 public sealed class SystemHandler(ILogger<SystemHandler> logger)
     : HandlerBase(logger), ISystemHandler
 {
-    public Task<IResult> Ping() => Task.FromResult<IResult>(Results.Ok());
+    public Task<IResult> Ping() => ExecuteAsync(
+        "ping",
+        () => Task.FromResult<IResult>(Results.Ok()));
 }

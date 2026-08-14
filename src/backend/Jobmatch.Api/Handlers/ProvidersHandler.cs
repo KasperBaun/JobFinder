@@ -1,6 +1,5 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
-using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -28,22 +27,21 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         "list providers",
         () =>
         {
-            var listings = providers.List();
-            var summaries = listings.Select(ToSummary).ToList();
+            var summaries = providers.List().Select(ProviderMappings.ToSummary).ToList();
             return Task.FromResult<IResult>(Results.Ok(new ProvidersResponse(summaries)));
         });
 
     public Task<IResult> GetById(int id) => ExecuteAsync(
-        "get provider: {ProviderId}",
+        "get provider {ProviderId}",
         () =>
         {
             var detail = providers.GetById(id);
-            return Task.FromResult<IResult>(Results.Ok(ToDetail(detail)));
+            return Task.FromResult<IResult>(Results.Ok(ProviderMappings.ToDetail(detail)));
         },
         logParams: [id]);
 
     public Task<IResult> Update(int id, ProviderUpsert? request) => ExecuteAsync(
-        "update provider: {ProviderId}",
+        "update provider {ProviderId}",
         () =>
         {
             if (request is null)
@@ -55,7 +53,7 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         logParams: [id]);
 
     public Task<IResult> SetSecrets(int id, SetSecretsRequest? request) => ExecuteAsync(
-        "set provider secrets: {ProviderId}",
+        "set provider secrets {ProviderId}",
         () =>
         {
             if (request is null)
@@ -67,7 +65,7 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         logParams: [id]);
 
     public Task<IResult> SetConfig(int id, ProviderConfigUpdate? request) => ExecuteAsync(
-        "set provider config: {ProviderId}",
+        "set provider config {ProviderId}",
         () =>
         {
             var ov = new ProviderOverride(
@@ -81,11 +79,11 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         logParams: [id]);
 
     public Task<IResult> Test(int id, CancellationToken ct) => ExecuteAsync(
-        "test provider: {ProviderId}",
+        "test provider {ProviderId}",
         async () =>
         {
             var outcome = await providers.TestAsync(id, ct).ConfigureAwait(false);
-            return Results.Ok(ToTestResult(outcome));
+            return Results.Ok(ProviderMappings.ToTestResult(outcome));
         },
         logParams: [id]);
 
@@ -95,7 +93,7 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         {
             var candidates = await providers.DetectAsync(request?.Url, ct).ConfigureAwait(false);
             var dtos = candidates
-                .Select(c => new DetectedSourceDto(c.Kind, c.DisplayName, c.Summary))
+                .Select(ProviderMappings.ToDetected)
                 .ToList();
             return Results.Ok(new DetectSourceResponse(dtos));
         });
@@ -109,7 +107,7 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
             var preview = await providers
                 .PreviewAsync(request.Url, request.Kind, request.DisplayName, ct)
                 .ConfigureAwait(false);
-            return Results.Ok(new SourcePreviewResult(ToTestResult(preview.Test), ToOverlap(preview.Overlap)));
+            return Results.Ok(new SourcePreviewResult(ProviderMappings.ToTestResult(preview.Test), ProviderMappings.ToOverlap(preview.Overlap)));
         });
 
     public Task<IResult> Create(CreateSourceRequest? request, CancellationToken ct) => ExecuteAsync(
@@ -125,112 +123,11 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         });
 
     public Task<IResult> Delete(int id) => ExecuteAsync(
-        "delete provider: {ProviderId}",
+        "delete provider {ProviderId}",
         () =>
         {
             providers.Delete(id);
             return Task.FromResult<IResult>(Results.Ok(new SaveResponse(true)));
         },
         logParams: [id]);
-
-    private static ProviderSummary ToSummary(ProviderListing l) => new(
-        Id: l.Portal.Id,
-        Name: l.Portal.Name,
-        DisplayName: string.IsNullOrWhiteSpace(l.Portal.DisplayName) ? l.Portal.Name : l.Portal.DisplayName!,
-        Type: l.Portal.Type.ToString().ToLowerInvariant(),
-        Enabled: l.Enabled,
-        Endpoint: l.Portal.Endpoint?.ToString(),
-        RateLimitRps: l.Portal.RateLimitRps,
-        Notes: l.Portal.Notes,
-        NotesDa: l.Portal.NotesDa,
-        LastFetchedAt: l.LastFetchedAt,
-        LastFetchCount: l.LastFetchCount,
-        RequiresSecret: l.Portal.RequiresSecret,
-        HasSecret: l.HasSecret,
-        Removable: l.Portal.Id >= UserProviderStore.IdBase);
-
-    private static ProviderDetail ToDetail(ProviderListingDetail d)
-    {
-        var l = d.Listing;
-        var recent = d.RecentRuns.Select(r => new ProviderRecentRun(
-            RunId: r.RunId,
-            StartedAt: r.StartedAt,
-            Status: r.Status,
-            FetchedCount: r.FetchedCount,
-            Error: r.Error)).ToList();
-
-        return new ProviderDetail(
-            Id: l.Portal.Id,
-            Name: l.Portal.Name,
-            DisplayName: string.IsNullOrWhiteSpace(l.Portal.DisplayName) ? l.Portal.Name : l.Portal.DisplayName!,
-            Type: l.Portal.Type.ToString().ToLowerInvariant(),
-            Enabled: l.Enabled,
-            Endpoint: l.Portal.Endpoint?.ToString(),
-            RateLimitRps: l.Portal.RateLimitRps,
-            Notes: l.Portal.Notes,
-            NotesDa: l.Portal.NotesDa,
-            LastFetchedAt: l.LastFetchedAt,
-            LastFetchCount: l.LastFetchCount,
-            RequiresSecret: l.Portal.RequiresSecret,
-            HasSecret: l.HasSecret,
-            Removable: l.Portal.Id >= UserProviderStore.IdBase,
-            RecentRuns: recent,
-            Config: ToConfigDto(l.Portal, d.Override));
-    }
-
-    private static readonly string[] QueryKeys = ["q", "query", "keywords", "search", "searchText"];
-
-    private static ProviderConfigDto ToConfigDto(PortalConfig portal, ProviderOverride? ov)
-    {
-        var pg = portal.Pagination;
-        var defaultMaxPages = pg?.MaxPages;
-        var defaultPageSize = pg?.Size;
-        var maxPages = ov?.MaxPages ?? defaultMaxPages;
-        var pageSize = ov?.PageSize ?? defaultPageSize;
-        var ceiling = maxPages is int mp && pageSize is int ps ? mp * ps : (int?)null;
-
-        return new ProviderConfigDto(
-            Method: portal.Method,
-            EnrichBody: ov?.EnrichBody ?? portal.EnrichBody,
-            Paginates: pg is not null,
-            MaxPages: maxPages,
-            PageSize: pageSize,
-            HardCeiling: ceiling,
-            SearchQuery: ExtractSearchQuery(portal.QueryParams),
-            RateLimitRps: ov?.RateLimitRps ?? portal.RateLimitRps,
-            Defaults: new ProviderConfigDefaults(defaultMaxPages, defaultPageSize, portal.RateLimitRps, portal.EnrichBody),
-            RateLimitOverridden: ov?.RateLimitRps is not null,
-            EnrichBodyOverridden: ov?.EnrichBody is not null,
-            MaxPagesOverridden: ov?.MaxPages is not null,
-            PageSizeOverridden: ov?.PageSize is not null);
-    }
-
-    private static string? ExtractSearchQuery(IReadOnlyDictionary<string, object?>? queryParams)
-    {
-        if (queryParams is null) return null;
-        foreach (var key in QueryKeys)
-        {
-            if (queryParams.TryGetValue(key, out var val) && val is not null)
-            {
-                var s = Convert.ToString(val, System.Globalization.CultureInfo.InvariantCulture);
-                if (!string.IsNullOrWhiteSpace(s)) return s;
-            }
-        }
-        return null;
-    }
-
-    private static SourceOverlapDto? ToOverlap(SourceOverlapMatch? m) => m is null
-        ? null
-        : new SourceOverlapDto(m.ProviderId, m.DisplayName, m.ExistingCount, m.SharedCount, m.Ratio, m.Duplicate);
-
-    private static ProviderTestResult ToTestResult(ProviderTestOutcome o) => new(
-        Ok: o.Ok,
-        FetchedCount: o.FetchedCount,
-        DurationMs: o.DurationMs,
-        SampleTitle: o.SampleTitle,
-        Error: o.Error,
-        TestedAt: o.TestedAt,
-        Samples: [.. o.Samples.Select(s => new ProviderTestSampleDto(s.Title, s.Company, s.Location, s.Url))],
-        HitPageCap: o.HitPageCap,
-        PossiblyCapped: o.PossiblyCapped);
 }

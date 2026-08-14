@@ -61,6 +61,10 @@ public sealed class JobSearchHandler(
     /// current snapshot for replay-on-connect, then streams live snapshots until the run is terminal or the
     /// client disconnects. A client disconnect ends only this stream — it never cancels the background run.
     /// </summary>
+    // The one handler method that does not go through ExecuteAsync, and cannot: an SSE feed writes
+    // its own status and headers and then streams for the life of the run, so there is no single
+    // IResult for the base wrapper to map an exception onto. It sets its own 404 and swallows the
+    // cancellation that a client disconnect raises.
     public async Task Stream(string id, HttpContext http, CancellationToken ct)
     {
         var current = service.Get(id);

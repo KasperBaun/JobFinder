@@ -7,7 +7,16 @@ public sealed record ProviderListing(
     bool Enabled,
     bool HasSecret,
     DateTimeOffset? LastFetchedAt,
-    int? LastFetchCount);
+    int? LastFetchCount)
+{
+    /// <summary>Only sources the user added themselves can be removed; the shipped catalog is
+    /// ours to change (R-090). Ids at or above the user block are the user's own.</summary>
+    public bool Removable => Portal.Id >= UserProviderStore.IdBase;
+
+    /// <summary>The label to show: a source's display name where it has one, else its id-safe name.</summary>
+    public string DisplayName =>
+        string.IsNullOrWhiteSpace(Portal.DisplayName) ? Portal.Name : Portal.DisplayName!;
+}
 
 public sealed record ProviderRunHistory(
     string RunId,

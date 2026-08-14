@@ -1,8 +1,6 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
 using Jobmatch.Pipeline.Llm;
-using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Platform.Paths;
 using Jobmatch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -16,7 +14,7 @@ public interface ILlmHandler
 }
 
 public sealed class LlmHandler(
-    UserContext ctx,
+    ILlmModelLocator model,
     LlmModelDownloader downloader,
     ModelDownloadManager downloads,
     ILogger<LlmHandler> logger) : HandlerBase(logger), ILlmHandler
@@ -25,10 +23,8 @@ public sealed class LlmHandler(
         "llm status",
         () =>
         {
-            var ranking = RankingConfigLoader.Load(ctx.RankingPath);
-            var llm = ranking.Llm;
-            var resolvedPath = ResolveModelPath(llm.ModelPath, ctx.RootDir);
-            var status = downloader.GetStatus(resolvedPath, llm.ModelDownloadUrl);
+            var llm = model.Config;
+            var status = downloader.GetStatus(model.ModelPath, llm.ModelDownloadUrl);
             var dl = downloads.Snapshot();
             var response = new LlmStatusResponse(
                 Enabled: llm.Enabled,
@@ -48,15 +44,9 @@ public sealed class LlmHandler(
         "start llm model download",
         () =>
         {
-            var ranking = RankingConfigLoader.Load(ctx.RankingPath);
-            var llm = ranking.Llm;
-            var path = ResolveModelPath(llm.ModelPath, ctx.RootDir);
-            var snapshot = downloads.Start(llm.ModelDownloadUrl, path);
+            var snapshot = downloads.Start(model.Config.ModelDownloadUrl, model.ModelPath);
             Logger.LogInformation("LLM model download requested → state {State}", snapshot.State);
             var body = new LlmDownloadStatus(snapshot.State, snapshot.DownloadedBytes, snapshot.TotalBytes, snapshot.Error);
             return Task.FromResult<IResult>(Results.Ok(body));
         });
-
-    private static string ResolveModelPath(string configured, string userDataDir)
-        => Path.IsPathRooted(configured) ? configured : Path.Combine(userDataDir, configured);
 }

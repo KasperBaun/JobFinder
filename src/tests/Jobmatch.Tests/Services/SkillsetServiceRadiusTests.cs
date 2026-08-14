@@ -24,29 +24,31 @@ public sealed class SkillsetServiceRadiusTests : IDisposable
         try { if (Directory.Exists(_tempRoot)) Directory.Delete(_tempRoot, recursive: true); } catch { }
     }
 
-    private SkillsetService New()
+    private SkillsetService New(IGeocodingService? geocoding = null)
     {
         var ctx = UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
-        return new SkillsetService(ctx);
+        return new SkillsetService(ctx, geocoding ?? new NullGeocoder());
     }
 
-    private static SkillsetUpdate Essentials(
-        string? address = null, double? radiusKm = null,
-        double? latitude = null, double? longitude = null, string? resolvedAddress = null) => new(
+    private static SkillsetUpdate Essentials(string? address = null, double? radiusKm = null) => new(
         Name: "Jane Doe", Location: "Copenhagen", ExperienceYears: 5,
         TargetRoles: ["Backend Engineer"], RemotePreference: "remote", Seniority: "senior",
         PrimaryStack: ["C#"], SecondaryStack: null, Domains: null, Disqualifiers: null,
         Languages: null, EmploymentTypes: null, Country: null, Region: null, Metro: null,
-        Address: address, RadiusKm: radiusKm,
-        Latitude: latitude, Longitude: longitude, ResolvedAddress: resolvedAddress);
+        Address: address, RadiusKm: radiusKm);
+
+    private sealed class FixedGeocoder(GeocodeResult result) : IGeocodingService
+    {
+        public Task<GeocodeResult?> GeocodeAsync(string address, CancellationToken ct = default) =>
+            Task.FromResult<GeocodeResult?>(result);
+    }
 
     [Fact]
-    public void Update_Persists_Address_Radius_And_Coordinates()
+    public async Task Update_Persists_Address_Radius_And_Coordinates()
     {
-        var svc = New();
-        svc.Update(Essentials(
-            address: "Somewhere 1, 2300 København S", radiusKm: 50,
-            latitude: 55.6761, longitude: 12.5683, resolvedAddress: "Somewhere 1, 2300 København S"));
+        var svc = New(new FixedGeocoder(
+            new GeocodeResult(55.6761, 12.5683, "Somewhere 1, 2300 København S")));
+        await svc.UpdateAsync(Essentials(address: "Somewhere 1, 2300 København S", radiusKm: 50));
 
         var reloaded = svc.Get();
         Assert.Equal("Somewhere 1, 2300 København S", reloaded.Address);
@@ -56,12 +58,12 @@ public sealed class SkillsetServiceRadiusTests : IDisposable
     }
 
     [Fact]
-    public void Update_With_Blank_Address_Clears_Address_And_Coordinates()
+    public async Task Update_With_Blank_Address_Clears_Address_And_Coordinates()
     {
-        var svc = New();
-        svc.Update(Essentials(address: "Somewhere 1", radiusKm: 50, latitude: 55.0, longitude: 12.0));
+        var svc = New(new FixedGeocoder(new GeocodeResult(55.0, 12.0, "Somewhere 1")));
+        await svc.UpdateAsync(Essentials(address: "Somewhere 1", radiusKm: 50));
 
-        svc.Update(Essentials(address: "  "));
+        await svc.UpdateAsync(Essentials(address: "  "));
 
         var reloaded = svc.Get();
         Assert.Null(reloaded.Address);
@@ -72,30 +74,30 @@ public sealed class SkillsetServiceRadiusTests : IDisposable
     }
 
     [Fact]
-    public void Update_Null_Radius_Keeps_Existing()
+    public async Task Update_Null_Radius_Keeps_Existing()
     {
         var svc = New();
-        svc.Update(Essentials(radiusKm: 25));
-        svc.Update(Essentials());
+        await svc.UpdateAsync(Essentials(radiusKm: 25));
+        await svc.UpdateAsync(Essentials());
 
         Assert.Equal(25, svc.Get().RadiusKm);
     }
 
     [Fact]
-    public void Update_Negative_Radius_Throws()
+    public async Task Update_Negative_Radius_Throws()
     {
         var svc = New();
-        var ex = Assert.Throws<ConfigException>(() => svc.Update(Essentials(radiusKm: -1)));
+        var ex = await Assert.ThrowsAsync<ConfigException>(() => svc.UpdateAsync(Essentials(radiusKm: -1)));
         Assert.Contains("radiusKm", ex.Message);
     }
 
     [Fact]
-    public void Find_Returns_Null_Before_First_Save_Then_The_Profile()
+    public async Task Find_Returns_Null_Before_First_Save_Then_The_Profile()
     {
         var svc = New();
         Assert.Null(svc.Find());
 
-        svc.Update(Essentials());
+        await svc.UpdateAsync(Essentials());
         Assert.NotNull(svc.Find());
     }
 }

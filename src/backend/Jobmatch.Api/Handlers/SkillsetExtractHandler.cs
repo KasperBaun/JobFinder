@@ -1,8 +1,7 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
 using Jobmatch.Features.Cv;
-using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Pipeline.Llm;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +17,7 @@ public interface ISkillsetExtractHandler
 // readiness gate lives here so a POST fails fast with a clear 400 instead of
 // surfacing the problem minutes later through the status poll.
 public sealed class SkillsetExtractHandler(
-    UserContext ctx,
+    ILlmModelLocator model,
     CvExtractionManager extractions,
     ILogger<SkillsetExtractHandler> logger) : HandlerBase(logger), ISkillsetExtractHandler
 {
@@ -27,7 +26,7 @@ public sealed class SkillsetExtractHandler(
         async () =>
         {
             var source = await BuildSourceAsync(file, text, url).ConfigureAwait(false);
-            EnsureLlmReady();
+            model.EnsureReady();
             var snapshot = extractions.Start(source);
             Logger.LogInformation("CV extraction requested → state {State}", snapshot.State);
             return Results.Ok(ToResponse(snapshot));
@@ -36,19 +35,6 @@ public sealed class SkillsetExtractHandler(
     public Task<IResult> Status() => ExecuteAsync(
         "cv extraction status",
         () => Task.FromResult<IResult>(Results.Ok(ToResponse(extractions.Snapshot()))));
-
-    private void EnsureLlmReady()
-    {
-        var llm = RankingConfigLoader.Load(ctx.RankingPath).Llm;
-        if (!llm.Enabled)
-            throw new InvalidRequestException("AI is disabled (llm.enabled in ranking.yml) — enable it to extract a profile from a CV.");
-        if (llm.Provider.Equals("llamasharp", StringComparison.OrdinalIgnoreCase))
-        {
-            var path = Path.IsPathRooted(llm.ModelPath) ? llm.ModelPath : Path.Combine(ctx.RootDir, llm.ModelPath);
-            if (!File.Exists(path))
-                throw new InvalidRequestException("The AI model has not been downloaded yet — download it first.");
-        }
-    }
 
     private static async Task<CvSource> BuildSourceAsync(IFormFile? file, string? text, string? url)
     {

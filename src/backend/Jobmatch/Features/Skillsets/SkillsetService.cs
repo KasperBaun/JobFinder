@@ -4,7 +4,7 @@ using Jobmatch.Platform.Paths;
 
 namespace Jobmatch.Features.Skillsets;
 
-public sealed class SkillsetService(UserContext ctx) : ISkillsetService
+public sealed class SkillsetService(UserContext ctx, IGeocodingService geocoding) : ISkillsetService
 {
     private readonly object _fileLock = new();
 
@@ -17,18 +17,39 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
 
     public Skillset? Find() => File.Exists(ctx.SkillsetPath) ? SkillsetParser.Load(ctx.SkillsetPath) : null;
 
-    public Skillset Update(SkillsetUpdate input)
+    public async Task<Skillset> UpdateAsync(SkillsetUpdate input, CancellationToken ct = default)
     {
+        // Resolving coordinates is a network call, so it happens before the lock rather than inside it.
+        var geocode = await ResolveCoordinatesAsync(input.Address, ct).ConfigureAwait(false);
+
         lock (_fileLock)
         {
             // Create-or-update: on first write there is no file yet, so merge onto an empty baseline.
             var existing = File.Exists(ctx.SkillsetPath)
                 ? SkillsetParser.Load(ctx.SkillsetPath)
                 : EmptyBaseline();
-            var merged = Merge(existing, input);
+            var merged = Merge(existing, input, geocode);
             AtomicFile.WriteAllText(ctx.SkillsetPath, SkillsetParser.Serialize(merged));
             return merged;
         }
+    }
+
+    // Geocode only when the address is new or was never resolved; an unchanged address keeps its
+    // stored coordinates without a network call, and a blank address clears everything. A failed
+    // geocode still saves — the coordinates just stay empty (R-105).
+    private async Task<GeocodeResult?> ResolveCoordinatesAsync(string? rawAddress, CancellationToken ct)
+    {
+        var address = rawAddress?.Trim();
+        if (string.IsNullOrEmpty(address)) return null;
+
+        var existing = Find();
+        if (existing is { Latitude: double lat, Longitude: double lon }
+            && string.Equals(existing.Address, address, StringComparison.Ordinal))
+        {
+            return new GeocodeResult(lat, lon, existing.ResolvedAddress ?? address);
+        }
+
+        return await geocoding.GeocodeAsync(address, ct).ConfigureAwait(false);
     }
 
     private static Skillset EmptyBaseline() => new(
@@ -45,7 +66,7 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
         Languages: [],
         EmploymentTypes: []);
 
-    private static Skillset Merge(Skillset existing, SkillsetUpdate input)
+    private static Skillset Merge(Skillset existing, SkillsetUpdate input, GeocodeResult? geocode)
     {
         var name = input.Name?.Trim();
         if (string.IsNullOrEmpty(name)) throw new ConfigException("name must not be empty");
@@ -81,9 +102,9 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
             PreferredCompanies = input.PreferredCompanies is null ? existing.PreferredCompanies : CleanList(input.PreferredCompanies),
             Address = NullIfBlank(input.Address),
             RadiusKm = radiusKm,
-            Latitude = input.Latitude,
-            Longitude = input.Longitude,
-            ResolvedAddress = NullIfBlank(input.ResolvedAddress),
+            Latitude = geocode?.Latitude,
+            Longitude = geocode?.Longitude,
+            ResolvedAddress = geocode?.ResolvedAddress,
         };
     }
 

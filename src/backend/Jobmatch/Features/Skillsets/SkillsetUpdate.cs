@@ -1,5 +1,11 @@
 namespace Jobmatch.Features.Skillsets;
 
+/// <summary>
+/// A requested profile change. Deliberately carries no coordinates: those are derived from
+/// <see cref="SkillsetUpdate.Address"/> by the service at save time (R-105), so there is no way for
+/// a caller to save a profile whose stored position disagrees with its address.
+/// </summary>
+
 public sealed record SkillsetUpdate(
     string? Name,
     string? Location,
@@ -18,8 +24,4 @@ public sealed record SkillsetUpdate(
     IReadOnlyList<string>? Metro,
     IReadOnlyList<string>? PreferredCompanies = null,
     string? Address = null,
-    double? RadiusKm = null,
-    // Server-computed by the geocoding step in SkillsetHandler — never client input.
-    double? Latitude = null,
-    double? Longitude = null,
-    string? ResolvedAddress = null);
+    double? RadiusKm = null);

@@ -77,6 +77,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<ISearchService, SearchPipeline>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();
         services.AddScoped<ICvExtractionService, CvExtractionService>();
+        services.AddScoped<ILlmModelLocator, LlmModelLocator>();
 
         // Background job search: the JobSearch lifecycle store, the live SSE fan-out bus, and the
         // orchestrating service/job. The bus is a singleton (one in-proc broker); the store and service

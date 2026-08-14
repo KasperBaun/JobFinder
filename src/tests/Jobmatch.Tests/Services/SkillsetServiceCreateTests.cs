@@ -27,7 +27,7 @@ public sealed class SkillsetServiceCreateTests : IDisposable
     private (UserContext ctx, SkillsetService svc) New()
     {
         var ctx = UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
-        return (ctx, new SkillsetService(ctx));
+        return (ctx, new SkillsetService(ctx, new NullGeocoder()));
     }
 
     private static SkillsetUpdate Essentials() => new(
@@ -37,12 +37,12 @@ public sealed class SkillsetServiceCreateTests : IDisposable
         Languages: null, EmploymentTypes: null, Country: null, Region: null, Metro: null);
 
     [Fact]
-    public void Update_CreatesFile_WhenMissing()
+    public async Task Update_CreatesFile_WhenMissing()
     {
         var (ctx, svc) = New();
         Assert.False(File.Exists(ctx.SkillsetPath));
 
-        var saved = svc.Update(Essentials());
+        var saved = await svc.UpdateAsync(Essentials());
 
         Assert.True(File.Exists(ctx.SkillsetPath));
         Assert.Equal("Jane Doe", saved.Name);
@@ -53,10 +53,10 @@ public sealed class SkillsetServiceCreateTests : IDisposable
     }
 
     [Fact]
-    public void Update_ThenReload_RoundTrips()
+    public async Task Update_ThenReload_RoundTrips()
     {
         var (ctx, svc) = New();
-        svc.Update(Essentials());
+        await svc.UpdateAsync(Essentials());
 
         var reloaded = svc.Get();
         Assert.Equal("Jane Doe", reloaded.Name);
@@ -64,7 +64,7 @@ public sealed class SkillsetServiceCreateTests : IDisposable
     }
 
     [Fact]
-    public void Get_ThrowsFriendly_WhenNoProfile()
+    public async Task Get_ThrowsFriendly_WhenNoProfile()
     {
         var (_, svc) = New();
         Assert.Throws<InvalidRequestException>(() => svc.Get());
