@@ -1,12 +1,16 @@
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Platform.Paths;
 
 /// <summary>
-/// Resolves the active user (by email) and the on-disk paths derived from <c>data/&lt;email&gt;/</c>.
-/// On first run for a user, seeds the user's data directory with an example skillset template
-/// copied from <c>{AppContext.BaseDirectory}/config/</c>.
+/// Every path the app is allowed to read or write for the active user, derived once from
+/// <c>data/&lt;email&gt;/</c>. Nothing outside this type builds a path into the data directory.
 /// </summary>
+/// <remarks>
+/// Resolution is deliberately split: <see cref="ActiveUserEmail"/> answers who the user is,
+/// <see cref="DataRoot"/> answers where their directory lives, and <see cref="UserDataDirectory"/>
+/// creates and seeds it. <see cref="Resolve"/> composes the three.
+/// </remarks>
 public sealed class UserContext
 {
     public required string Email { get; init; }
@@ -28,55 +32,41 @@ public sealed class UserContext
     public required string UserProvidersPath { get; init; }
 
     /// <summary>
-    /// Resolves the active <see cref="UserContext"/> by determining the email, building the on-disk
-    /// path layout under <c>{repoRoot}/data/{email}/</c>, performing first-run seeding if the
-    /// directory doesn't yet exist, and ensuring the standard subdirectories exist.
+    /// Resolves the active user, lays out their paths under <c>{repoRoot}/data/{email}/</c>, and
+    /// creates the directory (seeding it on first run).
     /// </summary>
     /// <param name="emailOverride">Optional email override; takes precedence over env and git.</param>
-    /// <param name="repoRoot">Optional repo root; defaults to walking up from cwd looking for <c>.git</c>, falling back to <c>%LOCALAPPDATA%/jobfinder</c> if none found.</param>
-    /// <param name="seedExamples">When true (default), copy example configs into a freshly created RootDir.</param>
+    /// <param name="repoRoot">Optional repo root; defaults to walking up from cwd looking for <c>.git</c>, falling back to the per-user application-data directory if none is found.</param>
+    /// <param name="seedExamples">When true (default), copy the example profile into a freshly created RootDir.</param>
     /// <param name="cwdOverride">Optional cwd override used as the start of the <c>.git</c> walk-up; defaults to <see cref="Directory.GetCurrentDirectory"/>.</param>
     /// <param name="dataDirOverride">Optional explicit data directory; when set it becomes <see cref="RootDir"/> verbatim (used once the user has chosen a location during first-run setup), bypassing the <c>{repoRoot}/data/{email}</c> layout.</param>
+    /// <param name="logger">Optional logger for the first-run seed.</param>
     public static UserContext Resolve(
         string? emailOverride = null,
         string? repoRoot = null,
         bool seedExamples = true,
         string? cwdOverride = null,
-        string? dataDirOverride = null)
+        string? dataDirOverride = null,
+        ILogger? logger = null)
     {
-        var email = ResolveEmail(emailOverride)
-            ?? throw new ConfigException(
-                "Could not determine the active user's email. Tried (in order): "
-                + "explicit override, environment variable JOBFINDER_USER, and `git config user.email`. "
-                + "Set one of these and try again.");
+        var email = ActiveUserEmail.Resolve(emailOverride);
 
         var cwd = cwdOverride ?? Directory.GetCurrentDirectory();
         var rootDir = !string.IsNullOrWhiteSpace(dataDirOverride)
             ? Path.GetFullPath(dataDirOverride)
-            : Path.Combine(repoRoot ?? FindRepoRootOrStableFallback(cwd), "data", email);
+            : Path.Combine(repoRoot ?? DataRoot.FindRepoRootOrFallback(cwd), "data", email);
 
-        var firstRun = !Directory.Exists(rootDir);
-        if (firstRun)
-        {
-            Directory.CreateDirectory(rootDir);
-            if (seedExamples)
-            {
-                SeedFromExamples(rootDir);
-            }
-        }
+        if (UserDataDirectory.Ensure(rootDir) && seedExamples)
+            UserDataDirectory.SeedFromExamples(rootDir, logger);
 
-        var importsDir = Path.Combine(rootDir, "imports");
-        var rawDir = Path.Combine(rootDir, "raw");
-        var historyDir = Path.Combine(rootDir, "history");
-        var jobSearchDir = Path.Combine(rootDir, "jobsearch");
-        var examplesDir = Path.Combine(rootDir, "examples");
+        return For(email, rootDir);
+    }
 
-        Directory.CreateDirectory(importsDir);
-        Directory.CreateDirectory(rawDir);
-        Directory.CreateDirectory(historyDir);
-        Directory.CreateDirectory(jobSearchDir);
-        Directory.CreateDirectory(examplesDir);
-
+    /// <summary>The path layout for an already-resolved user and directory. Creates nothing.</summary>
+    public static UserContext For(string email, string rootDir)
+    {
+        // A per-user ranking.yml wins; otherwise the shipped default is used in place, never copied,
+        // so an upgrade's tuning reaches users who never customised theirs.
         var userRanking = Path.Combine(rootDir, "ranking.yml");
         var rankingPath = File.Exists(userRanking)
             ? userRanking
@@ -89,115 +79,34 @@ public sealed class UserContext
             SkillsetPath = Path.Combine(rootDir, "skillset.md"),
             PortalsPath = Path.Combine(rootDir, "portals.yml"),
             RankingPath = rankingPath,
-            ImportsDir = importsDir,
-            RawDir = rawDir,
+            ImportsDir = Path.Combine(rootDir, "imports"),
+            RawDir = Path.Combine(rootDir, "raw"),
             AllListingsPath = Path.Combine(rootDir, "all-listings.json"),
             RankedListingsPath = Path.Combine(rootDir, "ranked-listings.json"),
             TopJobsPath = Path.Combine(rootDir, "top-jobs.md"),
             VerificationReportPath = Path.Combine(rootDir, "verification-report.md"),
-            HistoryDir = historyDir,
-            JobSearchDir = jobSearchDir,
+            HistoryDir = Path.Combine(rootDir, "history"),
+            JobSearchDir = Path.Combine(rootDir, "jobsearch"),
             MarksPath = Path.Combine(rootDir, "marks.json"),
-            ExamplesDir = examplesDir,
+            ExamplesDir = Path.Combine(rootDir, "examples"),
             ProviderStatePath = Path.Combine(rootDir, "provider-state.json"),
             UserProvidersPath = Path.Combine(rootDir, "user-providers.json"),
         };
     }
 
-    private static string FindRepoRootOrStableFallback(string startDir)
-    {
-        var dir = new DirectoryInfo(startDir);
-        while (dir is not null)
-        {
-            var gitPath = Path.Combine(dir.FullName, ".git");
-            if (Directory.Exists(gitPath) || File.Exists(gitPath))
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
-        // No .git anchor: fall back to a stable per-user location instead of cwd.
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrEmpty(localAppData))
-        {
-            throw new ConfigException(
-                "Could not resolve a stable data directory: no `.git` anchor was found above "
-                + $"'{startDir}', and Environment.SpecialFolder.LocalApplicationData returned empty. "
-                + "Run jobfinder from inside a git repo, or set JOBFINDER_USER and ensure a writable "
-                + "user-profile directory is available.");
-        }
-        return Path.Combine(localAppData, "jobfinder");
-    }
-
-    /// <summary>Best-effort email resolution (override → env → git), returning null instead of throwing.</summary>
-    public static string? TryResolveEmail(string? emailOverride = null) => ResolveEmail(emailOverride);
+    /// <inheritdoc cref="ActiveUserEmail.TryResolve"/>
+    public static string? TryResolveEmail(string? emailOverride = null) => ActiveUserEmail.TryResolve(emailOverride);
 
     /// <summary>
     /// The default data directory to <em>suggest</em> to the user during first-run setup:
-    /// <c>{repoRoot|stable-fallback}/data/{email}</c>. Used as a pre-filled hint only — the user
+    /// <c>{repoRoot|fallback}/data/{email}</c>. Used as a pre-filled hint only — the user
     /// confirms or changes it before anything is written.
     /// </summary>
     public static string SuggestDefaultDataDir(string? email, string? cwdOverride = null)
     {
         var cwd = cwdOverride ?? Directory.GetCurrentDirectory();
-        var root = FindRepoRootOrStableFallback(cwd);
+        var root = DataRoot.FindRepoRootOrFallback(cwd);
         var folder = string.IsNullOrWhiteSpace(email) ? "me" : email.Trim();
         return Path.Combine(root, "data", folder);
-    }
-
-    private static string? ResolveEmail(string? emailOverride)
-    {
-        if (!string.IsNullOrWhiteSpace(emailOverride))
-            return emailOverride.Trim();
-
-        var env = Environment.GetEnvironmentVariable("JOBFINDER_USER");
-        if (!string.IsNullOrWhiteSpace(env))
-            return env.Trim();
-
-        return TryGetGitUserEmail();
-    }
-
-    private static string? TryGetGitUserEmail()
-    {
-        try
-        {
-            var psi = new ProcessStartInfo("git", "config user.email")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return null;
-
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit();
-
-            if (proc.ExitCode != 0)
-                return null;
-
-            var trimmed = output.Trim();
-            return string.IsNullOrEmpty(trimmed) ? null : trimmed;
-        }
-        catch
-        {
-            // git missing, not a repo, or any other failure → fall through to ConfigException
-            return null;
-        }
-    }
-
-    private static void SeedFromExamples(string rootDir)
-    {
-        var examplesDir = Path.Combine(AppContext.BaseDirectory, "config");
-        var skillsetExample = Path.Combine(examplesDir, "skillset.example.md");
-
-        if (File.Exists(skillsetExample))
-        {
-            File.Copy(skillsetExample, Path.Combine(rootDir, "skillset.md"), overwrite: false);
-            Console.WriteLine($"[first-run] seeded {rootDir}/skillset.md from examples");
-        }
     }
 }

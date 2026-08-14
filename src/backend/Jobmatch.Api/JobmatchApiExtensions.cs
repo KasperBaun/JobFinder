@@ -16,6 +16,7 @@ using Jobmatch.Features.Skillsets;
 using Jobmatch.Features.Transfer;
 using Jobmatch.Pipeline.Llm;
 using Jobmatch.Pipeline;
+using Jobmatch.Platform.Json;
 using Jobmatch.Platform.Paths;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -31,14 +32,17 @@ public static class JobmatchApiExtensions
     /// </param>
     public static IServiceCollection AddJobmatchApi(this IServiceCollection services, bool enableBackgroundJobs = true)
     {
-        // Minimal-API JSON must match the SSE / on-disk shape: camelCase, enums as camelCase strings
-        // (so JobSearchState/Phase serialise as "running"/"llmJudging", not 4), and nulls omitted.
+        // Minimal-API JSON is the same policy the SSE feed and the on-disk records use — camelCase,
+        // enums as camelCase strings (so JobSearchState/Phase serialise as "running"/"llmJudging",
+        // not 4), nulls omitted. Taken from Platform.Json so the wire and the files cannot drift.
         services.ConfigureHttpJsonOptions(options =>
         {
-            options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-            options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-            options.SerializerOptions.Converters.Add(
-                new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+            var shared = JobmatchJsonOptions.Default;
+            options.SerializerOptions.PropertyNamingPolicy = shared.PropertyNamingPolicy;
+            options.SerializerOptions.DefaultIgnoreCondition = shared.DefaultIgnoreCondition;
+            options.SerializerOptions.Encoder = shared.Encoder;
+            foreach (var converter in shared.Converters)
+                options.SerializerOptions.Converters.Add(converter);
         });
 
         // Active user — resolution is deferred through the provider so the app can boot and show a
@@ -150,13 +154,8 @@ public static class JobmatchApiExtensions
     private static string HangfireDbPath(IServiceProvider sp)
     {
         var provider = sp.GetRequiredService<IUserContextProvider>();
-        if (provider.IsConfigured)
-            return Path.Combine(provider.Current.RootDir, "hangfire.db");
-
-        var fallback = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "jobfinder");
-        Directory.CreateDirectory(fallback);
-        return Path.Combine(fallback, "hangfire.db");
+        var root = provider.IsConfigured ? provider.Current.RootDir : DataRoot.EnsureFallback();
+        return Path.Combine(root, "hangfire.db");
     }
 
     public static WebApplication MapJobmatchApi(this WebApplication app)

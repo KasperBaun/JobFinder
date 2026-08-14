@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Pipeline.Llm;
 
@@ -44,11 +45,7 @@ public sealed class OllamaClient(HttpClient http, string baseUrl, string model, 
         return parsed.Message?.Content ?? string.Empty;
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JobmatchJsonOptions.Default;
 
     private sealed record ChatRequest(
         string Model,

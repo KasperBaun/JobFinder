@@ -3,6 +3,7 @@ using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
 using Jobmatch.Features.Jobs;
+using Jobmatch.Platform.Json;
 using Jobmatch.Platform.Paths;
 
 namespace Jobmatch.Features.History;
@@ -16,12 +17,10 @@ namespace Jobmatch.Features.History;
 /// </summary>
 public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSearchStore jobs) : IHistoryService
 {
-    private static readonly JsonSerializerOptions ReadOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    // Case-insensitive on top of the shared policy: run files recorded before camelCase became
+    // the convention are still on disk and must keep deserialising.
+    private static readonly JsonSerializerOptions ReadOptions =
+        new(JobmatchJsonOptions.Default) { PropertyNameCaseInsensitive = true };
 
     public IReadOnlyList<RunSummary> List()
     {

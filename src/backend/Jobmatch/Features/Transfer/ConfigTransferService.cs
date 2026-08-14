@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.IO.Compression;
-using System.Reflection;
 using System.Text.Json;
 using Jobmatch.Platform.Json;
 using Jobmatch.Platform.Paths;
+using Jobmatch.Platform;
 
 namespace Jobmatch.Features.Transfer;
 
@@ -179,7 +179,7 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
         var manifest = new ConfigExportManifest(
             SchemaVersion,
             ctx.Email,
-            ResolveToolVersion(),
+            ToolVersion.Current,
             DateTimeOffset.UtcNow);
 
         var entry = zip.CreateEntry(ManifestEntryName, CompressionLevel.Optimal);
@@ -211,12 +211,4 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
 
     private static string ToArchivePath(string relativePath) =>
         relativePath.Replace(Path.DirectorySeparatorChar, '/');
-
-    private static string ResolveToolVersion()
-    {
-        var entry = Assembly.GetEntryAssembly();
-        return entry?.GetName().Version?.ToString(3)
-            ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)
-            ?? "unknown";
-    }
 }

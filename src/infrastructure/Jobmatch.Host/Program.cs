@@ -1,3 +1,4 @@
+using Jobmatch.Host;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Net;
@@ -172,8 +173,7 @@ static string ResolveFallbackLogRoot()
     }
     catch
     {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "jobfinder");
+        return DataRoot.EnsureFallback();
     }
 }
 

@@ -1,3 +1,4 @@
+using Jobmatch.Platform.IO;
 using YamlDotNet.Serialization;
 
 namespace Jobmatch.Features.Providers;
@@ -96,10 +97,7 @@ public static class PortalConfigLoader
 
         if (!changed) return;
 
-        var output = Serializer.Serialize(root);
-        var temp = path + ".tmp";
-        File.WriteAllText(temp, output);
-        File.Move(temp, path, overwrite: true);
+        AtomicFile.WriteAllText(path, Serializer.Serialize(root));
     }
 
     private static PortalConfig BuildPortal(IReadOnlyDictionary<string, object?> map, int index)

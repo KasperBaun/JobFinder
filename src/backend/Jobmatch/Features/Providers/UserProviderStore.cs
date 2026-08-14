@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using Jobmatch.Platform.IO;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Features.Providers;
 
@@ -15,13 +17,7 @@ public static class UserProviderStore
 {
     public const int IdBase = 10000;
 
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions WriteOptions = JobmatchJsonOptions.Indented;
 
     public static IReadOnlyList<PortalConfig> Load(string path)
     {
@@ -33,14 +29,7 @@ public static class UserProviderStore
 
     public static void Save(string path, IReadOnlyList<PortalConfig> providers)
     {
-        var dir = Path.GetDirectoryName(path);
-        if (dir is not null)
-            Directory.CreateDirectory(dir);
-
-        var json = JsonSerializer.Serialize(new { version = 1, providers }, WriteOptions);
-        var tmp = path + ".tmp";
-        File.WriteAllText(tmp, json);
-        File.Move(tmp, path, overwrite: true);
+        AtomicFile.WriteAllText(path, JsonSerializer.Serialize(new { version = 1, providers }, WriteOptions));
     }
 
     /// <summary>

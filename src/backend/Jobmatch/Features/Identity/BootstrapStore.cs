@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Jobmatch.Platform.IO;
 using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Features.Identity;
@@ -53,12 +54,6 @@ public sealed class BootstrapStore
 
     public void Save(BootstrapConfig config)
     {
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
-        var tmp = Path + ".tmp";
-        using (var stream = File.Create(tmp))
-        {
-            JsonSerializer.Serialize(stream, config, JobmatchJsonOptions.Indented);
-        }
-        File.Move(tmp, Path, overwrite: true);
+        AtomicFile.Write(Path, stream => JsonSerializer.Serialize(stream, config, JobmatchJsonOptions.Indented));
     }
 }

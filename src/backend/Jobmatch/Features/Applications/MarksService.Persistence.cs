@@ -1,16 +1,14 @@
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Jobmatch.Platform.IO;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Features.Applications;
 
 public sealed partial class MarksService
 {
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
+    private static readonly JsonSerializerOptions WriteOptions = JobmatchJsonOptions.Indented;
 
     private Dictionary<string, Dictionary<string, ListingMark>> LoadMutable()
     {
@@ -86,17 +84,11 @@ public sealed partial class MarksService
 
     private void AtomicWrite(Dictionary<string, Dictionary<string, ListingMark>> all)
     {
-        var dir = Path.GetDirectoryName(ctx.MarksPath);
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
         var serialisable = all.ToDictionary(
             run => run.Key,
             run => run.Value.ToDictionary(l => l.Key, l => Project(l.Value)));
 
-        var tempPath = ctx.MarksPath + ".tmp";
-        var json = JsonSerializer.Serialize(serialisable, WriteOptions);
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, ctx.MarksPath, overwrite: true);
+        AtomicFile.WriteAllText(ctx.MarksPath, JsonSerializer.Serialize(serialisable, WriteOptions));
     }
 
     private static object Project(ListingMark mark)

@@ -1,20 +1,19 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using Jobmatch.Platform.IO;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Features.Providers;
 
 public static class ProviderStateLoader
 {
-    private static readonly JsonSerializerOptions SerializeOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-    };
+    private static readonly JsonSerializerOptions SerializeOptions = JobmatchJsonOptions.Indented;
 
-    private static readonly JsonSerializerOptions DeserializeOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
+    // Reads stay case-insensitive: state files written before the camelCase policy existed
+    // carry PascalCase members, and this file is the user's provider opt-in/opt-out — losing it
+    // to a casing mismatch would silently re-enable every source they turned off.
+    private static readonly JsonSerializerOptions DeserializeOptions =
+        new(JobmatchJsonOptions.Default) { PropertyNameCaseInsensitive = true };
 
     public static ProviderState LoadOrEmpty(string path)
     {
@@ -71,10 +70,7 @@ public static class ProviderStateLoader
                 .Where(kvp => !kvp.Value.IsEmpty)
                 .ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value));
 
-        var json = JsonSerializer.Serialize(raw, SerializeOptions);
-        var tmp = path + ".tmp";
-        File.WriteAllText(tmp, json);
-        File.Move(tmp, path, overwrite: true);
+        AtomicFile.WriteAllText(path, JsonSerializer.Serialize(raw, SerializeOptions));
     }
 
     private sealed class RawProviderState

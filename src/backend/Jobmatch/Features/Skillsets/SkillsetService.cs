@@ -1,4 +1,5 @@
 using Jobmatch.Domain;
+using Jobmatch.Platform.IO;
 using Jobmatch.Platform.Paths;
 
 namespace Jobmatch.Features.Skillsets;
@@ -25,7 +26,7 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
                 ? SkillsetParser.Load(ctx.SkillsetPath)
                 : EmptyBaseline();
             var merged = Merge(existing, input);
-            AtomicWriteText(ctx.SkillsetPath, SkillsetParser.Serialize(merged));
+            AtomicFile.WriteAllText(ctx.SkillsetPath, SkillsetParser.Serialize(merged));
             return merged;
         }
     }
@@ -100,13 +101,4 @@ public sealed class SkillsetService(UserContext ctx) : ISkillsetService
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-
-    private static void AtomicWriteText(string path, string content)
-    {
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        var temp = path + ".tmp";
-        File.WriteAllText(temp, content);
-        File.Move(temp, path, overwrite: true);
-    }
 }

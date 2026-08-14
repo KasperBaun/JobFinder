@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
+using Jobmatch.Platform.IO;
 using Jobmatch.Platform.Json;
 using Jobmatch.Platform.Paths;
 
@@ -32,26 +33,7 @@ public sealed class JobSearchStore(UserContext ctx) : IJobSearchStore
 
     public void Save(JobSearch job)
     {
-        Directory.CreateDirectory(ctx.JobSearchDir);
-        var path = PathFor(job.Id);
-        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(job, WriteOptions));
-
-        // Atomic replace, retried: a concurrent reader (SSE replay / history list) or an AV / file-sync
-        // scanner can briefly hold the temp or target file, which surfaces on Windows as a transient
-        // IOException (sharing violation) or UnauthorizedAccessException (access denied) from MoveFile.
-        for (var attempt = 0; ; attempt++)
-        {
-            try
-            {
-                File.Move(tmp, path, overwrite: true);
-                return;
-            }
-            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && attempt < 10)
-            {
-                Thread.Sleep(20);
-            }
-        }
+        AtomicFile.WriteAllText(PathFor(job.Id), JsonSerializer.Serialize(job, WriteOptions));
     }
 
     public JobSearch? Get(string id)
