@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.6.0",
   "description": "Local-first job aggregator. Top-level convenience scripts that wrap dotnet + npm.",
+  "author": "Kasper Baun",
+  "license": "MIT",
   "workspaces": [
     "src/frontend",
     "src/desktop",
