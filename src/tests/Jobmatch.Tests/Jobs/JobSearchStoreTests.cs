@@ -1,6 +1,6 @@
-using Jobmatch.Jobs;
-using Jobmatch.Search;
-using JobmatchUserContext = Jobmatch.UserContext;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Features.Jobs;
+using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
 
 namespace Jobmatch.Tests.Jobs;
 

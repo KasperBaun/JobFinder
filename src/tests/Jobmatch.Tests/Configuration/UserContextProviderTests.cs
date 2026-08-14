@@ -1,5 +1,5 @@
+using Jobmatch.Features.Identity;
 using Jobmatch;
-using Jobmatch.Configuration;
 
 namespace Jobmatch.Tests.Configuration;
 

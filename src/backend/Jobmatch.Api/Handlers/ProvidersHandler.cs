@@ -1,8 +1,7 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
-using Jobmatch.Configuration;
-using Jobmatch.Models;
-using Jobmatch.Services;
+using Jobmatch.Domain;
+using Jobmatch.Features.Providers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

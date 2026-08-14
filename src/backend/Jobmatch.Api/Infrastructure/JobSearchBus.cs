@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using Jobmatch.Jobs;
+using Jobmatch.Domain.Runs;
 
 namespace Jobmatch.Api.Infrastructure;
 

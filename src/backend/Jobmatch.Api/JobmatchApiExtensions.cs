@@ -1,15 +1,22 @@
 using System.Net.Security;
-using Hangfire;
 using Hangfire.Storage.SQLite;
+using Hangfire;
 using Jobmatch.Api.Endpoints;
 using Jobmatch.Api.Handlers;
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Jobs;
-using Jobmatch.Configuration;
-using Jobmatch.Jobs;
-using Jobmatch.Llm;
-using Jobmatch.Search;
-using Jobmatch.Services;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Features.Applications;
+using Jobmatch.Features.Cv;
+using Jobmatch.Features.History;
+using Jobmatch.Features.Identity;
+using Jobmatch.Features.Jobs;
+using Jobmatch.Features.Providers;
+using Jobmatch.Features.Skillsets;
+using Jobmatch.Features.Transfer;
+using Jobmatch.Pipeline.Llm;
+using Jobmatch.Pipeline;
+using Jobmatch.Platform.Paths;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +51,7 @@ public static class JobmatchApiExtensions
         services.AddScoped<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
 
         // Filesystem abstraction — physical by default; tests stage in-memory.
-        services.AddSingleton<Jobmatch.IO.IFileSystem, Jobmatch.IO.PhysicalFileSystem>();
+        services.AddSingleton<Jobmatch.Platform.IO.IFileSystem, Jobmatch.Platform.IO.PhysicalFileSystem>();
 
         // Injectable clock (MarksService stamps status changes with it; tests pin a fixed one).
         services.AddSingleton(TimeProvider.System);

@@ -1,5 +1,5 @@
 using System.Text;
-using Jobmatch.Cv;
+using Jobmatch.Features.Cv;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;

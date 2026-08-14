@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text;
-using Jobmatch.Services;
+using Jobmatch.Features.Skillsets;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Services;

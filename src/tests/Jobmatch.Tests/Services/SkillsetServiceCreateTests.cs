@@ -1,6 +1,7 @@
+using Jobmatch.Domain;
+using Jobmatch.Features.Skillsets;
+using Jobmatch.Platform.Paths;
 using Jobmatch;
-using Jobmatch.Models;
-using Jobmatch.Services;
 
 namespace Jobmatch.Tests.Services;
 

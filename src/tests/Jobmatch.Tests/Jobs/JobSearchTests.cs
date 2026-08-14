@@ -1,5 +1,4 @@
-using Jobmatch.Jobs;
-using Jobmatch.Search;
+using Jobmatch.Domain.Runs;
 
 namespace Jobmatch.Tests.Jobs;
 

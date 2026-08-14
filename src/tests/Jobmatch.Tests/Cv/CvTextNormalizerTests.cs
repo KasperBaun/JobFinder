@@ -1,4 +1,4 @@
-using Jobmatch.Cv;
+using Jobmatch.Features.Cv;
 
 namespace Jobmatch.Tests.Cv;
 

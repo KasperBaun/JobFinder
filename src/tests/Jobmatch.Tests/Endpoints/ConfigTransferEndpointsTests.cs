@@ -1,9 +1,10 @@
-using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Jobmatch;
-using Jobmatch.Api;
+using System.Net;
 using Jobmatch.Api.Models;
+using Jobmatch.Api;
+using Jobmatch.Platform.Paths;
+using Jobmatch;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,8 +1,9 @@
-using Jobmatch;
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
-using Jobmatch.Configuration;
-using Jobmatch.Llm;
+using Jobmatch.Pipeline.Llm;
+using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Platform.Paths;
+using Jobmatch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

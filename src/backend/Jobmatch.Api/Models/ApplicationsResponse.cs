@@ -1,4 +1,4 @@
-using Jobmatch.Services;
+using Jobmatch.Features.Applications;
 
 namespace Jobmatch.Api.Models;
 

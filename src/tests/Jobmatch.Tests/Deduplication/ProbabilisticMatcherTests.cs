@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Jobmatch.Deduplication;
-using Jobmatch.Geo;
-using Jobmatch.Models;
+using Jobmatch.Domain;
+using Jobmatch.Pipeline.Deduplication;
+using Jobmatch.Pipeline.Geo;
 
 namespace Jobmatch.Tests.Deduplication;
 

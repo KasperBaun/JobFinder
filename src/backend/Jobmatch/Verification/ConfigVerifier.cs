@@ -1,6 +1,7 @@
-using Jobmatch.Adapters;
-using Jobmatch.Configuration;
-using Jobmatch.Models;
+using Jobmatch.Domain;
+using Jobmatch.Features.Providers;
+using Jobmatch.Features.Skillsets;
+using Jobmatch.Pipeline.Ranking;
 
 namespace Jobmatch.Verification;
 

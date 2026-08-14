@@ -1,6 +1,6 @@
 using System.Text.Json;
-using Jobmatch.Models;
-using Jobmatch.Ranking;
+using Jobmatch.Domain;
+using Jobmatch.Pipeline.Ranking;
 
 namespace Jobmatch.Tests.Ranking;
 

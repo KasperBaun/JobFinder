@@ -1,8 +1,9 @@
 using System.Text.Json;
-using Jobmatch.Geo;
-using Jobmatch.Models;
-using Jobmatch.Search;
-using Match = Jobmatch.Models.Match;
+using Jobmatch.Domain;
+using Jobmatch.Pipeline.Geo;
+using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Pipeline;
+using Match = Jobmatch.Domain.Match;
 
 namespace Jobmatch.Tests.Search;
 

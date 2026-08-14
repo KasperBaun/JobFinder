@@ -1,5 +1,5 @@
-using Jobmatch.Models;
-using Jobmatch.Search;
+using Jobmatch.Features.Providers;
+using Jobmatch.Pipeline;
 
 namespace Jobmatch.Tests.Search;
 

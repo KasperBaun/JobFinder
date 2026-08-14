@@ -1,9 +1,10 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
+using System.Text;
+using Jobmatch.Features.Providers;
+using Jobmatch.Pipeline.Adapters;
+using Jobmatch.Pipeline.Ranking;
 using Jobmatch;
-using Jobmatch.Adapters;
-using Jobmatch.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Adapters;

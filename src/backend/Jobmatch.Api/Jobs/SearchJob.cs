@@ -1,7 +1,8 @@
 using Hangfire;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Jobs;
-using Jobmatch.Search;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Features.Jobs;
+using Jobmatch.Pipeline;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Api.Jobs;

@@ -1,7 +1,7 @@
-using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using Jobmatch.Llm;
+using System.Net.Http;
+using System.Net;
+using Jobmatch.Pipeline.Llm;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Llm;

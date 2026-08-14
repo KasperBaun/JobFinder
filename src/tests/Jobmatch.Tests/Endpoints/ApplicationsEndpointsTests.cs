@@ -1,8 +1,8 @@
-using System.Net;
 using System.Net.Http.Json;
-using Jobmatch.Api;
+using System.Net;
 using Jobmatch.Api.Models;
-using Jobmatch.Configuration;
+using Jobmatch.Api;
+using Jobmatch.Features.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -82,7 +82,7 @@ public sealed class ApplicationsEndpointsTests : IDisposable
 
     private static void WriteHistory(string dataDir, string runId)
     {
-        var detail = new Jobmatch.Search.RunDetail(
+        var detail = new Jobmatch.Domain.Runs.RunDetail(
             RunId: runId,
             StartedAt: DateTimeOffset.UtcNow,
             Providers: [],
@@ -92,14 +92,14 @@ public sealed class ApplicationsEndpointsTests : IDisposable
             ShortlistCount: 1,
             TopScore: 0.8,
             GoodMarks: 0,
-            Shortlist: [new Jobmatch.Search.ListingMatch(
+            Shortlist: [new Jobmatch.Domain.Runs.ListingMatch(
                 "l1", "portal", "Role A", "Co A", "Copenhagen", "onsite", "https://x/l1", null, 0.8, "", [], [])],
             Marks: new Dictionary<string, string>());
         var historyDir = Path.Combine(dataDir, "history");
         Directory.CreateDirectory(historyDir);
         File.WriteAllText(
             Path.Combine(historyDir, $"{runId}.json"),
-            System.Text.Json.JsonSerializer.Serialize(detail, Jobmatch.Json.JobmatchJsonOptions.Indented));
+            System.Text.Json.JsonSerializer.Serialize(detail, Jobmatch.Platform.Json.JobmatchJsonOptions.Indented));
     }
 
     [Fact]

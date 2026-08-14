@@ -1,5 +1,4 @@
-using Jobmatch.Models;
-using Jobmatch.Services;
+using Jobmatch.Features.Cv;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

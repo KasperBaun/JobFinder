@@ -1,6 +1,7 @@
 using Hangfire;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Features.Jobs;
 using Jobmatch;
-using Jobmatch.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

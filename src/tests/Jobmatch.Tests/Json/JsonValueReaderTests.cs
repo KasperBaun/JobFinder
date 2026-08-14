@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Jobmatch.Json;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Tests.Json;
 

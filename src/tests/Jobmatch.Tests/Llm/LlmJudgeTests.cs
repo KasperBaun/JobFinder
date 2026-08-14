@@ -1,5 +1,5 @@
-using Jobmatch.Llm;
-using Jobmatch.Models;
+using Jobmatch.Domain;
+using Jobmatch.Pipeline.Llm;
 
 namespace Jobmatch.Tests.Llm;
 

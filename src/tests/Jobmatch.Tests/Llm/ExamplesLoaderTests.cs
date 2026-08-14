@@ -1,4 +1,4 @@
-using Jobmatch.Llm;
+using Jobmatch.Pipeline.Llm;
 
 namespace Jobmatch.Tests.Llm;
 

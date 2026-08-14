@@ -1,9 +1,10 @@
 using System.Text.Json;
-using Jobmatch.Jobs;
-using Jobmatch.Json;
-using Jobmatch.Search;
-using Jobmatch.Services;
-using JobmatchUserContext = Jobmatch.UserContext;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Features.Applications;
+using Jobmatch.Features.History;
+using Jobmatch.Features.Jobs;
+using Jobmatch.Platform.Json;
+using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
 
 namespace Jobmatch.Tests.Services;
 

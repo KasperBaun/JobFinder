@@ -1,7 +1,7 @@
 using Jobmatch.Api.Handlers;
 using Jobmatch.Api.Models;
-using Jobmatch.Models;
-using Jobmatch.Services;
+using Jobmatch.Domain;
+using Jobmatch.Features.Skillsets;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Api;

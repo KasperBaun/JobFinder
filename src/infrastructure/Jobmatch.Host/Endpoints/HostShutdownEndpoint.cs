@@ -1,5 +1,5 @@
-using Jobmatch.Api;
 using Jobmatch.Api.Infrastructure;
+using Jobmatch.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

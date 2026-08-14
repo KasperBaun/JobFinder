@@ -1,4 +1,4 @@
-using Jobmatch.Geo;
+using Jobmatch.Pipeline.Geo;
 
 namespace Jobmatch.Tests.Geo;
 

@@ -1,5 +1,5 @@
+using Jobmatch.Pipeline.Ranking;
 using Jobmatch;
-using Jobmatch.Configuration;
 
 namespace Jobmatch.Tests.Configuration;
 
@@ -153,7 +153,7 @@ public sealed class RankingConfigLoaderTests
               freshness: 0.0
             """;
         var cfg = RankingConfigLoader.Parse(yaml);
-        var d = Jobmatch.Models.LocationTierWeights.Default;
+        var d = Jobmatch.Pipeline.Ranking.LocationTierWeights.Default;
         Assert.Equal(d.City, cfg.LocationTierWeights.City);
         Assert.Equal(d.Metro, cfg.LocationTierWeights.Metro);
         Assert.Equal(d.Country, cfg.LocationTierWeights.Country);

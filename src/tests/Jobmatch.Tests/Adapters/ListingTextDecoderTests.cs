@@ -1,6 +1,6 @@
 using System.Text.Json;
-using Jobmatch.Adapters;
-using Jobmatch.Models;
+using Jobmatch.Domain;
+using Jobmatch.Pipeline.Adapters;
 
 namespace Jobmatch.Tests.Adapters;
 

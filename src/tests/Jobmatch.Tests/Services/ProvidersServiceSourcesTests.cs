@@ -1,8 +1,7 @@
+using Jobmatch.Features.Providers;
+using Jobmatch.Platform.IO;
+using Jobmatch.Platform.Paths;
 using Jobmatch;
-using Jobmatch.Configuration;
-using Jobmatch.IO;
-using Jobmatch.Models;
-using Jobmatch.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Services;

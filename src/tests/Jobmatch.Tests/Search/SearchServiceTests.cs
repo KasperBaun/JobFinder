@@ -1,12 +1,13 @@
-using System.Net;
 using System.Net.Sockets;
-using System.Text.Json;
+using System.Net;
 using System.Text.Json.Serialization;
-using Jobmatch.Configuration;
-using Jobmatch.IO;
-using Jobmatch.Models;
-using Jobmatch.Search;
-using JobmatchUserContext = Jobmatch.UserContext;
+using System.Text.Json;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Domain;
+using Jobmatch.Features.Providers;
+using Jobmatch.Pipeline;
+using Jobmatch.Platform.IO;
+using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
 
 namespace Jobmatch.Tests.Search;
 

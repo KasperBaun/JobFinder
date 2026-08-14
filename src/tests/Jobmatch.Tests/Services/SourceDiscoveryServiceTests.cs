@@ -1,5 +1,5 @@
 using System.Net;
-using Jobmatch.Services;
+using Jobmatch.Features.Providers;
 
 namespace Jobmatch.Tests.Services;
 

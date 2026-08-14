@@ -1,4 +1,5 @@
-using Jobmatch.Llm;
+using Jobmatch.Features.Cv;
+using Jobmatch.Pipeline.Llm;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Llm;

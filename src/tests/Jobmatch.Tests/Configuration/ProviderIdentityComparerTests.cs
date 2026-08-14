@@ -1,5 +1,4 @@
-using Jobmatch.Configuration;
-using Jobmatch.Models;
+using Jobmatch.Features.Providers;
 
 namespace Jobmatch.Tests.Configuration;
 

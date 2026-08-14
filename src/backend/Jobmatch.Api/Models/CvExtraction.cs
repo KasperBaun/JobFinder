@@ -1,5 +1,5 @@
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Models;
+using Jobmatch.Features.Cv;
 
 namespace Jobmatch.Api.Models;
 

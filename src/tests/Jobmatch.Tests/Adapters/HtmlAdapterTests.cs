@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
-using Jobmatch.Adapters;
-using Jobmatch.Models;
+using Jobmatch.Features.Providers;
+using Jobmatch.Pipeline.Adapters;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Adapters;

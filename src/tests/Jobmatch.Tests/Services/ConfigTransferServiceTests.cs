@@ -1,9 +1,10 @@
 using System.IO.Compression;
-using System.Text;
 using System.Text.Json;
+using System.Text;
+using Jobmatch.Features.Transfer;
+using Jobmatch.Platform.Json;
+using Jobmatch.Platform.Paths;
 using Jobmatch;
-using Jobmatch.Json;
-using Jobmatch.Services;
 
 namespace Jobmatch.Tests.Services;
 

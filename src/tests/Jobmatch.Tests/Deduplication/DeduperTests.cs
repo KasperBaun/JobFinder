@@ -1,6 +1,6 @@
 using System.Text.Json;
-using Jobmatch.Deduplication;
-using Jobmatch.Models;
+using Jobmatch.Domain;
+using Jobmatch.Pipeline.Deduplication;
 
 namespace Jobmatch.Tests.Deduplication;
 

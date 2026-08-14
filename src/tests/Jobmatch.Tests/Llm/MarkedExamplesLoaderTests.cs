@@ -1,9 +1,9 @@
 using System.Text.Json;
-using Jobmatch.Json;
-using Jobmatch.Llm;
-using Jobmatch.Models;
-using Jobmatch.Search;
-using Jobmatch.Services;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Domain;
+using Jobmatch.Features.Applications;
+using Jobmatch.Pipeline.Llm;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Tests.Llm;
 

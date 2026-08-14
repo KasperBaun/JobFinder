@@ -1,4 +1,4 @@
-using Jobmatch.Search;
+using Jobmatch.Domain.Runs;
 
 namespace Jobmatch.Api.Models;
 

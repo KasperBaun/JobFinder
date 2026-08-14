@@ -1,8 +1,8 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
-using Jobmatch.Configuration;
-using Jobmatch.Cv;
-using Jobmatch.Services;
+using Jobmatch.Features.Cv;
+using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Platform.Paths;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

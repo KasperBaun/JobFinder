@@ -1,6 +1,6 @@
+using Jobmatch.Domain;
+using Jobmatch.Features.Skillsets;
 using Jobmatch;
-using Jobmatch.Configuration;
-using Jobmatch.Models;
 
 namespace Jobmatch.Tests.Configuration;
 

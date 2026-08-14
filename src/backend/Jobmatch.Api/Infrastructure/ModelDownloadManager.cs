@@ -1,4 +1,4 @@
-using Jobmatch.Llm;
+using Jobmatch.Pipeline.Llm;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

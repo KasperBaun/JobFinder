@@ -1,6 +1,6 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api.Models;
-using Jobmatch.Services;
+using Jobmatch.Features.History;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

@@ -1,8 +1,7 @@
 using System.Text.Json;
-using Jobmatch.Jobs;
-using Jobmatch.Json;
-using Jobmatch.Models;
-using Jobmatch.Search;
+using Jobmatch.Domain.Runs;
+using Jobmatch.Domain;
+using Jobmatch.Platform.Json;
 
 namespace Jobmatch.Tests.Json;
 
