@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // In `npm run dev`, the orchestrator picks free ports and hands them in via env.
-// When running vite standalone (`npm --prefix .../Client run dev`), both fall
+// When running vite standalone (`npm run dev -w jobfinder-gui`), both fall
 // back to vite defaults — useful only for client-only debugging without dotnet.
 const vitePort = parseInt(process.env.JOBFINDER_VITE_PORT ?? '', 10)
 const apiTarget = process.env.JOBFINDER_API_TARGET

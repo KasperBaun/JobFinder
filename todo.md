@@ -4,7 +4,7 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
-- **Nine ESLint warnings left standing, deliberately.** `npm --prefix src/frontend run lint`
+- **Nine ESLint warnings left standing, deliberately.** `npm run lint -w jobfinder-gui`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
   `react-hooks/set-state-in-effect`: `MarkButton`, `StatusSelect` and `MarkWhy` reset optimistic
   state from an effect when the server value changes, `I18nProvider` mirrors its pinned locale,
@@ -108,7 +108,7 @@ Current status of work on `jobfinder`.
   EV cert (~$250/yr — the only one that suppresses the SmartScreen popup instantly). Plain OV
   `.pfx` signing is no longer issued (2023 hardware-key mandate). Wiring points when resumed:
   `win.*` in `src/desktop/electron-builder.yml` (the TODO comment at line ~26) + the
-  `npm --prefix src/desktop run dist` step in `.github/workflows/release.yml`.
+  `npm run dist -w jobfinder-desktop` step in `.github/workflows/release.yml`.
 
 ## In progress
 

@@ -45,9 +45,10 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Setup Node
+        # >= 22.12 — Electron 43 refuses older runtimes.
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Test
         run: dotnet test src/Jobmatch.slnx -c Release
@@ -56,23 +57,22 @@ jobs:
           # test that touches per-user paths resolves instead of throwing.
           JOBFINDER_USER: ci@jobfinder.local
 
+      - name: Install workspaces
+        run: npm ci
+
       - name: Test frontend
         run: |
-          npm --prefix src/frontend ci
-          npm --prefix src/frontend run lint
-          npm --prefix src/frontend run test
+          npm run lint -w jobfinder-gui
+          npm run test -w jobfinder-gui
 
       - name: Publish backend (self-contained win-x64, GUI bundled)
         run: node src/scripts/publish-backend.mjs
 
-      - name: Install desktop dependencies
-        run: npm --prefix src/desktop ci
-
       - name: Set desktop version
-        run: npm --prefix src/desktop version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+        run: npm version ${{ env.VERSION }} -w jobfinder-desktop --no-git-tag-version --allow-same-version
 
       - name: Build desktop installer (Electron / NSIS)
-        run: npm --prefix src/desktop run dist
+        run: npm run dist -w jobfinder-desktop
 
       - name: Publish to rolling "latest" prerelease
         uses: softprops/action-gh-release@v3
@@ -103,32 +103,32 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Setup Node
+        # >= 22.12 — Electron 43 refuses older runtimes.
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Test
         run: dotnet test src/Jobmatch.slnx -c Release
         env:
           JOBFINDER_USER: ci@jobfinder.local
 
+      - name: Install workspaces
+        run: npm ci
+
       - name: Test frontend
         run: |
-          npm --prefix src/frontend ci
-          npm --prefix src/frontend run lint
-          npm --prefix src/frontend run test
+          npm run lint -w jobfinder-gui
+          npm run test -w jobfinder-gui
 
       - name: Publish backend (self-contained linux-x64, GUI bundled)
         run: node src/scripts/publish-backend.mjs linux-x64
 
-      - name: Install desktop dependencies
-        run: npm --prefix src/desktop ci
-
       - name: Set desktop version
-        run: npm --prefix src/desktop version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+        run: npm version ${{ env.VERSION }} -w jobfinder-desktop --no-git-tag-version --allow-same-version
 
       - name: Build desktop installer (Electron / deb)
-        run: npm --prefix src/desktop run dist
+        run: npm run dist -w jobfinder-desktop
 
       - name: Append .deb to "latest" prerelease
         uses: softprops/action-gh-release@v3
