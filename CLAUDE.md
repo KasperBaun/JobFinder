@@ -103,10 +103,23 @@ through a pull request, **squash-merged** (`<PR title> (#N)`). Two GitHub rulese
 this and are not to be worked around — ask before touching either:
 
 - **`PR-main`** on the default branch — blocks deletion and non-fast-forward pushes, and
-  requires a PR with squash as the only allowed merge method. Direct pushes to `main` fail
-  with "push declined due to repository rule violations".
+  requires a PR with squash as the only allowed merge method, one approving review, and
+  **review from a code owner**. `.github/CODEOWNERS` makes `@KasperBaun` the owner of `*`,
+  so his is the only approval that satisfies the rule — other contributors may approve, but
+  it doesn't unblock the merge. Approvals are dismissed on new pushes, and the last push
+  must itself be approved. Direct pushes to `main` fail with "push declined due to
+  repository rule violations".
+  - **Repository admin bypasses all of it** (`bypass_actors`, mode `always`). That is
+    deliberate: GitHub forbids approving your own PR, so without the bypass the owner could
+    never merge his own release PR. Removing it deadlocks the release flow.
+  - `CODEOWNERS` is only read from the **base** branch, so it has to live on `main` to have
+    any effect — keeping the copy on `dev` in sync is cosmetic.
+  - `PATCH /repos/{owner}/{repo}/rulesets/{id}` 404s for the `gh` CLI's OAuth token even
+    though `POST`/`DELETE` work. To change this ruleset by API, recreate it; the id is not
+    referenced anywhere, but the **name** is.
 - **`protect-dev`** on `refs/heads/dev` — blocks deletion and non-fast-forward pushes.
-  Ordinary commits can still be pushed straight to `dev`. It exists because a merge once
+  Ordinary commits can still be pushed straight to `dev`, by any contributor with write
+  access; `dev` is deliberately unguarded beyond that. It exists because a merge once
   deleted `dev`, which auto-closed the open PR that targeted it.
 
 1. **Verify functional first** — `dotnet test src/Jobmatch.slnx -c Release`
@@ -129,7 +142,9 @@ this and are not to be worked around — ask before touching either:
    patch is `${{ github.run_number }}`.
 4. **PR `dev` → `main`**, titled like the release (`Release 0.4 — <headline>`), squash-merged
    — the ruleset allows nothing else. The PR title becomes the commit subject on `main`, so
-   it is the release's permanent label.
+   it is the release's permanent label. A release PR opened by the owner merges on the admin
+   bypass, not on an approval — the code-owner requirement gates *contributors'* PRs, which
+   need his review before they can land.
 5. **The merge is the release.** CI tests both platforms, publishes the self-contained
    backend, builds the NSIS `.exe` and the `.deb`, then wipes and re-uploads the assets on
    the rolling **`latest`** prerelease tag. There are no per-version git tags, and `latest`
