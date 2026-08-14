@@ -8,6 +8,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest</AnalysisLevel>
+    <Company>Kasper Baun</Company>
+    <Copyright>Copyright (c) 2026 Kasper Baun</Copyright>
   </PropertyGroup>
 
   <!-- Transitive-only advisory in SQLitePCLRaw.lib.e_sqlite3, pulled by Hangfire.Storage.SQLite
