@@ -5,27 +5,6 @@ using Jobmatch.Models;
 namespace Jobmatch.Services;
 
 /// <summary>
-/// One recognised way to add a source. <see cref="Draft"/> is the server-built provider config and
-/// is never sent to the client verbatim — the API projects only <see cref="Kind"/>,
-/// <see cref="DisplayName"/> and <see cref="Summary"/>. Create/preview re-run detection and select
-/// by <see cref="Kind"/>, so the client never hands the server a raw endpoint or field mapping.
-/// </summary>
-public sealed record SourceCandidate(
-    string Kind,
-    string DisplayName,
-    string Summary,
-    PortalConfig Draft);
-
-public interface ISourceDetectionService
-{
-    /// <summary>Pattern-matches a pasted URL to known ATS boards or an RSS feed. Pure; no network.</summary>
-    IReadOnlyList<SourceCandidate> Detect(Uri url);
-
-    /// <summary>Builds a manual-import source from a user-supplied name (no endpoint).</summary>
-    SourceCandidate BuildManual(string displayName);
-}
-
-/// <summary>
 /// Recognises the common cases a non-technical user can add by pasting a URL — job boards on the
 /// major ATS platforms (Greenhouse, Ashby, Lever, SmartRecruiters, Teamtailor, HR-Manager, Oracle
 /// Recruiting Cloud) plus generic RSS feeds. The generated config mirrors a proven catalog entry for

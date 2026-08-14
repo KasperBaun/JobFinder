@@ -43,5 +43,3 @@ public sealed record SkillsetUpdateRequest(
     IReadOnlyList<string>? PreferredCompanies,
     string? Address = null,
     double? RadiusKm = null);
-
-public sealed record SaveResponse(bool Success, string? Error = null);
