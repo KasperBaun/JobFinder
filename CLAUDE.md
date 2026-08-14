@@ -99,7 +99,15 @@ Everything else in the skill's `reference/` applies without carve-out: Endpoint 
 
 `main` is the release branch: **every push to it builds and publishes installers** via
 `.github/workflows/release.yml`. Feature branches land in `dev`; `dev` reaches `main` only
-through a pull request merged with a merge commit (`Merge pull request #N from KasperBaun/dev`).
+through a pull request, **squash-merged** (`<PR title> (#N)`). Two GitHub rulesets enforce
+this and are not to be worked around — ask before touching either:
+
+- **`PR-main`** on the default branch — blocks deletion and non-fast-forward pushes, and
+  requires a PR with squash as the only allowed merge method. Direct pushes to `main` fail
+  with "push declined due to repository rule violations".
+- **`protect-dev`** on `refs/heads/dev` — blocks deletion and non-fast-forward pushes.
+  Ordinary commits can still be pushed straight to `dev`. It exists because a merge once
+  deleted `dev`, which auto-closed the open PR that targeted it.
 
 1. **Verify functional first** — `dotnet test src/Jobmatch.slnx -c Release`
    (with `JOBFINDER_USER` set; the runner has no `git config user.email`),
@@ -119,14 +127,19 @@ through a pull request merged with a merge commit (`Merge pull request #N from K
    `npm version X.Y.0 -w jobfinder-desktop --no-git-tag-version` — both write the single
    root lock, so packages and lock stay in sync. Only the minor is bumped by hand — the
    patch is `${{ github.run_number }}`.
-4. **PR `dev` → `main`**, titled like the release (`Release 0.4 — <headline>`), merged with
-   a merge commit.
+4. **PR `dev` → `main`**, titled like the release (`Release 0.4 — <headline>`), squash-merged
+   — the ruleset allows nothing else. The PR title becomes the commit subject on `main`, so
+   it is the release's permanent label.
 5. **The merge is the release.** CI tests both platforms, publishes the self-contained
    backend, builds the NSIS `.exe` and the `.deb`, then wipes and re-uploads the assets on
    the rolling **`latest`** prerelease tag. There are no per-version git tags, and `latest`
    keeps its original creation date while its assets are replaced — check
    `gh run list --workflow=release.yml`, not the release date, to confirm a build shipped.
-6. **Merge `main` back into `dev`** afterwards so the merge commit isn't orphaned.
+6. **Merge `main` back into `dev`** afterwards. A squash merge rewrites the release as one
+   new commit that is not in `dev`'s history, so the two branches diverge by construction —
+   `git checkout dev && git merge origin/main` reconciles them (the trees are already
+   identical, so it is an empty merge). Resetting `dev` onto `main` instead is not an
+   option: `protect-dev` blocks the non-fast-forward push.
 
 ## Localization
 
