@@ -1,8 +1,8 @@
+using Jobmatch.Pipeline.Stages;
 using System.Text.Json;
 using Jobmatch.Domain;
 using Jobmatch.Pipeline.Geo;
 using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Pipeline;
 using Match = Jobmatch.Domain.Match;
 
 namespace Jobmatch.Tests.Search;
@@ -12,7 +12,7 @@ namespace Jobmatch.Tests.Search;
 /// The planner keeps handing out passes until every shortlist entry has been offered to the judge —
 /// bounded by a verdict budget (llm.top_n + top_n) and a pass cap, so a run can never balloon.
 /// </summary>
-public sealed class SearchServiceJudgePlannerTests
+public sealed class JudgePlannerTests
 {
     private static readonly Gazetteer Gaz = Gazetteer.FromEntries(
     [
@@ -81,7 +81,7 @@ public sealed class SearchServiceJudgePlannerTests
     private static List<Match> Demote(IEnumerable<Match> scored, params string[] ids)
         => [.. scored.Select(m => ids.Contains(m.Listing.Id) ? m with { Score = 0.01 } : m)];
 
-    private static SearchService.JudgePlanner Planner(int firstPassN, int topN, double minScore = 0.0)
+    private static JudgePlanner Planner(int firstPassN, int topN, double minScore = 0.0)
         => new(Ranking(), minScore, topN, Radius(), firstPassN);
 
     private static IReadOnlyList<string> Ids(IReadOnlyList<Match> matches) => [.. matches.Select(m => m.Listing.Id)];
@@ -182,7 +182,7 @@ public sealed class SearchServiceJudgePlannerTests
             scored = Demote(scored, batch[0].Listing.Id);
         }
 
-        Assert.Equal(SearchService.JudgePlanner.MaxPasses, passes);
+        Assert.Equal(JudgePlanner.MaxPasses, passes);
         Assert.True(planner.Remaining > 0);
     }
 

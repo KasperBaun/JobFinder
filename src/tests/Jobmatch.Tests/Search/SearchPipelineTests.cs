@@ -11,13 +11,13 @@ using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
 
 namespace Jobmatch.Tests.Search;
 
-public sealed class SearchServiceTests : IDisposable
+public sealed class SearchPipelineTests : IDisposable
 {
     private static readonly IFileSystem Fs = new PhysicalFileSystem();
     private readonly string _tempRoot;
     private readonly string? _envBackup;
 
-    public SearchServiceTests()
+    public SearchPipelineTests()
     {
         _tempRoot = Path.Combine(Path.GetTempPath(), "jobmatch-search-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempRoot);
@@ -117,7 +117,7 @@ public sealed class SearchServiceTests : IDisposable
             """;
         var (ctx, portalList) = CreateContext("empty@example.com", portals);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.Equal(4, events.Count);
@@ -157,7 +157,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.IsType<StartedEvent>(events[0]);
@@ -215,7 +215,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         var started = Assert.IsType<StartedEvent>(events[0]);
@@ -247,7 +247,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -278,7 +278,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         Assert.False(File.Exists(ctx.MarksPath), "search should not create marks.json");
@@ -372,7 +372,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -442,7 +442,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -481,7 +481,7 @@ public sealed class SearchServiceTests : IDisposable
             ]
             """);
 
-        var svc = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var svc = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(svc.RunAsync(new SearchRequest(), portalList));
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 
@@ -518,7 +518,7 @@ public sealed class SearchServiceTests : IDisposable
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "other-1.json"),
             """[ { "title": "Y", "url": "https://y.com/1" } ]""");
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(Providers: ["mine"]), portalList));
 
         var started = Assert.IsType<StartedEvent>(events[0]);
@@ -550,7 +550,7 @@ public sealed class SearchServiceTests : IDisposable
             File.WriteAllText(Path.Combine(ctx.ImportsDir, $"{name}-1.json"),
                 $$"""[ { "title": "Python Role at {{name}}", "url": "https://{{name}}.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         var running = events.OfType<ProviderRunningEvent>().Select(e => e.Provider).ToHashSet();
@@ -594,7 +594,7 @@ public sealed class SearchServiceTests : IDisposable
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"),
             """[ { "title": "Python Dev", "url": "https://x.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs, perSourceTimeout: TimeSpan.FromMilliseconds(300));
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs, perSourceTimeout: TimeSpan.FromMilliseconds(300));
         var events = await Drain(service.RunAsync(new SearchRequest(), portalList));
 
         var failed = events.OfType<ProviderFailedEvent>().SingleOrDefault(e => e.Provider == "slow");
@@ -666,7 +666,7 @@ public sealed class SearchServiceTests : IDisposable
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "second-1.json"),
             """[ { "title": "Second Provider Python Role", "url": "https://dup.com/1", "description": "Python.", "location": "Copenhagen" } ]""");
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var complete = Assert.IsType<CompleteEvent>((await Drain(service.RunAsync(new SearchRequest(), portalList)))[^1]);
 
         Assert.Single(complete.Shortlist);

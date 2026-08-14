@@ -76,7 +76,7 @@ public sealed class UserAddedSourceReachesTheRunTests : IDisposable
     private void StageImport(string name, string csv) =>
         File.WriteAllText(Path.Combine(_ctx.ImportsDir, $"{name}-export.csv"), csv);
 
-    private SearchService NewService() => new(
+    private SearchPipeline NewService() => new(
         _ctx, new ProviderCatalog(_ctx), TestServices.Runs(_ctx), Fs);
 
     private static async Task<List<SearchProgressEvent>> Drain(IAsyncEnumerable<SearchProgressEvent> events)

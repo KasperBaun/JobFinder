@@ -74,7 +74,7 @@ public static class JobmatchApiExtensions
         services.AddSingleton<ISourceDiscoveryService>(sp =>
             new SourceDiscoveryService(sp.GetRequiredService<ISourceDetectionService>()));
         services.AddScoped<IProvidersService, ProvidersService>();
-        services.AddScoped<ISearchService, SearchService>();
+        services.AddScoped<ISearchService, SearchPipeline>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();
         services.AddScoped<ICvExtractionService, CvExtractionService>();
 

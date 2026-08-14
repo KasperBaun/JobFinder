@@ -1,12 +1,15 @@
-using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
+using Jobmatch.Domain.Runs;
 using Jobmatch.Pipeline.Geo;
-using Jobmatch.Pipeline.Ranking;
 using Match = Jobmatch.Domain.Match;
+namespace Jobmatch.Pipeline.Ranking;
 
-namespace Jobmatch.Pipeline;
-
-public sealed partial class SearchService
+/// <summary>
+/// Turns scored matches into the shortlist the user sees, and a classified reason for every match
+/// that did not make it. This is ranking policy — which cutoffs apply, in what order, and what the
+/// user is told about each — so it sits with the scorer rather than inside the orchestrator.
+/// </summary>
+public static class ShortlistBuilder
 {
     /// <summary>
     /// Classifies why a scored match would be excluded from the shortlist. Order of
@@ -19,9 +22,9 @@ public sealed partial class SearchService
     /// read the post-judge score and can only be settled afterwards.
     /// The legacy Ranker.Rank/Filter path (tests only) deliberately has no radius filter.
     /// </summary>
-    private sealed record DropClassification(string Reason, string Context, IReadOnlyDictionary<string, object> Args);
+    internal sealed record DropClassification(string Reason, string Context, IReadOnlyDictionary<string, object> Args);
 
-    private static DropClassification? ClassifyDrop(Match m, RankingConfig ranking, double minScore, RadiusFilter? radius)
+    internal static DropClassification? ClassifyDrop(Match m, RankingConfig ranking, double minScore, RadiusFilter? radius)
     {
         if (ClassifyScoreIndependentDrop(m, ranking, radius) is DropClassification drop) return drop;
 
@@ -34,7 +37,7 @@ public sealed partial class SearchService
         return null;
     }
 
-    private static DropClassification? ClassifyScoreIndependentDrop(Match m, RankingConfig ranking, RadiusFilter? radius)
+    internal static DropClassification? ClassifyScoreIndependentDrop(Match m, RankingConfig ranking, RadiusFilter? radius)
     {
         if (ranking.MaxAgeDays is int maxAge && m.Listing.PostedAt is DateTimeOffset posted)
         {
@@ -86,7 +89,7 @@ public sealed partial class SearchService
     /// <summary>Splits scored matches into the top-N shortlist (by score) and the dropped remainder
     /// (classified drops plus everything beyond top-N). Duplicates never reach this point — both
     /// dedupe passes (R-115, R-117) run before ranking.</summary>
-    internal static (List<Match> Shortlist, List<DroppedEntry> Dropped) BuildShortlist(
+    public static (List<Match> Shortlist, List<DroppedEntry> Dropped) BuildShortlist(
         IReadOnlyList<Match> scoredAll, RankingConfig ranking, double minScore, int topN, RadiusFilter? radius)
     {
         var dropped = new List<DroppedEntry>();

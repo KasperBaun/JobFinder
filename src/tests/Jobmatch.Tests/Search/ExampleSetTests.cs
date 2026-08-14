@@ -1,23 +1,21 @@
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
-using Jobmatch.Pipeline;
-using Jobmatch.Platform.IO;
+using Jobmatch.Pipeline.Stages;
 using Jobmatch.Platform.Json;
 using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
 
 namespace Jobmatch.Tests.Search;
 
-public sealed class SearchServiceExamplesTests : IDisposable
+public sealed class ExampleSetTests : IDisposable
 {
-    private static readonly IFileSystem Fs = new PhysicalFileSystem();
     private readonly string _tempRoot;
     private readonly string? _envBackup;
     private readonly JobmatchUserContext _ctx;
-    private readonly SearchService _service;
+    private readonly ExampleSet _examples;
     private readonly MarksService _marks;
 
-    public SearchServiceExamplesTests()
+    public ExampleSetTests()
     {
         _tempRoot = Path.Combine(Path.GetTempPath(), "jobmatch-search-examples-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempRoot);
@@ -25,7 +23,7 @@ public sealed class SearchServiceExamplesTests : IDisposable
         Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
         _ctx = JobmatchUserContext.Resolve(emailOverride: "examples@example.com", repoRoot: _tempRoot, seedExamples: false);
         _marks = new MarksService(_ctx);
-        _service = new SearchService(_ctx, TestServices.Catalog(_ctx), TestServices.Runs(_ctx), Fs, marks: _marks);
+        _examples = new ExampleSet(_ctx, TestServices.Runs(_ctx), _marks);
     }
 
     public void Dispose()
@@ -68,12 +66,12 @@ public sealed class SearchServiceExamplesTests : IDisposable
     }
 
     [Fact]
-    public void LoadExamples_MergesCuratedAndMarked()
+    public void Load_MergesCuratedAndMarked()
     {
         WriteCuratedExample("disliked-junior.md", "Junior Developer", "Junior Co");
         WriteMarkedHistory("20260701-100000-aaaaaa", "l1", "AI Engineer - Student", "Uni Co", "bad", "I'm not a student");
 
-        var examples = _service.LoadExamples();
+        var examples = _examples.Load();
 
         Assert.Equal(2, examples.Count);
         Assert.Contains(examples, e => e.Company == "Junior Co" && e.Note == "Curated why.");
@@ -81,21 +79,21 @@ public sealed class SearchServiceExamplesTests : IDisposable
     }
 
     [Fact]
-    public void LoadExamples_CuratedWins_OnTitleCompanyCollision()
+    public void Load_CuratedWins_OnTitleCompanyCollision()
     {
         WriteCuratedExample("disliked-student.md", "AI Engineer - Student", "Uni Co");
         WriteMarkedHistory("20260701-100000-aaaaaa", "l1", "AI Engineer - Student", "Uni Co", "bad", "marked why");
 
-        var example = Assert.Single(_service.LoadExamples());
+        var example = Assert.Single(_examples.Load());
         Assert.Equal("Curated why.", example.Note);
     }
 
     [Fact]
-    public void LoadExamples_NoMarks_ReturnsCuratedOnly()
+    public void Load_NoMarks_ReturnsCuratedOnly()
     {
         WriteCuratedExample("disliked-junior.md", "Junior Developer", "Junior Co");
 
-        var example = Assert.Single(_service.LoadExamples());
+        var example = Assert.Single(_examples.Load());
         Assert.Equal("Junior Co", example.Company);
     }
 }

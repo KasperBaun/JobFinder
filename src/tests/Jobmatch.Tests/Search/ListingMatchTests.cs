@@ -101,7 +101,7 @@ public sealed class ListingMatchTests : IDisposable
             """);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-2026-04-20.json"), $"[{listingJson}]");
 
-        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         CompleteEvent? complete = null;
         await foreach (var evt in service.RunAsync(new SearchRequest(), portals))
         {

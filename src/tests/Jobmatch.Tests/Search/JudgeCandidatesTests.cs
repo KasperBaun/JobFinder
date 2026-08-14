@@ -1,8 +1,8 @@
+using Jobmatch.Pipeline.Stages;
 using System.Text.Json;
 using Jobmatch.Domain;
 using Jobmatch.Pipeline.Geo;
 using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Pipeline;
 using Match = Jobmatch.Domain.Match;
 
 namespace Jobmatch.Tests.Search;
@@ -12,7 +12,7 @@ namespace Jobmatch.Tests.Search;
 /// raw keyword top-N left real shortlist entries unjudged (and silently keyword-scored) because
 /// the budget went to listings the hard filters discarded moments later.
 /// </summary>
-public sealed class SearchServiceJudgeCandidatesTests
+public sealed class JudgeCandidatesTests
 {
     private static readonly Gazetteer Gaz = Gazetteer.FromEntries(
     [
@@ -94,7 +94,7 @@ public sealed class SearchServiceJudgeCandidatesTests
             Scored("near", 0.40, location: "København"),
         };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), Radius(), topN: 1);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), Radius(), topN: 1);
 
         Assert.Equal(["near"], Ids(candidates));
     }
@@ -104,7 +104,7 @@ public sealed class SearchServiceJudgeCandidatesTests
     {
         var scored = new List<Match> { Scored("far-remote", 0.90, location: "Aalborg", remote: RemoteMode.Remote) };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), Radius(), topN: 25);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), Radius(), topN: 25);
 
         Assert.Equal(["far-remote"], Ids(candidates));
     }
@@ -118,7 +118,7 @@ public sealed class SearchServiceJudgeCandidatesTests
             Scored("fresh", 0.40, postedAt: DateTimeOffset.UtcNow.AddDays(-2)),
         };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(maxAgeDays: 30), Radius(), topN: 25);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(maxAgeDays: 30), Radius(), topN: 25);
 
         Assert.Equal(["fresh"], Ids(candidates));
     }
@@ -132,7 +132,7 @@ public sealed class SearchServiceJudgeCandidatesTests
             Scored("primary", 0.40),
         };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(requirePrimary: true), Radius(), topN: 25);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(requirePrimary: true), Radius(), topN: 25);
 
         Assert.Equal(["primary"], Ids(candidates));
     }
@@ -146,7 +146,7 @@ public sealed class SearchServiceJudgeCandidatesTests
             Scored("clean", 0.40),
         };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), Radius(), topN: 25);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), Radius(), topN: 25);
 
         Assert.Equal(["clean"], Ids(candidates));
     }
@@ -158,7 +158,7 @@ public sealed class SearchServiceJudgeCandidatesTests
     {
         var scored = new List<Match> { Scored("weak", 0.01, location: "København") };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), Radius(), topN: 25);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), Radius(), topN: 25);
 
         Assert.Equal(["weak"], Ids(candidates));
     }
@@ -173,7 +173,7 @@ public sealed class SearchServiceJudgeCandidatesTests
             Scored("b", 0.60),
         };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), Radius(), topN: 2);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), Radius(), topN: 2);
 
         Assert.Equal(["a", "b"], Ids(candidates));
     }
@@ -188,7 +188,7 @@ public sealed class SearchServiceJudgeCandidatesTests
             Scored("near-2", 0.30),
         };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), Radius(), topN: 0);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), Radius(), topN: 0);
 
         Assert.Equal(["near-1", "near-2"], Ids(candidates));
     }
@@ -198,7 +198,7 @@ public sealed class SearchServiceJudgeCandidatesTests
     {
         var scored = new List<Match> { Scored("far", 0.90, location: "Aalborg") };
 
-        var candidates = SearchService.SelectJudgeCandidates(scored, Ranking(), radius: null, topN: 25);
+        var candidates = JudgeCandidates.ForFirstPass(scored, Ranking(), radius: null, topN: 25);
 
         Assert.Equal(["far"], Ids(candidates));
     }

@@ -3,11 +3,17 @@ using Jobmatch.Domain;
 using Jobmatch.Pipeline.Deduplication;
 using Match = Jobmatch.Domain.Match;
 
-namespace Jobmatch.Pipeline;
+namespace Jobmatch.Pipeline.Stages;
 
-public sealed partial class SearchService
+/// <summary>
+/// Domain match → the shapes a run record and the GUI consume. Kept apart from the orchestrator
+/// because these carry presentation decisions — lowercase remote mode on the wire, an empty
+/// description reported as absent, the preferred-company bonus surfaced as a flag — that have
+/// nothing to do with running a search.
+/// </summary>
+internal static class RunRecordProjection
 {
-    private static ListingMatch ToListingMatch(
+    internal static ListingMatch ToListingMatch(
         Match match,
         IReadOnlyDictionary<string, string> portalDisplayNames,
         IReadOnlyList<ListingSighting>? sightings = null)
@@ -35,7 +41,7 @@ public sealed partial class SearchService
             Sightings: sightings);
     }
 
-    private static IReadOnlyList<ListingSighting>? ToSightings(
+    internal static IReadOnlyList<ListingSighting>? ToSightings(
         Match primary, ProbabilisticDedupeResult probDedupe, IReadOnlyDictionary<string, string> portalDisplayNames)
     {
         if (!probDedupe.SightingsByCanonical.TryGetValue(primary.Listing.Id, out var absorbed)) return null;
@@ -48,7 +54,7 @@ public sealed partial class SearchService
             Probability: s.Probability)).ToList();
     }
 
-    private static RawListing ToRawListing(Listing l) => new(
+    internal static RawListing ToRawListing(Listing l) => new(
         Id: l.Id,
         Title: l.Title,
         Company: l.Company,
@@ -56,7 +62,7 @@ public sealed partial class SearchService
         Url: l.Url.ToString(),
         PostedAt: l.PostedAt);
 
-    private static ScoredEntry ToScoredEntry(Match m, IReadOnlyDictionary<string, string> portalDisplayNames) => new(
+    internal static ScoredEntry ToScoredEntry(Match m, IReadOnlyDictionary<string, string> portalDisplayNames) => new(
         Id: m.Listing.Id,
         Title: m.Listing.Title,
         Company: m.Listing.Company,
