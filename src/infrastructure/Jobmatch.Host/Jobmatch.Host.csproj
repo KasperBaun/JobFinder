@@ -13,6 +13,8 @@
     <Authors>Kasper Baun</Authors>
     <Description>Local-first job search aggregator with editorial GUI. Run `jobfinder` to launch — opens the browser to an ephemeral local server.</Description>
     <PackageTags>jobs;search;gui;local-first</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/KasperBaun/JobFinder</PackageProjectUrl>
     <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\..\pkg</PackageOutputPath>
     <NoWarn>$(NoWarn);NU5048</NoWarn>
   </PropertyGroup>

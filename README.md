@@ -96,6 +96,11 @@ Two ways in:
 
 - [`CHANGELOG.md`](./CHANGELOG.md) — what's shipped.
 
+## License
+
+Copyright © 2026 Kasper Baun. Released under the [MIT License](./LICENSE) — free to use,
+modify and redistribute, provided the copyright notice travels with it.
+
 Place data for the distance filter comes from [GeoNames](https://www.geonames.org/)
 (licensed [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)) and
 [Danmarks Adresser / DAWA](https://dataforsyningen.dk/) (Danish public-sector data).

@@ -4,6 +4,7 @@
   "private": true,
   "description": "Jobfinder desktop shell — an Electron window over the bundled .NET backend.",
   "author": "Kasper Baun",
+  "license": "MIT",
   "homepage": "https://github.com/KasperBaun/JobFinder",
   "main": "dist/main.js",
   "scripts": {
