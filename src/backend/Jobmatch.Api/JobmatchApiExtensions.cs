@@ -56,6 +56,9 @@ public static class JobmatchApiExtensions
         services.AddScoped<IHistoryService, HistoryService>();
         services.AddScoped<ISkillsetService, SkillsetService>();
         services.AddSingleton<ISourceDetectionService, SourceDetectionService>();
+        // Singleton so the one HttpClient behind link discovery is pooled, not rebuilt per request.
+        services.AddSingleton<ISourceDiscoveryService>(sp =>
+            new SourceDiscoveryService(sp.GetRequiredService<ISourceDetectionService>()));
         services.AddScoped<IProvidersService, ProvidersService>();
         services.AddScoped<ISearchService, SearchService>();
         services.AddScoped<IConfigTransferService, ConfigTransferService>();

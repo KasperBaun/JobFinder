@@ -90,6 +90,78 @@ public sealed class SourceDetectionServiceTests
     }
 
     [Fact]
+    public void OracleRecruiting_BoardUrl_ProducesApiDraftMatchingTheCatalogPattern()
+    {
+        var c = DetectOne("https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/jobs");
+
+        Assert.Equal("oracle", c.Kind);
+        Assert.Equal(PortalType.Api, c.Draft.Type);
+        Assert.Equal(
+            "https://ejqi.fa.ocs.oraclecloud.eu/hcmRestApi/resources/latest/recruitingCEJobRequisitions",
+            c.Draft.Endpoint!.ToString());
+        // Without `expand` the requisition list comes back empty, and the rows sit one level down.
+        Assert.Equal("requisitionList.secondaryLocations", c.Draft.QueryParams!["expand"]);
+        Assert.Contains("siteNumber=CX_1001", (string)c.Draft.QueryParams!["finder"]!);
+        Assert.Equal("items.0.requisitionList", c.Draft.ResponseMapping!["items_path"]);
+        Assert.Equal(
+            "https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/job/{Id}",
+            c.Draft.ResponseMapping!["url_template"]);
+        Assert.True(c.Draft.EnrichBody);
+        // "ejqi" is a tenant id, not an employer — it must not be stamped on 140 jobs as the company.
+        Assert.Equal("Oracle Recruiting Cloud (CX_1001)", c.DisplayName);
+        Assert.Null(c.Draft.StaticFields);
+    }
+
+    [Fact]
+    public void OracleRecruiting_JobDeepLink_ProducesTheSameBoardDraft()
+    {
+        var board = DetectOne("https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/jobs");
+        var deepLink = DetectOne("https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/job/23989");
+
+        Assert.Equal(board.Draft.Endpoint, deepLink.Draft.Endpoint);
+        Assert.Equal(board.Draft.QueryParams!["finder"], deepLink.Draft.QueryParams!["finder"]);
+    }
+
+    [Fact]
+    public void OracleRecruiting_RestUrl_TakesSiteNumberFromTheFinderParam()
+    {
+        var c = DetectOne(
+            "https://fa-ewto-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/"
+            + "recruitingCEJobRequisitions?finder=findReqs;siteNumber=CX_2,limit=50");
+
+        Assert.Equal("oracle", c.Kind);
+        Assert.Contains("siteNumber=CX_2", (string)c.Draft.QueryParams!["finder"]!);
+    }
+
+    [Fact]
+    public void OracleRecruiting_LocalisedBoard_KeepsTheLanguageInJobLinks()
+    {
+        var c = DetectOne("https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/da/sites/CX_1001/jobs");
+        Assert.Contains("/CandidateExperience/da/sites/CX_1001/job/", c.Draft.ResponseMapping!["url_template"]);
+    }
+
+    [Fact]
+    public void OracleHostWithoutASiteNumber_ProducesNoCandidate()
+    {
+        Assert.Empty(_svc.Detect(new Uri("https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/")));
+    }
+
+    [Fact]
+    public void WithBrand_RenamesCandidateAndItsStoredConfig()
+    {
+        var c = DetectOne("https://ejqi.fa.ocs.oraclecloud.eu/hcmUI/CandidateExperience/en/sites/CX_1001/jobs");
+
+        var branded = SourceDetectionService.WithBrand(c, "Danske Bank");
+
+        Assert.Equal("Danske Bank", branded.DisplayName);
+        Assert.Equal("Danske Bank", branded.Draft.DisplayName);
+        Assert.Equal("oracle-danske-bank", branded.Draft.Name);
+        Assert.Equal("Danske Bank", branded.Draft.StaticFields!["company"]);
+        // The endpoint is what the board actually is — renaming must not touch it.
+        Assert.Equal(c.Draft.Endpoint, branded.Draft.Endpoint);
+    }
+
+    [Fact]
     public void UnknownUrl_ProducesNoCandidate()
     {
         Assert.Empty(_svc.Detect(new Uri("https://example.com/careers")));

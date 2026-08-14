@@ -1,35 +1,40 @@
 using Jobmatch.Configuration;
 using Jobmatch.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Services;
 
-// User-added sources: detect a pasted URL, preview-test the candidate, persist it to the per-user
-// store, and remove it again. Kept in its own partial so the core read/toggle service stays small.
+// User-added sources: resolve a pasted URL to a candidate, preview-fetch it, persist it to the
+// per-user store, and remove it again. Kept in its own partial so the core read/toggle service stays
+// small; the "do you already have this?" comparison lives in ProvidersService.Overlap.cs.
 public sealed partial class ProvidersService
 {
-    public IReadOnlyList<DetectedSource> Detect(string? url)
+    public async Task<IReadOnlyList<DetectedSource>> DetectAsync(string? url, CancellationToken ct)
     {
-        var candidates = detection.Detect(ParseUrl(url));
-        if (candidates.Count == 0) return [];
-
-        var existing = LoadCatalog();
-        return candidates
-            .Select(c => new DetectedSource(c.Kind, c.DisplayName, c.Summary, DuplicateWarning(c.Draft, existing)))
-            .ToList();
+        var candidates = await ResolveCandidatesAsync(ParseUrl(url), ct).ConfigureAwait(false);
+        return [.. candidates.Select(c => new DetectedSource(c.Kind, c.DisplayName, c.Summary))];
     }
 
-    public Task<ProviderTestOutcome> PreviewTestAsync(string? url, string kind, string? displayName, CancellationToken ct)
+    public async Task<SourcePreview> PreviewAsync(string? url, string kind, string? displayName, CancellationToken ct)
     {
-        var candidate = SelectCandidate(url, kind, displayName);
-        return TestConfigAsync(candidate.Draft, ct);
+        var candidate = await SelectCandidateAsync(url, kind, displayName, ct).ConfigureAwait(false);
+        var test = await TestConfigAsync(candidate.Draft, ct).ConfigureAwait(false);
+        // The overlap probe fetches other sources, so it only earns its cost once this one works.
+        var overlap = test.Ok
+            ? await FindOverlapAsync(candidate.Draft, test.Samples, ct).ConfigureAwait(false)
+            : null;
+        return new SourcePreview(test, overlap);
     }
 
-    public ProviderListing Create(string? url, string kind, string? displayName)
+    public async Task<ProviderListing> CreateAsync(string? url, string kind, string? displayName, CancellationToken ct)
     {
-        var candidate = SelectCandidate(url, kind, displayName);
+        var candidate = await SelectCandidateAsync(url, kind, displayName, ct).ConfigureAwait(false);
         var draft = candidate.Draft;
+        // The name the user typed is the best company name anyone has for this board — it has to
+        // reach the listings too, not just the card, or every job arrives labelled with the platform
+        // default (or nothing) while the source itself reads correctly.
         if (!string.IsNullOrWhiteSpace(displayName))
-            draft = draft with { DisplayName = displayName!.Trim() };
+            draft = SourceDetectionService.WithBrand(candidate, displayName).Draft with { Name = draft.Name };
 
         var created = UserProviderStore.Add(ctx.UserProvidersPath, draft, LoadBakedCatalog());
         var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
@@ -45,12 +50,32 @@ public sealed partial class ProvidersService
         RemoveFromState(id);
     }
 
-    private SourceCandidate SelectCandidate(string? url, string kind, string? displayName)
+    // Pattern matching first because it is free and exact; only a URL nothing recognises is worth a
+    // request to a stranger's server.
+    private async Task<IReadOnlyList<SourceCandidate>> ResolveCandidatesAsync(Uri url, CancellationToken ct)
+    {
+        var matched = detection.Detect(url);
+        if (matched.Count > 0) return matched;
+
+        try
+        {
+            return await discovery.DiscoverAsync(url, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Link discovery failed for {Url}", url);
+            return [];
+        }
+    }
+
+    private async Task<SourceCandidate> SelectCandidateAsync(
+        string? url, string kind, string? displayName, CancellationToken ct)
     {
         if (kind == "manual")
             return detection.BuildManual(displayName ?? string.Empty);
 
-        return detection.Detect(ParseUrl(url)).FirstOrDefault(c => c.Kind == kind)
+        var candidates = await ResolveCandidatesAsync(ParseUrl(url), ct).ConfigureAwait(false);
+        return candidates.FirstOrDefault(c => c.Kind == kind)
             ?? throw new InvalidRequestException($"could not recognise a '{kind}' source at that address");
     }
 
@@ -82,31 +107,4 @@ public sealed partial class ProvidersService
         return uri;
     }
 
-    private static string? DuplicateWarning(PortalConfig draft, IReadOnlyList<PortalConfig> existing)
-    {
-        if (draft.Endpoint is null) return null;
-        var key = EndpointKey(draft.Endpoint);
-        foreach (var p in existing)
-        {
-            if (p.Endpoint is null || p.Type != draft.Type) continue;
-            if (EndpointKey(p.Endpoint) == key)
-            {
-                var name = string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name : p.DisplayName!;
-                return $"You already pull from this source via “{name}”.";
-            }
-        }
-        return null;
-    }
-
-    // Host + path identifies one board — ATS platforms share a host across every customer, so the
-    // path must be part of the key or every board on that platform would falsely look like a dup.
-    // The host alias collapses it-jobbank and jobindex, which serve the same feed from two hosts.
-    private static string EndpointKey(Uri u) =>
-        $"{BackendKey(u.Host)}{u.AbsolutePath.TrimEnd('/').ToLowerInvariant()}";
-
-    private static string BackendKey(string host) => host.ToLowerInvariant() switch
-    {
-        "www.it-jobbank.dk" or "it-jobbank.dk" or "www.jobindex.dk" or "jobindex.dk" => "jobindex.dk",
-        var h => h,
-    };
 }

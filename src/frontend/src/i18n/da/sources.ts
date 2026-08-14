@@ -13,7 +13,6 @@ export const sources: Messages['sources'] = {
 
   nameLabel: 'Navn',
   addSource: 'Tilføj jobkilde',
-  testFirst: 'Test først',
   fallbackName: 'jobkilde',
 
   notFoundHint:
@@ -31,4 +30,15 @@ export const sources: Messages['sources'] = {
   foundJobs: count => `Fandt ${count} job`,
   nothingCameBack: 'Der kom intet tilbage',
   sample: title => `f.eks. “${title}”`,
+
+  fetching: 'Henter opslagene…',
+  checkingExisting: 'Tjekker om du allerede har den…',
+
+  duplicateTitle: 'Du har allerede denne jobkilde',
+  duplicateBody: (name, shared, total) =>
+    `“${name}” henter allerede ${shared} af disse ${total} job. Tilføjer du den her, bliver de hentet to gange.`,
+  overlapBody: (name, shared, total) =>
+    `${shared} af disse ${total} job kommer også fra “${name}”. Resten ville være nye.`,
+  openExisting: name => `Åbn ${name}`,
+  addAnyway: 'Tilføj alligevel',
 }

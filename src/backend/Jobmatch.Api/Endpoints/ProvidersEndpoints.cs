@@ -130,11 +130,12 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
                 Routes.Providers.Detect,
                 (
                     [FromServices] IProvidersHandler handler,
-                    [FromBody] DetectSourceRequest? request)
-                    => handler.Detect(request))
+                    [FromBody] DetectSourceRequest? request,
+                    CancellationToken ct)
+                    => handler.Detect(request, ct))
             .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.Detect)}")
             .WithSummary("Detect a source from a URL")
-            .WithDescription("Recognises known ATS job boards and RSS feeds from a pasted URL and returns addable candidates.")
+            .WithDescription("Recognises known ATS job boards and RSS feeds from a pasted URL, falling back to reading the page for a link to a board it does recognise, and returns addable candidates.")
             .Produces<DetectSourceResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);
@@ -151,8 +152,8 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
                     => handler.PreviewTest(request, ct))
             .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.PreviewTest)}")
             .WithSummary("Preview-test a detected source")
-            .WithDescription("Runs a live fetch against a detected (not-yet-saved) candidate and reports whether listings came back.")
-            .Produces<ProviderTestResult>(StatusCodes.Status200OK)
+            .WithDescription("Runs a live fetch against a detected (not-yet-saved) candidate, reports whether listings came back, and — when they did — whether an existing source returns the same jobs.")
+            .Produces<SourcePreviewResult>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);
     }
@@ -163,8 +164,9 @@ public sealed class ProvidersEndpoints : IEndpointRegistration
                 Routes.Providers.Create,
                 (
                     [FromServices] IProvidersHandler handler,
-                    [FromBody] CreateSourceRequest? request)
-                    => handler.Create(request))
+                    [FromBody] CreateSourceRequest? request,
+                    CancellationToken ct)
+                    => handler.Create(request, ct))
             .WithName($"{nameof(Routes.Providers)}.{nameof(Routes.Providers.Create)}")
             .WithSummary("Add a source")
             .WithDescription("Persists a detected or manual source as a new user provider and returns its id.")

@@ -1,6 +1,7 @@
 using Jobmatch;
 using Jobmatch.Configuration;
 using Jobmatch.IO;
+using Jobmatch.Models;
 using Jobmatch.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -25,19 +26,24 @@ public sealed class ProvidersServiceSourcesTests : IDisposable
         try { if (Directory.Exists(_tempRoot)) Directory.Delete(_tempRoot, recursive: true); } catch { }
     }
 
-    private (ProvidersService svc, UserContext ctx) NewService()
+    private (ProvidersService svc, UserContext ctx) NewService(ISourceDiscoveryService? discovery = null)
     {
         var ctx = UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
-        var svc = new ProvidersService(ctx, new PhysicalFileSystem(), new SourceDetectionService(), NullLogger<ProvidersService>.Instance);
+        var svc = new ProvidersService(
+            ctx,
+            new PhysicalFileSystem(),
+            new SourceDetectionService(),
+            discovery ?? new FakeSourceDiscovery(),
+            NullLogger<ProvidersService>.Instance);
         return (svc, ctx);
     }
 
     [Fact]
-    public void Create_Greenhouse_PersistsEnabledRemovableProvider()
+    public async Task Create_Greenhouse_PersistsEnabledRemovableProvider()
     {
         var (svc, _) = NewService();
 
-        var created = svc.Create("https://boards.greenhouse.io/monzo", "greenhouse", displayName: null);
+        var created = await svc.CreateAsync("https://boards.greenhouse.io/monzo", "greenhouse", null, CancellationToken.None);
 
         Assert.True(created.Portal.Id >= UserProviderStore.IdBase);
         var listed = svc.List().Single(p => p.Portal.Id == created.Portal.Id);
@@ -46,10 +52,10 @@ public sealed class ProvidersServiceSourcesTests : IDisposable
     }
 
     [Fact]
-    public void Create_ThenDelete_RemovesFromList()
+    public async Task Create_ThenDelete_RemovesFromList()
     {
         var (svc, ctx) = NewService();
-        var created = svc.Create("https://jobs.lever.co/acmewidgets", "lever", displayName: "Acme Widgets");
+        var created = await svc.CreateAsync("https://jobs.lever.co/acmewidgets", "lever", "Acme Widgets", CancellationToken.None);
 
         svc.Delete(created.Portal.Id);
 
@@ -72,39 +78,78 @@ public sealed class ProvidersServiceSourcesTests : IDisposable
     }
 
     [Fact]
-    public void Create_ManualKind_PersistsManualProvider()
+    public async Task Create_WithATypedName_StampsItOnTheListingsToo()
     {
         var (svc, _) = NewService();
-        var created = svc.Create(url: null, "manual", displayName: "My saved roles");
-        Assert.Equal(Jobmatch.Models.PortalType.Manual, created.Portal.Type);
+
+        // A tenant not already in the shipped catalog — the store refuses an exact endpoint dupe.
+        var created = await svc.CreateAsync(
+            "https://abcd.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs",
+            "oracle",
+            "Acme Bank",
+            CancellationToken.None);
+
+        Assert.Equal("Acme Bank", created.Portal.DisplayName);
+        Assert.Equal("Acme Bank", created.Portal.StaticFields!["company"]);
+    }
+
+    [Fact]
+    public async Task Create_ManualKind_PersistsManualProvider()
+    {
+        var (svc, _) = NewService();
+        var created = await svc.CreateAsync(null, "manual", "My saved roles", CancellationToken.None);
+        Assert.Equal(PortalType.Manual, created.Portal.Type);
         Assert.True(created.Portal.Id >= UserProviderStore.IdBase);
     }
 
     [Fact]
-    public void Detect_NewBoard_ReturnsCandidateWithoutWarning()
+    public async Task Detect_NewBoard_ReturnsACandidate()
     {
         var (svc, _) = NewService();
-        // A different Ashby customer than the catalog's 'pleo' — same host, different board → no dup.
-        var candidates = svc.Detect("https://jobs.ashbyhq.com/monzo");
+        var candidates = await svc.DetectAsync("https://jobs.ashbyhq.com/monzo", CancellationToken.None);
         var c = Assert.Single(candidates);
         Assert.Equal("ashby", c.Kind);
-        Assert.Null(c.DuplicateWarning);
     }
 
     [Fact]
-    public void Detect_BoardAlreadyInCatalog_WarnsAboutOverlap()
+    public async Task Detect_BoardAlreadyInCatalog_StillResolves()
     {
         var (svc, _) = NewService();
-        // 'pleo' is in the shipped catalog on the same Ashby endpoint.
-        var c = Assert.Single(svc.Detect("https://jobs.ashbyhq.com/pleo"));
-        Assert.NotNull(c.DuplicateWarning);
-        Assert.Contains("Pleo", c.DuplicateWarning);
+        // 'pleo' is already in the shipped catalog on this endpoint. Detection must not short-circuit
+        // on that: the user gets told they have it once the candidate has been fetched and compared,
+        // not by a guess made from the URL before anything was fetched.
+        var c = Assert.Single(await svc.DetectAsync("https://jobs.ashbyhq.com/pleo", CancellationToken.None));
+        Assert.Equal("ashby", c.Kind);
     }
 
     [Fact]
-    public void Detect_InvalidUrl_Throws()
+    public async Task Detect_InvalidUrl_Throws()
     {
         var (svc, _) = NewService();
-        Assert.Throws<InvalidRequestException>(() => svc.Detect("   "));
+        await Assert.ThrowsAsync<InvalidRequestException>(() => svc.DetectAsync("   ", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Detect_UnrecognisedUrl_FallsBackToLinkDiscovery()
+    {
+        var discovered = new SourceDetectionService().Detect(new Uri("https://boards.greenhouse.io/monzo"))[0];
+        var (svc, _) = NewService(new FakeSourceDiscovery(discovered));
+
+        var c = Assert.Single(await svc.DetectAsync("https://example.com/careers", CancellationToken.None));
+
+        Assert.Equal("greenhouse", c.Kind);
+    }
+
+    [Fact]
+    public async Task Create_FromDiscoveredCandidate_PersistsTheDiscoveredBoard()
+    {
+        var discovered = new SourceDetectionService().Detect(new Uri("https://jobs.lever.co/acmewidgets"))[0];
+        var (svc, _) = NewService(new FakeSourceDiscovery(discovered));
+
+        // The pasted URL is the careers page, not the board — creation has to re-resolve it the same
+        // way detection did, or the user would be told "could not recognise a 'lever' source".
+        var created = await svc.CreateAsync("https://example.com/careers", "lever", null, CancellationToken.None);
+
+        Assert.Equal("https://api.lever.co/v0/postings/acmewidgets", created.Portal.Endpoint!.ToString());
     }
 }

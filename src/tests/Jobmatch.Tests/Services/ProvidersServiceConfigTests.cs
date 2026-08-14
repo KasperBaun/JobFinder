@@ -32,7 +32,8 @@ public sealed class ProvidersServiceConfigTests : IDisposable
     private ProvidersService NewService()
     {
         var ctx = UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
-        return new ProvidersService(ctx, new PhysicalFileSystem(), new SourceDetectionService(), NullLogger<ProvidersService>.Instance);
+        return new ProvidersService(ctx, new PhysicalFileSystem(), new SourceDetectionService(),
+            new FakeSourceDiscovery(), NullLogger<ProvidersService>.Instance);
     }
 
     [Fact]

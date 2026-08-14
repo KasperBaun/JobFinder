@@ -2,6 +2,7 @@ using Jobmatch;
 using Jobmatch.Configuration;
 using Jobmatch.IO;
 using Jobmatch.Services;
+using Jobmatch.Tests.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Configuration;
@@ -32,7 +33,8 @@ public sealed class ProvidersHandlerSecretsTests : IDisposable
         UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
 
     private static ProvidersService NewService(UserContext ctx) =>
-        new(ctx, new PhysicalFileSystem(), new SourceDetectionService(), NullLogger<ProvidersService>.Instance);
+        new(ctx, new PhysicalFileSystem(), new SourceDetectionService(), new FakeSourceDiscovery(),
+            NullLogger<ProvidersService>.Instance);
 
     [Fact]
     public void SetSecrets_WritesValuesToProviderStateJson()

@@ -16,9 +16,9 @@ public interface IProvidersHandler
     Task<IResult> SetSecrets(int id, SetSecretsRequest? request);
     Task<IResult> SetConfig(int id, ProviderConfigUpdate? request);
     Task<IResult> Test(int id, CancellationToken ct);
-    Task<IResult> Detect(DetectSourceRequest? request);
+    Task<IResult> Detect(DetectSourceRequest? request, CancellationToken ct);
     Task<IResult> PreviewTest(PreviewSourceRequest? request, CancellationToken ct);
-    Task<IResult> Create(CreateSourceRequest? request);
+    Task<IResult> Create(CreateSourceRequest? request, CancellationToken ct);
     Task<IResult> Delete(int id);
 }
 
@@ -90,15 +90,15 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         },
         logParams: [id]);
 
-    public Task<IResult> Detect(DetectSourceRequest? request) => ExecuteAsync(
+    public Task<IResult> Detect(DetectSourceRequest? request, CancellationToken ct) => ExecuteAsync(
         "detect source",
-        () =>
+        async () =>
         {
-            var candidates = providers.Detect(request?.Url);
+            var candidates = await providers.DetectAsync(request?.Url, ct).ConfigureAwait(false);
             var dtos = candidates
-                .Select(c => new DetectedSourceDto(c.Kind, c.DisplayName, c.Summary, c.DuplicateWarning))
+                .Select(c => new DetectedSourceDto(c.Kind, c.DisplayName, c.Summary))
                 .ToList();
-            return Task.FromResult<IResult>(Results.Ok(new DetectSourceResponse(dtos)));
+            return Results.Ok(new DetectSourceResponse(dtos));
         });
 
     public Task<IResult> PreviewTest(PreviewSourceRequest? request, CancellationToken ct) => ExecuteAsync(
@@ -107,20 +107,22 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         {
             if (request?.Kind is null)
                 throw new InvalidRequestException("kind is required");
-            var outcome = await providers
-                .PreviewTestAsync(request.Url, request.Kind, request.DisplayName, ct)
+            var preview = await providers
+                .PreviewAsync(request.Url, request.Kind, request.DisplayName, ct)
                 .ConfigureAwait(false);
-            return Results.Ok(ToTestResult(outcome));
+            return Results.Ok(new SourcePreviewResult(ToTestResult(preview.Test), ToOverlap(preview.Overlap)));
         });
 
-    public Task<IResult> Create(CreateSourceRequest? request) => ExecuteAsync(
+    public Task<IResult> Create(CreateSourceRequest? request, CancellationToken ct) => ExecuteAsync(
         "create source",
-        () =>
+        async () =>
         {
             if (request?.Kind is null)
                 throw new InvalidRequestException("kind is required");
-            var created = providers.Create(request.Url, request.Kind, request.DisplayName);
-            return Task.FromResult<IResult>(Results.Ok(new ProviderCreatedResponse(created.Portal.Id)));
+            var created = await providers
+                .CreateAsync(request.Url, request.Kind, request.DisplayName, ct)
+                .ConfigureAwait(false);
+            return Results.Ok(new ProviderCreatedResponse(created.Portal.Id));
         });
 
     public Task<IResult> Delete(int id) => ExecuteAsync(
@@ -217,6 +219,10 @@ public sealed class ProvidersHandler(IProvidersService providers, ILogger<Provid
         }
         return null;
     }
+
+    private static SourceOverlapDto? ToOverlap(SourceOverlapMatch? m) => m is null
+        ? null
+        : new SourceOverlapDto(m.ProviderId, m.DisplayName, m.ExistingCount, m.SharedCount, m.Ratio, m.Duplicate);
 
     private static ProviderTestResult ToTestResult(ProviderTestOutcome o) => new(
         Ok: o.Ok,

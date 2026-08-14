@@ -51,8 +51,11 @@ public sealed record ProviderTestSample(
 public sealed record DetectedSource(
     string Kind,
     string DisplayName,
-    string Summary,
-    string? DuplicateWarning);
+    string Summary);
+
+/// <summary>What a candidate returned when it was actually run, plus — only if it returned
+/// something — the source the user already has that it duplicates.</summary>
+public sealed record SourcePreview(ProviderTestOutcome Test, SourceOverlapMatch? Overlap);
 
 public interface IProvidersService
 {
@@ -62,9 +65,9 @@ public interface IProvidersService
     void SetSecrets(int id, IReadOnlyDictionary<string, string> values);
     void SetConfigOverride(int id, ProviderOverride ov);
     Task<ProviderTestOutcome> TestAsync(int id, CancellationToken ct);
-    IReadOnlyList<DetectedSource> Detect(string? url);
-    Task<ProviderTestOutcome> PreviewTestAsync(string? url, string kind, string? displayName, CancellationToken ct);
-    ProviderListing Create(string? url, string kind, string? displayName);
+    Task<IReadOnlyList<DetectedSource>> DetectAsync(string? url, CancellationToken ct);
+    Task<SourcePreview> PreviewAsync(string? url, string kind, string? displayName, CancellationToken ct);
+    Task<ProviderListing> CreateAsync(string? url, string kind, string? displayName, CancellationToken ct);
     void Delete(int id);
 }
 
@@ -72,6 +75,7 @@ public sealed partial class ProvidersService(
     UserContext ctx,
     IFileSystem fs,
     ISourceDetectionService detection,
+    ISourceDiscoveryService discovery,
     ILogger<ProvidersService> logger) : IProvidersService
 {
     public IReadOnlyList<ProviderListing> List()
