@@ -25,10 +25,10 @@ public sealed class ApplicationsEndpointsTests : IDisposable
         try { if (Directory.Exists(_tempRoot)) Directory.Delete(_tempRoot, recursive: true); } catch { }
     }
 
-    private WebApplicationFactory<ApiProgram> Factory() =>
-        new WebApplicationFactory<ApiProgram>().WithWebHostBuilder(builder =>
-            builder.ConfigureServices(services =>
-                services.AddSingleton(new BootstrapStore(_bootstrapPath))));
+    private ApiTestFactory Factory() => new()
+    {
+        ConfigureTestServices = services => services.AddSingleton(new BootstrapStore(_bootstrapPath)),
+    };
 
     private static async Task CompleteSetup(HttpClient client, string dataDir)
     {

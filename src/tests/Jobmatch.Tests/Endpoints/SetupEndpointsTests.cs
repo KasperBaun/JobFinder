@@ -27,10 +27,10 @@ public sealed class SetupEndpointsTests : IDisposable
     }
 
     // Override the BootstrapStore so the provider reads/writes a throwaway location.
-    private WebApplicationFactory<ApiProgram> Factory() =>
-        new WebApplicationFactory<ApiProgram>().WithWebHostBuilder(builder =>
-            builder.ConfigureServices(services =>
-                services.AddSingleton(new BootstrapStore(_bootstrapPath))));
+    private ApiTestFactory Factory() => new()
+    {
+        ConfigureTestServices = services => services.AddSingleton(new BootstrapStore(_bootstrapPath)),
+    };
 
     [Fact]
     public async Task Setup_Status_Then_Complete_RoundTrips()

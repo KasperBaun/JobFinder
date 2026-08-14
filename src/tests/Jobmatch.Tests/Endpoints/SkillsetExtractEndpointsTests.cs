@@ -32,11 +32,11 @@ public sealed class SkillsetExtractEndpointsTests : IDisposable
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    private WebApplicationFactory<ApiProgram> Factory() =>
-        new WebApplicationFactory<ApiProgram>().WithWebHostBuilder(builder =>
-            builder.ConfigureServices(services =>
-                services.AddSingleton(UserContext.Resolve(
-                    emailOverride: "extract@test", repoRoot: _tempRoot, seedExamples: false))));
+    private ApiTestFactory Factory() => new()
+    {
+        ConfigureTestServices = services => services.AddSingleton(UserContext.Resolve(
+            emailOverride: "extract@test", repoRoot: _tempRoot, seedExamples: false)),
+    };
 
     [Fact]
     public async Task Status_FreshProcess_ReturnsIdle()

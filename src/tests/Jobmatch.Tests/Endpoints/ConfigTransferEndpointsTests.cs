@@ -27,11 +27,11 @@ public sealed class ConfigTransferEndpointsTests : IDisposable
 
     // Override the process-singleton UserContext so the endpoints operate on a throwaway temp
     // directory instead of the developer's real data/<email>/ folder.
-    private WebApplicationFactory<ApiProgram> Factory(string email = "endpoint@test") =>
-        new WebApplicationFactory<ApiProgram>().WithWebHostBuilder(builder =>
-            builder.ConfigureServices(services =>
-                services.AddSingleton(UserContext.Resolve(
-                    emailOverride: email, repoRoot: _tempRoot, seedExamples: false))));
+    private ApiTestFactory Factory(string email = "endpoint@test") => new()
+    {
+        ConfigureTestServices = services => services.AddSingleton(UserContext.Resolve(
+            emailOverride: email, repoRoot: _tempRoot, seedExamples: false)),
+    };
 
     [Fact]
     public async Task Export_Returns_Zip_With_Attachment()
