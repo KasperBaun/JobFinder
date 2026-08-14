@@ -20,19 +20,17 @@ public static class MarkedExamplesLoader
     private const int MaxExamples = 12;
 
     public static IReadOnlyList<ExampleListing> Load(
-        string historyDir,
+        IRunHistoryStore runs,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, ListingMark>> allMarks)
     {
-        if (allMarks.Count == 0 || !Directory.Exists(historyDir)) return [];
+        if (allMarks.Count == 0) return [];
 
         var candidates = new List<(ExampleListing Example, int Priority)>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var runId in allMarks.Keys.OrderByDescending(id => id, StringComparer.Ordinal))
         {
-            var path = Path.Combine(historyDir, $"{runId}.json");
-            if (!File.Exists(path)) continue;
-            var detail = HistoryService.TryReadDetail(path);
+            var detail = runs.Find(runId);
             if (detail is null) continue;
 
             foreach (var (listingId, mark) in allMarks[runId])

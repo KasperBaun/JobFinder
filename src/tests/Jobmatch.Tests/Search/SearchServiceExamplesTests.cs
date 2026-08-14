@@ -25,7 +25,7 @@ public sealed class SearchServiceExamplesTests : IDisposable
         Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
         _ctx = JobmatchUserContext.Resolve(emailOverride: "examples@example.com", repoRoot: _tempRoot, seedExamples: false);
         _marks = new MarksService(_ctx);
-        _service = new SearchService(_ctx, Fs, marks: _marks);
+        _service = new SearchService(_ctx, TestServices.Catalog(_ctx), TestServices.Runs(_ctx), Fs, marks: _marks);
     }
 
     public void Dispose()

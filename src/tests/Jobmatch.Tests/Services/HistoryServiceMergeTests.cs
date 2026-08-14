@@ -24,7 +24,7 @@ public sealed class HistoryServiceMergeTests : IDisposable
         Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
         _ctx = JobmatchUserContext.Resolve(emailOverride: "hist@example.com", repoRoot: _tempRoot, seedExamples: false);
         _store = new JobSearchStore(_ctx);
-        _history = new HistoryService(_ctx, new MarksService(_ctx), _store);
+        _history = new HistoryService(TestServices.Runs(_ctx), new MarksService(_ctx), _store);
     }
 
     public void Dispose()

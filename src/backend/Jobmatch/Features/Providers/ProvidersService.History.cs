@@ -1,62 +1,22 @@
-using System.Text.Json;
-
 namespace Jobmatch.Features.Providers;
 
-// Projects each provider's most-recent-run info out of the per-user history/*.json files. Kept in
-// its own partial so the core service file stays under the size limit.
+// Projects each provider's most-recent-run info out of the recorded runs. Reads through
+// IRunHistoryStore and the typed RunDetail rather than walking the JSON by hand, so renaming a
+// member of the run record cannot break the providers page alone.
 public sealed partial class ProvidersService
 {
     private Dictionary<string, LastFetch> LoadLastFetchByProvider()
     {
         var result = new Dictionary<string, LastFetch>(StringComparer.OrdinalIgnoreCase);
-        if (!Directory.Exists(ctx.HistoryDir)) return result;
 
-        IEnumerable<string> files;
-        try
+        // Newest first, so the first entry seen for a provider is its most recent run.
+        foreach (var run in history.All())
         {
-            files = Directory.EnumerateFiles(ctx.HistoryDir, "*.json")
-                .OrderByDescending(p => p, StringComparer.Ordinal);
-        }
-        catch
-        {
-            return result;
-        }
-
-        foreach (var file in files)
-        {
-            try
+            foreach (var provider in run.Providers)
             {
-                using var stream = File.OpenRead(file);
-                using var doc = JsonDocument.Parse(stream);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
-
-                if (!doc.RootElement.TryGetProperty("startedAt", out var startedProp)) continue;
-                if (!doc.RootElement.TryGetProperty("providers", out var providersProp)) continue;
-                if (providersProp.ValueKind != JsonValueKind.Array) continue;
-                if (!startedProp.TryGetDateTimeOffset(out var startedAt)) continue;
-
-                foreach (var prov in providersProp.EnumerateArray())
-                {
-                    if (prov.ValueKind != JsonValueKind.Object) continue;
-                    if (!prov.TryGetProperty("name", out var nameProp)) continue;
-                    var name = nameProp.GetString();
-                    if (string.IsNullOrWhiteSpace(name)) continue;
-
-                    int? count = null;
-                    if (prov.TryGetProperty("fetchedCount", out var countProp) &&
-                        countProp.ValueKind == JsonValueKind.Number)
-                    {
-                        count = countProp.GetInt32();
-                    }
-
-                    if (!result.ContainsKey(name))
-                    {
-                        result[name] = new LastFetch(startedAt, count);
-                    }
-                }
-            }
-            catch
-            {
+                if (string.IsNullOrWhiteSpace(provider.Name)) continue;
+                if (result.ContainsKey(provider.Name)) continue;
+                result[provider.Name] = new LastFetch(run.StartedAt, provider.FetchedCount);
             }
         }
 
@@ -66,59 +26,21 @@ public sealed partial class ProvidersService
     private IReadOnlyList<ProviderRunHistory> LoadRecentRuns(string providerName, int take)
     {
         var result = new List<ProviderRunHistory>();
-        if (!Directory.Exists(ctx.HistoryDir)) return result;
 
-        IEnumerable<string> files;
-        try
-        {
-            files = Directory.EnumerateFiles(ctx.HistoryDir, "*.json")
-                .OrderByDescending(p => p, StringComparer.Ordinal);
-        }
-        catch
-        {
-            return result;
-        }
-
-        foreach (var file in files)
+        foreach (var run in history.All())
         {
             if (result.Count >= take) break;
-            try
-            {
-                using var stream = File.OpenRead(file);
-                using var doc = JsonDocument.Parse(stream);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
-                if (!doc.RootElement.TryGetProperty("runId", out var runIdProp)) continue;
-                if (!doc.RootElement.TryGetProperty("startedAt", out var startedProp)) continue;
-                if (!doc.RootElement.TryGetProperty("providers", out var providersProp)) continue;
-                if (providersProp.ValueKind != JsonValueKind.Array) continue;
-                if (!startedProp.TryGetDateTimeOffset(out var startedAt)) continue;
 
-                foreach (var prov in providersProp.EnumerateArray())
-                {
-                    if (prov.ValueKind != JsonValueKind.Object) continue;
-                    if (!prov.TryGetProperty("name", out var nameProp)) continue;
-                    if (!string.Equals(nameProp.GetString(), providerName, StringComparison.OrdinalIgnoreCase)) continue;
+            var provider = run.Providers.FirstOrDefault(
+                p => string.Equals(p.Name, providerName, StringComparison.OrdinalIgnoreCase));
+            if (provider is null) continue;
 
-                    var status = prov.TryGetProperty("status", out var sProp) ? sProp.GetString() ?? "unknown" : "unknown";
-                    int? count = prov.TryGetProperty("fetchedCount", out var cProp) && cProp.ValueKind == JsonValueKind.Number
-                        ? cProp.GetInt32()
-                        : null;
-                    string? error = prov.TryGetProperty("error", out var eProp) && eProp.ValueKind == JsonValueKind.String
-                        ? eProp.GetString()
-                        : null;
-
-                    result.Add(new ProviderRunHistory(
-                        RunId: runIdProp.GetString() ?? "",
-                        StartedAt: startedAt,
-                        Status: status,
-                        FetchedCount: count,
-                        Error: error));
-                    break;
-                }
-            }
-            catch
-            {
-            }
+            result.Add(new ProviderRunHistory(
+                RunId: run.RunId,
+                StartedAt: run.StartedAt,
+                Status: provider.Status.ToString().ToLowerInvariant(),
+                FetchedCount: provider.FetchedCount,
+                Error: provider.Error));
         }
 
         return result;

@@ -33,7 +33,8 @@ public sealed class ProvidersHandlerSecretsTests : IDisposable
         UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
 
     private static ProvidersService NewService(UserContext ctx) =>
-        new(ctx, new PhysicalFileSystem(), new SourceDetectionService(), new FakeSourceDiscovery(),
+        new(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), new PhysicalFileSystem(),
+            new SourceDetectionService(), new FakeSourceDiscovery(),
             NullLogger<ProvidersService>.Instance);
 
     [Fact]

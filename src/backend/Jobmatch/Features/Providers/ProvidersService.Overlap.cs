@@ -21,7 +21,7 @@ public sealed partial class ProvidersService
         if (samples.Count < SourceOverlap.MinComparableCount) return null;
 
         var newUrls = samples.Select(s => s.Url).ToList();
-        var probes = RankProbes(LoadMerged(), draft, DominantHost(newUrls));
+        var probes = RankProbes(catalog.Effective(), draft, DominantHost(newUrls));
 
         SourceOverlapMatch? best = null;
         foreach (var portal in probes)

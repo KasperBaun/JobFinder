@@ -24,7 +24,7 @@ public sealed class ApplicationsServiceTests : IDisposable
         Environment.SetEnvironmentVariable("JOBFINDER_USER", null);
         _ctx = JobmatchUserContext.Resolve(emailOverride: "apps@example.com", repoRoot: _tempRoot, seedExamples: false);
         _marks = new MarksService(_ctx, _clock);
-        _applications = new ApplicationsService(_ctx, _marks);
+        _applications = new ApplicationsService(TestServices.Runs(_ctx), _marks);
     }
 
     public void Dispose()

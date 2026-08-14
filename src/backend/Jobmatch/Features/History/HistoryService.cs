@@ -1,10 +1,6 @@
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
 using Jobmatch.Features.Jobs;
-using Jobmatch.Platform.Json;
-using Jobmatch.Platform.Paths;
 
 namespace Jobmatch.Features.History;
 
@@ -15,13 +11,8 @@ namespace Jobmatch.Features.History;
 /// running runs all appear), unioned with any legacy history files that predate the job model. Detail
 /// returns the rich RunDetail when present, otherwise a lightweight one synthesised from the JobSearch.
 /// </summary>
-public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSearchStore jobs) : IHistoryService
+public sealed class HistoryService(IRunHistoryStore runs, IMarksService marks, IJobSearchStore jobs) : IHistoryService
 {
-    // Case-insensitive on top of the shared policy: run files recorded before camelCase became
-    // the convention are still on disk and must keep deserialising.
-    private static readonly JsonSerializerOptions ReadOptions =
-        new(JobmatchJsonOptions.Default) { PropertyNameCaseInsensitive = true };
-
     public IReadOnlyList<RunSummary> List()
     {
         var allMarks = marks.LoadAll();
@@ -45,26 +36,22 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
                 Phase: job.Phase));
         }
 
-        // Legacy runs recorded before the job model: history file with no JobSearch record.
-        if (Directory.Exists(ctx.HistoryDir))
+        // Legacy runs recorded before the job model: a history file with no JobSearch record.
+        foreach (var detail in runs.All())
         {
-            foreach (var file in Directory.EnumerateFiles(ctx.HistoryDir, "*.json"))
-            {
-                var detail = TryReadDetail(file);
-                if (detail is null || seen.Contains(detail.RunId)) continue;
-                summaries.Add(new RunSummary(
-                    RunId: detail.RunId,
-                    StartedAt: detail.StartedAt,
-                    Providers: detail.Providers,
-                    FetchedCount: detail.FetchedCount,
-                    DedupedCount: detail.DedupedCount,
-                    RankedCount: detail.RankedCount,
-                    ShortlistCount: detail.ShortlistCount,
-                    TopScore: detail.TopScore,
-                    GoodMarks: CountGoodMarks(allMarks, detail.RunId),
-                    State: JobSearchState.Succeeded,
-                    Phase: JobSearchPhase.Done));
-            }
+            if (seen.Contains(detail.RunId)) continue;
+            summaries.Add(new RunSummary(
+                RunId: detail.RunId,
+                StartedAt: detail.StartedAt,
+                Providers: detail.Providers,
+                FetchedCount: detail.FetchedCount,
+                DedupedCount: detail.DedupedCount,
+                RankedCount: detail.RankedCount,
+                ShortlistCount: detail.ShortlistCount,
+                TopScore: detail.TopScore,
+                GoodMarks: CountGoodMarks(allMarks, detail.RunId),
+                State: JobSearchState.Succeeded,
+                Phase: JobSearchPhase.Done));
         }
 
         return summaries.OrderByDescending(r => r.StartedAt).ToList();
@@ -72,12 +59,11 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
 
     public RunDetail GetByRunId(string runId)
     {
-        var safeId = SanitiseRunId(runId)
+        var safeId = RunHistoryStore.SanitiseRunId(runId)
             ?? throw new NotFoundException($"history run '{runId}' not found");
 
         var job = jobs.Get(safeId);
-        var path = Path.Combine(ctx.HistoryDir, $"{safeId}.json");
-        var detail = File.Exists(path) ? TryReadDetail(path) : null;
+        var detail = runs.Find(safeId);
 
         if (detail is null && job is null)
             throw new NotFoundException($"history run '{runId}' not found");
@@ -162,16 +148,14 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
 
         foreach (var raw in runIds)
         {
-            var safe = SanitiseRunId(raw);
+            var safe = RunHistoryStore.SanitiseRunId(raw);
             if (safe is null)
             {
                 missing.Add(raw);
                 continue;
             }
 
-            var path = Path.Combine(ctx.HistoryDir, $"{safe}.json");
-            var hadHistory = File.Exists(path);
-            if (hadHistory) File.Delete(path);
+            var hadHistory = runs.Delete(safe);
             var removedJob = jobs.Delete([safe]) > 0;
 
             if (hadHistory || removedJob)
@@ -191,35 +175,11 @@ public sealed class HistoryService(UserContext ctx, IMarksService marks, IJobSea
         return new HistoryDeleteResult(deleted, missing);
     }
 
-    internal static RunDetail? TryReadDetail(string path)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            try
-            {
-                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
-                    FileShare.ReadWrite | FileShare.Delete);
-                return JsonSerializer.Deserialize<RunDetail>(stream, ReadOptions);
-            }
-            catch (FileNotFoundException) { return null; }
-            catch (DirectoryNotFoundException) { return null; }
-            catch (IOException) when (attempt < 5) { Thread.Sleep(20); }
-            catch { return null; }
-        }
-    }
-
     private static int CountGoodMarks(
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, ListingMark>> marks,
         string runId)
     {
         if (!marks.TryGetValue(runId, out var byListing)) return 0;
         return byListing.Values.Count(v => string.Equals(v.Mark, "good", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string? SanitiseRunId(string runId)
-    {
-        if (string.IsNullOrWhiteSpace(runId)) return null;
-        if (runId.IndexOfAny(['/', '\\', '.', ':']) >= 0) return null;
-        return runId;
     }
 }

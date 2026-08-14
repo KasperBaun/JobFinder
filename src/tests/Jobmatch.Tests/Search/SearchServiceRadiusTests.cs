@@ -90,7 +90,7 @@ public sealed class SearchServiceRadiusTests : IDisposable
         ctx = JobmatchUserContext.Resolve(emailOverride: "radius@example.com", repoRoot: _tempRoot, seedExamples: false);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"), listingsJson);
 
-        var service = new SearchService(ctx, Fs);
+        var service = new SearchService(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = new List<SearchProgressEvent>();
         await foreach (var evt in service.RunAsync(new SearchRequest(), PortalConfigLoader.Parse(ManualPortal)))
             events.Add(evt);

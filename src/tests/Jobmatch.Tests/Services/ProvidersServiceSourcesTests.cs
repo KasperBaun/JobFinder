@@ -30,6 +30,8 @@ public sealed class ProvidersServiceSourcesTests : IDisposable
         var ctx = UserContext.Resolve(emailOverride: "x@y", repoRoot: _tempRoot, seedExamples: false);
         var svc = new ProvidersService(
             ctx,
+            TestServices.Catalog(ctx),
+            TestServices.Runs(ctx),
             new PhysicalFileSystem(),
             new SourceDetectionService(),
             discovery ?? new FakeSourceDiscovery(),

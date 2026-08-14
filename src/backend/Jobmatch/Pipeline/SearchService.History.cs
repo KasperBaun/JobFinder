@@ -3,15 +3,12 @@ using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
 using Jobmatch.Pipeline.Deduplication;
 using Jobmatch.Pipeline.Output;
-using Jobmatch.Platform.Json;
 using Match = Jobmatch.Domain.Match;
 
 namespace Jobmatch.Pipeline;
 
 public sealed partial class SearchService
 {
-    private static readonly JsonSerializerOptions HistoryJsonOptions = JobmatchJsonOptions.Indented;
-
     /// <summary>Writes the ranked-JSON + markdown reports, builds the rich history sections, persists
     /// the history entry, and returns the shortlist projected to <see cref="ListingMatch"/> for the
     /// completion event.</summary>
@@ -76,8 +73,6 @@ public sealed partial class SearchService
         IReadOnlyList<DroppedEntry> dropped,
         IReadOnlyList<PossibleDuplicate> possibleDuplicates)
     {
-        Directory.CreateDirectory(_ctx.HistoryDir);
-
         var topScore = shortlist.Count > 0 ? shortlist[0].Score : 0.0;
 
         // Persist the full RunDetail shape (without marks — those live in marks.json) so the
@@ -100,8 +95,6 @@ public sealed partial class SearchService
             Dropped: dropped,
             PossibleDuplicates: possibleDuplicates.Count > 0 ? possibleDuplicates : null);
 
-        var path = Path.Combine(_ctx.HistoryDir, $"{runId}.json");
-        var json = JsonSerializer.Serialize(detail, HistoryJsonOptions);
-        File.WriteAllText(path, json);
+        _history.Save(detail);
     }
 }

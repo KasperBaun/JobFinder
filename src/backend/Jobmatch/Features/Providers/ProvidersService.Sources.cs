@@ -34,8 +34,8 @@ public sealed partial class ProvidersService
         if (!string.IsNullOrWhiteSpace(displayName))
             draft = SourceDetectionService.WithBrand(candidate, displayName).Draft with { Name = draft.Name };
 
-        var created = UserProviderStore.Add(ctx.UserProvidersPath, draft, LoadBakedCatalog());
-        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        var created = UserProviderStore.Add(ctx.UserProvidersPath, draft, catalog.Shipped());
+        var state = catalog.State();
         return MakeListing(created, state, LoadLastFetchByProvider());
     }
 
@@ -79,7 +79,7 @@ public sealed partial class ProvidersService
 
     private void RemoveFromState(int id)
     {
-        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        var state = catalog.State();
         var secrets = state.Secrets.Where(kvp => kvp.Key != id)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         var overrides = state.Overrides.Where(kvp => kvp.Key != id)

@@ -60,7 +60,10 @@ public static class JobmatchApiExtensions
         // Injectable clock (MarksService stamps status changes with it; tests pin a fixed one).
         services.AddSingleton(TimeProvider.System);
 
-        // Domain services
+        // Domain services. The catalog and the run-history store come first because they are the two
+        // things several features share — every provider list and every recorded run goes through them.
+        services.AddScoped<IProviderCatalog, ProviderCatalog>();
+        services.AddScoped<IRunHistoryStore, RunHistoryStore>();
         services.AddScoped<IWhoamiService, WhoamiService>();
         services.AddScoped<IMarksService, MarksService>();
         services.AddScoped<IApplicationsService, ApplicationsService>();

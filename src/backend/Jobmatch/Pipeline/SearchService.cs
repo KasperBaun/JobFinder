@@ -1,3 +1,4 @@
+using Jobmatch.Features.History;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
@@ -28,6 +29,8 @@ namespace Jobmatch.Pipeline;
 public sealed partial class SearchService : ISearchService
 {
     private readonly UserContext _ctx;
+    private readonly IProviderCatalog _catalog;
+    private readonly IRunHistoryStore _history;
     private readonly IFileSystem _fs;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IMarksService _marks;
@@ -43,6 +46,8 @@ public sealed partial class SearchService : ISearchService
 
     public SearchService(
         UserContext ctx,
+        IProviderCatalog catalog,
+        IRunHistoryStore history,
         IFileSystem fs,
         ILoggerFactory? loggerFactory = null,
         IMarksService? marks = null,
@@ -50,6 +55,8 @@ public sealed partial class SearchService : ISearchService
         Gazetteer? gazetteer = null)
     {
         _ctx = ctx;
+        _catalog = catalog;
+        _history = history;
         _fs = fs;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _marks = marks ?? new MarksService(ctx);
@@ -67,12 +74,10 @@ public sealed partial class SearchService : ISearchService
         string runId,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var catalogPath = Path.Combine(AppContext.BaseDirectory, "portals.json");
-        var catalog = PortalCatalogLoader.Load(catalogPath);
-        var state = ProviderStateLoader.LoadOrEmpty(_ctx.ProviderStatePath);
-        var allPortals = ProviderStateMerger.Merge(catalog, state);
-
-        await foreach (var evt in RunAsync(req, runId, allPortals, ct).ConfigureAwait(false))
+        // The catalog is the shipped sources plus the ones the user added themselves (R-090).
+        // Composing this by hand here is what once made a user-added source appear on the providers
+        // page yet never be fetched by a run.
+        await foreach (var evt in RunAsync(req, runId, _catalog.Effective(), ct).ConfigureAwait(false))
             yield return evt;
     }
 
@@ -147,7 +152,7 @@ public sealed partial class SearchService : ISearchService
     internal IReadOnlyList<ExampleListing> LoadExamples()
     {
         var curated = ExamplesLoader.Load(_ctx.ExamplesDir);
-        var marked = MarkedExamplesLoader.Load(_ctx.HistoryDir, _marks.LoadAll());
+        var marked = MarkedExamplesLoader.Load(_history, _marks.LoadAll());
         if (marked.Count == 0) return curated;
 
         var seen = new HashSet<string>(

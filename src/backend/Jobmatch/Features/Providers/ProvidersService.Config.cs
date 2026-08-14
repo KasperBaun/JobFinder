@@ -10,13 +10,12 @@ public sealed partial class ProvidersService
 
     public void SetConfigOverride(int id, ProviderOverride ov)
     {
-        var catalog = LoadCatalog();
-        var portal = catalog.FirstOrDefault(p => p.Id == id)
+        var portal = catalog.All().FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
 
         var sanitized = Validate(portal, ov);
 
-        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        var state = catalog.State();
         var overrides = state.Overrides.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         if (sanitized.IsEmpty) overrides.Remove(id);   // empty => reset to catalog default
         else overrides[id] = sanitized;

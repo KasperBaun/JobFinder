@@ -1,3 +1,4 @@
+using Jobmatch.Features.History;
 using System.Diagnostics;
 using System.Net;
 using Jobmatch.Pipeline.Adapters;
@@ -10,6 +11,8 @@ namespace Jobmatch.Features.Providers;
 
 public sealed partial class ProvidersService(
     UserContext ctx,
+    IProviderCatalog catalog,
+    IRunHistoryStore history,
     IFileSystem fs,
     ISourceDetectionService detection,
     ISourceDiscoveryService discovery,
@@ -17,19 +20,18 @@ public sealed partial class ProvidersService(
 {
     public IReadOnlyList<ProviderListing> List()
     {
-        var (catalog, state) = LoadCatalogAndState();
+        var state = catalog.State();
         var lastByProvider = LoadLastFetchByProvider();
-        return catalog.Select(p => MakeListing(p, state, lastByProvider)).ToList();
+        return catalog.All().Select(p => MakeListing(p, state, lastByProvider)).ToList();
     }
 
     public ProviderListingDetail GetById(int id)
     {
-        var (catalog, state) = LoadCatalogAndState();
-        var portal = catalog.FirstOrDefault(p => p.Id == id)
+        var state = catalog.State();
+        var portal = catalog.All().FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
 
-        var lastByProvider = LoadLastFetchByProvider();
-        var listing = MakeListing(portal, state, lastByProvider);
+        var listing = MakeListing(portal, state, LoadLastFetchByProvider());
         var recent = LoadRecentRuns(portal.Name, take: 5);
         state.Overrides.TryGetValue(id, out var ov);
         return new ProviderListingDetail(listing, recent, ov);
@@ -37,11 +39,10 @@ public sealed partial class ProvidersService(
 
     public void SetEnabled(int id, bool enabled)
     {
-        var catalog = LoadCatalog();
-        var portal = catalog.FirstOrDefault(p => p.Id == id)
+        var portal = catalog.All().FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
 
-        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        var state = catalog.State();
         var disabled = state.Disabled.ToHashSet();
         var explicitEnabled = state.Enabled.ToHashSet();
 
@@ -71,14 +72,13 @@ public sealed partial class ProvidersService(
 
     public void SetSecrets(int id, IReadOnlyDictionary<string, string> values)
     {
-        var catalog = LoadCatalog();
-        var portal = catalog.FirstOrDefault(p => p.Id == id)
+        var portal = catalog.All().FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
 
         if (portal.RequiresSecret is null)
             throw new InvalidRequestException($"provider '{portal.Name}' does not declare requiresSecret");
 
-        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
+        var state = catalog.State();
         var secrets = state.Secrets.ToDictionary(
             kvp => kvp.Key,
             kvp => (IReadOnlyDictionary<string, string>)new Dictionary<string, string>(kvp.Value));
@@ -100,8 +100,7 @@ public sealed partial class ProvidersService(
 
     public async Task<ProviderTestOutcome> TestAsync(int id, CancellationToken ct)
     {
-        var portals = LoadMerged();
-        var portal = portals.FirstOrDefault(p => p.Id == id)
+        var portal = catalog.Effective().FirstOrDefault(p => p.Id == id)
             ?? throw new NotFoundException($"provider id {id} not found");
         return await TestConfigAsync(portal, ct).ConfigureAwait(false);
     }
@@ -193,31 +192,6 @@ public sealed partial class ProvidersService(
             "This source took too long to respond (timed out).",
         _ => ex.Message,
     };
-
-    private static string CatalogPath() => Path.Combine(AppContext.BaseDirectory, "portals.json");
-
-    private static IReadOnlyList<PortalConfig> LoadBakedCatalog() => PortalCatalogLoader.Load(CatalogPath());
-
-    // The effective catalog is the shipped one plus the user's own added sources.
-    private IReadOnlyList<PortalConfig> LoadCatalog()
-    {
-        var baked = LoadBakedCatalog();
-        var user = UserProviderStore.Load(ctx.UserProvidersPath);
-        return user.Count == 0 ? baked : [.. baked, .. user];
-    }
-
-    private (IReadOnlyList<PortalConfig> Catalog, ProviderState State) LoadCatalogAndState()
-    {
-        var catalog = LoadCatalog();
-        var state = ProviderStateLoader.LoadOrEmpty(ctx.ProviderStatePath);
-        return (catalog, state);
-    }
-
-    private IReadOnlyList<PortalConfig> LoadMerged()
-    {
-        var (catalog, state) = LoadCatalogAndState();
-        return ProviderStateMerger.Merge(catalog, state);
-    }
 
     private static ProviderListing MakeListing(
         PortalConfig portal,

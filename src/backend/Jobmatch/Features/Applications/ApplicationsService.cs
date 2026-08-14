@@ -1,6 +1,5 @@
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.History;
-using Jobmatch.Platform.Paths;
 
 namespace Jobmatch.Features.Applications;
 
@@ -8,7 +7,7 @@ namespace Jobmatch.Features.Applications;
 // hashes (BaseAdapter.StableId), so the same posting statused in several runs
 // dedupes to one entry — run ids are timestamps, so ordinal-descending iteration
 // makes the newest run's status win (same convention as MarkedExamplesLoader).
-public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : IApplicationsService
+public sealed class ApplicationsService(IRunHistoryStore runs, IMarksService marks) : IApplicationsService
 {
     private static readonly IReadOnlyDictionary<string, int> ActivityOrder = new Dictionary<string, int>(StringComparer.Ordinal)
     {
@@ -22,7 +21,7 @@ public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : 
     public IReadOnlyList<ApplicationEntry> List()
     {
         var allMarks = marks.LoadAll();
-        if (allMarks.Count == 0 || !Directory.Exists(ctx.HistoryDir)) return [];
+        if (allMarks.Count == 0) return [];
 
         var entries = new List<ApplicationEntry>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -36,7 +35,7 @@ public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : 
 
             // A pruned run's file may be gone; skip it so it doesn't hide the rest,
             // and leave its listings unseen so an older run can still resolve them (R-107).
-            var detail = LoadDetail(runId);
+            var detail = runs.Find(runId);
             if (detail is null) continue;
 
             foreach (var (listingId, mark) in statused)
@@ -52,12 +51,6 @@ public sealed class ApplicationsService(UserContext ctx, IMarksService marks) : 
             .OrderBy(e => ActivityOrder.GetValueOrDefault(e.Status, int.MaxValue))
             .ThenByDescending(e => e.RunId, StringComparer.Ordinal)
             .ToList();
-    }
-
-    private RunDetail? LoadDetail(string runId)
-    {
-        var path = Path.Combine(ctx.HistoryDir, $"{runId}.json");
-        return File.Exists(path) ? HistoryService.TryReadDetail(path) : null;
     }
 
     // Statuses can target any scored listing (longlist table), not just the shortlist.

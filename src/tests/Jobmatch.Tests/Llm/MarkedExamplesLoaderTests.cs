@@ -1,3 +1,5 @@
+using Jobmatch.Features.History;
+using Jobmatch.Platform.Paths;
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
@@ -9,18 +11,23 @@ namespace Jobmatch.Tests.Llm;
 
 public sealed class MarkedExamplesLoaderTests : IDisposable
 {
+    private readonly string _root;
     private readonly string _historyDir;
 
     public MarkedExamplesLoaderTests()
     {
-        _historyDir = Path.Combine(Path.GetTempPath(), "jobmatch-marked-examples-tests-" + Guid.NewGuid().ToString("N"));
+        _root = Path.Combine(Path.GetTempPath(), "jobmatch-marked-examples-tests-" + Guid.NewGuid().ToString("N"));
+        _historyDir = Path.Combine(_root, "history");
         Directory.CreateDirectory(_historyDir);
     }
 
     public void Dispose()
     {
-        try { if (Directory.Exists(_historyDir)) Directory.Delete(_historyDir, recursive: true); } catch { }
+        try { if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true); } catch { }
     }
+
+    private IRunHistoryStore Runs() =>
+        new RunHistoryStore(UserContext.For("marked@example.com", _root));
 
     private void WriteHistory(string runId, IReadOnlyList<ScoredEntry>? scored = null, IReadOnlyList<ListingMatch>? shortlist = null)
     {
@@ -66,7 +73,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "AI Engineer - Student", "Uni Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("bad", "I'm not a student")));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("disliked", example.Polarity);
         Assert.Equal("AI Engineer - Student", example.Title);
         Assert.Equal("Uni Co", example.Company);
@@ -80,7 +87,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", shortlist: [Match("l1", "Senior .NET Developer", "Great Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", null)));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("liked", example.Polarity);
         Assert.Null(example.Note);
     }
@@ -93,7 +100,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
             shortlist: [Match("l1", "Backend Developer", "Fallback Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", "great stack")));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("Fallback Co", example.Company);
         Assert.Equal("great stack", example.Note);
     }
@@ -107,7 +114,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
             ("20260601-100000-old", "l1", new ListingMark("good", "old opinion")),
             ("20260701-100000-new", "l9", new ListingMark("bad", "new opinion")));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("disliked", example.Polarity);
         Assert.Equal("new opinion", example.Note);
     }
@@ -116,7 +123,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_MissingHistoryFile_IsSkipped()
     {
         var marks = Marks(("20260701-100000-gone", "l1", new ListingMark("bad", "whatever")));
-        Assert.Empty(MarkedExamplesLoader.Load(_historyDir, marks));
+        Assert.Empty(MarkedExamplesLoader.Load(Runs(), marks));
     }
 
     [Fact]
@@ -125,7 +132,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Some Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "no-such-listing", new ListingMark("bad", null)));
 
-        Assert.Empty(MarkedExamplesLoader.Load(_historyDir, marks));
+        Assert.Empty(MarkedExamplesLoader.Load(Runs(), marks));
     }
 
     [Fact]
@@ -134,7 +141,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Interview Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, "interview")));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("liked", example.Polarity);
         Assert.Equal("reached interview", example.Note);
     }
@@ -145,7 +152,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Offer Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", "great stack", "offer")));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("liked", example.Polarity);
         Assert.Equal("great stack — received an offer", example.Note);
     }
@@ -156,7 +163,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Mixed Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("bad", "toxic culture", "interview")));
 
-        var example = Assert.Single(MarkedExamplesLoader.Load(_historyDir, marks));
+        var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("disliked", example.Polarity);
         Assert.Equal("toxic culture", example.Note);
     }
@@ -170,7 +177,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Some Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, status)));
 
-        Assert.Empty(MarkedExamplesLoader.Load(_historyDir, marks));
+        Assert.Empty(MarkedExamplesLoader.Load(Runs(), marks));
     }
 
     [Fact]
@@ -189,7 +196,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
             .ToArray();
         var marks = Marks(entries);
 
-        var examples = MarkedExamplesLoader.Load(_historyDir, marks);
+        var examples = MarkedExamplesLoader.Load(Runs(), marks);
         Assert.Equal(12, examples.Count);
         Assert.Equal("Co 14", examples[0].Company); // offer outranks interview
         Assert.Equal("Co 13", examples[1].Company); // interview outranks plain marks
