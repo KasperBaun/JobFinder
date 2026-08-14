@@ -1,5 +1,6 @@
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Domain.Runs;
+using Jobmatch.Api.Features.Search;
 
 namespace Jobmatch.Tests.Jobs;
 

@@ -1,0 +1,18 @@
+using Jobmatch.Api.Infrastructure;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace Jobmatch.Api.Features.Health;
+
+public interface ISystemHandler
+{
+    Task<IResult> Ping();
+}
+
+public sealed class SystemHandler(ILogger<SystemHandler> logger)
+    : HandlerBase(logger), ISystemHandler
+{
+    public Task<IResult> Ping() => ExecuteAsync(
+        "ping",
+        () => Task.FromResult<IResult>(Results.Ok()));
+}

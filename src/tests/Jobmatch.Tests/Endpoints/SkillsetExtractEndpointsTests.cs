@@ -3,11 +3,11 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Api.Models;
 using Jobmatch.Api;
 using Jobmatch.Platform.Paths;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Jobmatch.Api.Features.Skillsets;
 
 namespace Jobmatch.Tests.Endpoints;
 

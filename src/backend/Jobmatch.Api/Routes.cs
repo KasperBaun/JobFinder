@@ -1,11 +1,19 @@
 namespace Jobmatch.Api;
 
+/// <summary>
+/// Every URL the API answers, in one place. This is the table of contents for the HTTP surface —
+/// deliberately central rather than split per feature, because "what endpoints exist?" is the
+/// question it exists to answer.
+/// </summary>
 public static class Routes
 {
+    /// <summary>Every route sits under this prefix; the SPA is served from the root.</summary>
+    public const string Prefix = "/api";
+
     public static class System
     {
         public const string Tag = "System";
-        public const string Base = $"{ApiConstants.RouteBase}/system";
+        public const string Base = $"{Prefix}/system";
         public const string Ping = $"{Base}/ping";
         // Shutdown is mapped only by Jobmatch.Host (HostShutdownEndpoint). The
         // standalone Jobmatch.Api project intentionally does not expose this.
@@ -15,14 +23,14 @@ public static class Routes
     public static class Whoami
     {
         public const string Tag = "Whoami";
-        public const string Base = $"{ApiConstants.RouteBase}/whoami";
+        public const string Base = $"{Prefix}/whoami";
         public const string Get = Base;
     }
 
     public static class Providers
     {
         public const string Tag = "Providers";
-        public const string Base = $"{ApiConstants.RouteBase}/providers";
+        public const string Base = $"{Prefix}/providers";
         public const string ById = $"{Base}/{{id:int}}";
         public const string GetAll = Base;
         public const string GetById = ById;
@@ -40,7 +48,7 @@ public static class Routes
     public static class Skillset
     {
         public const string Tag = "Skillset";
-        public const string Base = $"{ApiConstants.RouteBase}/skillset";
+        public const string Base = $"{Prefix}/skillset";
         public const string Get = Base;
         public const string Update = Base;
         // CV-driven profile setup (R-011): background extraction + status poll.
@@ -51,7 +59,7 @@ public static class Routes
     public static class Search
     {
         public const string Tag = "Search";
-        public const string Base = $"{ApiConstants.RouteBase}/search";
+        public const string Base = $"{Prefix}/search";
         // POST: enqueue a background run, returns { id }. Repurposed from the old synchronous SSE run.
         public const string Run = Base;
         // GET literal — must stay above ById so routing prefers it over the {id} parameter.
@@ -64,7 +72,7 @@ public static class Routes
     public static class History
     {
         public const string Tag = "History";
-        public const string Base = $"{ApiConstants.RouteBase}/history";
+        public const string Base = $"{Prefix}/history";
         public const string ByRunId = $"{Base}/{{runId}}";
         public const string GetAll = Base;
         public const string GetByRunId = ByRunId;
@@ -74,7 +82,7 @@ public static class Routes
     public static class Marks
     {
         public const string Tag = "Marks";
-        public const string Base = $"{ApiConstants.RouteBase}/marks";
+        public const string Base = $"{Prefix}/marks";
         public const string Set = Base;
         public const string SetStatus = $"{Base}/status";
     }
@@ -82,14 +90,14 @@ public static class Routes
     public static class Applications
     {
         public const string Tag = "Applications";
-        public const string Base = $"{ApiConstants.RouteBase}/applications";
+        public const string Base = $"{Prefix}/applications";
         public const string GetAll = Base;
     }
 
     public static class Llm
     {
         public const string Tag = "Llm";
-        public const string Base = $"{ApiConstants.RouteBase}/llm";
+        public const string Base = $"{Prefix}/llm";
         public const string Status = $"{Base}/status";
         public const string DownloadModel = $"{Base}/download-model";
     }
@@ -97,7 +105,7 @@ public static class Routes
     public static class Config
     {
         public const string Tag = "Config";
-        public const string Base = $"{ApiConstants.RouteBase}/config";
+        public const string Base = $"{Prefix}/config";
         public const string Export = $"{Base}/export";
         public const string Import = $"{Base}/import";
     }
@@ -105,7 +113,7 @@ public static class Routes
     public static class Setup
     {
         public const string Tag = "Setup";
-        public const string Base = $"{ApiConstants.RouteBase}/setup";
+        public const string Base = $"{Prefix}/setup";
         public const string Status = $"{Base}/status";
         public const string Complete = Base;
     }
@@ -113,7 +121,7 @@ public static class Routes
     public static class Settings
     {
         public const string Tag = "Settings";
-        public const string Base = $"{ApiConstants.RouteBase}/settings";
+        public const string Base = $"{Prefix}/settings";
         // Reads ride along on Setup.Status, which the GUI already fetches at boot.
         public const string SetLanguage = $"{Base}/language";
     }

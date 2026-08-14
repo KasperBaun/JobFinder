@@ -1,7 +1,7 @@
+using Jobmatch.Api.Features.Search;
 using Hangfire.Common;
 using Hangfire.States;
 using Hangfire;
-using Jobmatch.Api.Jobs;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Jobs;
 using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;

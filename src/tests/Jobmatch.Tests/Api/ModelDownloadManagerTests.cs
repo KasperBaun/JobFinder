@@ -4,6 +4,7 @@ using Jobmatch.Api.Infrastructure;
 using Jobmatch.Pipeline.Llm;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Jobmatch.Api.Features.Llm;
 
 namespace Jobmatch.Tests.Api;
 

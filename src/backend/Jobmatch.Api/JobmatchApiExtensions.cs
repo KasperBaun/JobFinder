@@ -1,205 +1,91 @@
-using System.Net.Security;
-using Hangfire.Storage.SQLite;
-using Hangfire;
-using Jobmatch.Api.Endpoints;
-using Jobmatch.Api.Handlers;
+using Jobmatch.Api.Features.Applications;
+using Jobmatch.Api.Features.Health;
+using Jobmatch.Api.Features.History;
+using Jobmatch.Api.Features.Llm;
+using Jobmatch.Api.Features.Providers;
+using Jobmatch.Api.Features.Search;
+using Jobmatch.Api.Features.Settings;
+using Jobmatch.Api.Features.Setup;
+using Jobmatch.Api.Features.Skillsets;
+using Jobmatch.Api.Features.Transfer;
+using Jobmatch.Api.Features.Whoami;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Api.Jobs;
-using Jobmatch.Domain.Runs;
-using Jobmatch.Features.Applications;
-using Jobmatch.Features.Cv;
-using Jobmatch.Features.History;
 using Jobmatch.Features.Identity;
-using Jobmatch.Features.Jobs;
-using Jobmatch.Features.Providers;
-using Jobmatch.Features.Skillsets;
-using Jobmatch.Features.Transfer;
-using Jobmatch.Pipeline.Llm;
-using Jobmatch.Pipeline;
-using Jobmatch.Platform.Json;
+using Jobmatch.Platform.IO;
 using Jobmatch.Platform.Paths;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobmatch.Api;
 
+/// <summary>
+/// The composition root. Every feature owns its own registrations under
+/// <c>Features/&lt;Name&gt;/&lt;Name&gt;Module.cs</c>, so adding or removing one is a line here
+/// rather than an edit in three separate blocks.
+/// </summary>
 public static class JobmatchApiExtensions
 {
     /// <param name="enableBackgroundJobs">
-    /// When true (dev + host), registers Hangfire (SQLite storage) and starts the in-process job server so
-    /// searches actually run. Tests pass false so no SQLite db is created and no server thread starts.
+    /// When true (dev + host), registers Hangfire (SQLite storage) and starts the in-process job
+    /// server so searches actually run. Tests pass false so no SQLite db is created and no server
+    /// thread starts.
     /// </param>
     public static IServiceCollection AddJobmatchApi(this IServiceCollection services, bool enableBackgroundJobs = true)
     {
-        // Minimal-API JSON is the same policy the SSE feed and the on-disk records use — camelCase,
-        // enums as camelCase strings (so JobSearchState/Phase serialise as "running"/"llmJudging",
-        // not 4), nulls omitted. Taken from Platform.Json so the wire and the files cannot drift.
-        services.ConfigureHttpJsonOptions(options =>
-        {
-            var shared = JobmatchJsonOptions.Default;
-            options.SerializerOptions.PropertyNamingPolicy = shared.PropertyNamingPolicy;
-            options.SerializerOptions.DefaultIgnoreCondition = shared.DefaultIgnoreCondition;
-            options.SerializerOptions.Encoder = shared.Encoder;
-            foreach (var converter in shared.Converters)
-                options.SerializerOptions.Converters.Add(converter);
-        });
+        services.AddJobmatchJson();
+        services.AddActiveUser();
 
-        // Active user — resolution is deferred through the provider so the app can boot and show a
-        // first-run setup screen (on a machine with no git identity) instead of crashing. The provider
-        // loads the persisted bootstrap config on construction and runs the one-time portals migration.
-        // UserContext itself is scoped so a Settings profile switch applies to the next request/job
-        // scope instead of leaving services pinned to the first resolved directory.
+        services.AddHealth();
+        services.AddWhoami();
+        services.AddSetup();
+        services.AddSettings();
+        services.AddProviders();
+        services.AddSkillsets();
+        services.AddSearch(enableBackgroundJobs);
+        services.AddHistory();
+        services.AddApplications();
+        services.AddLlm();
+        services.AddTransfer();
+
+        return services;
+    }
+
+    /// <summary>
+    /// The active user, and the two ambient dependencies that resolving their files needs.
+    /// Resolution is deferred through the provider so the app can boot and show a first-run setup
+    /// screen (on a machine with no git identity) instead of crashing. The provider loads the
+    /// persisted bootstrap config on construction and runs the one-time portals migration.
+    /// UserContext itself is scoped, so a Settings profile switch applies to the next request or
+    /// job scope instead of leaving services pinned to the first resolved directory.
+    /// </summary>
+    private static void AddActiveUser(this IServiceCollection services)
+    {
         services.AddSingleton<BootstrapStore>(_ => new BootstrapStore());
         services.AddSingleton<IUserContextProvider, UserContextProvider>();
         services.AddScoped<UserContext>(sp => sp.GetRequiredService<IUserContextProvider>().Current);
 
         // Filesystem abstraction — physical by default; tests stage in-memory.
-        services.AddSingleton<Jobmatch.Platform.IO.IFileSystem, Jobmatch.Platform.IO.PhysicalFileSystem>();
+        services.AddSingleton<IFileSystem, PhysicalFileSystem>();
 
         // Injectable clock (MarksService stamps status changes with it; tests pin a fixed one).
         services.AddSingleton(TimeProvider.System);
-
-        // Domain services. The catalog and the run-history store come first because they are the two
-        // things several features share — every provider list and every recorded run goes through them.
-        services.AddScoped<IProviderCatalog, ProviderCatalog>();
-        services.AddScoped<IRunHistoryStore, RunHistoryStore>();
-        services.AddScoped<IWhoamiService, WhoamiService>();
-        services.AddScoped<IMarksService, MarksService>();
-        services.AddScoped<IApplicationsService, ApplicationsService>();
-        services.AddScoped<IHistoryService, HistoryService>();
-        services.AddScoped<ISkillsetService, SkillsetService>();
-        services.AddSingleton<ISourceDetectionService, SourceDetectionService>();
-        // Singleton so the one HttpClient behind link discovery is pooled, not rebuilt per request.
-        services.AddSingleton<ISourceDiscoveryService>(sp =>
-            new SourceDiscoveryService(sp.GetRequiredService<ISourceDetectionService>()));
-        services.AddScoped<IProvidersService, ProvidersService>();
-        services.AddScoped<ISearchService, SearchPipeline>();
-        services.AddScoped<IConfigTransferService, ConfigTransferService>();
-        services.AddScoped<ICvExtractionService, CvExtractionService>();
-        services.AddScoped<ILlmModelLocator, LlmModelLocator>();
-
-        // Background job search: the JobSearch lifecycle store, the live SSE fan-out bus, and the
-        // orchestrating service/job. The bus is a singleton (one in-proc broker); the store and service
-        // are scoped (resolved per request and per Hangfire job scope).
-        services.AddScoped<IJobSearchStore, JobSearchStore>();
-        services.AddSingleton<JobSearchBus>();
-        services.AddScoped<IJobSearchService, JobSearchService>();
-        services.AddScoped<SearchJob>();
-
-        if (enableBackgroundJobs)
-        {
-            services.AddHangfire((sp, config) => config
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseSQLiteStorage(
-                    HangfireDbPath(sp),
-                    // Default SQLite poll is ~15s — far too slow for an interactive "Run a search".
-                    new SQLiteStorageOptions { QueuePollInterval = TimeSpan.FromSeconds(1) }));
-
-            // Registered before the Hangfire server so it runs first at startup: any run left Running by
-            // a previous process's exit is re-enqueued to resume promptly (R-036), instead of waiting out
-            // Hangfire's SQLite invisibility timeout (~30 min) or lingering as a stuck "running" indicator.
-            services.AddHostedService<OrphanedRunResumer>();
-
-            // Single-user tool: one worker serialises runs so two searches don't contend for the LLM.
-            services.AddHangfireServer(options => options.WorkerCount = 1);
-        }
-
-        // LLM model downloader — singleton because it owns a process-wide lock
-        // around the download. HttpClient injected from IHttpClientFactory so we
-        // get a long timeout suitable for the multi-GB stream. AllowRenegotiation
-        // is required because huggingface.co requests TLS renegotiation during
-        // the first hop; .NET's default SocketsHttpHandler refuses it.
-        services
-            .AddHttpClient<LlmModelDownloader>(c => c.Timeout = TimeSpan.FromHours(2))
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            {
-                SslOptions = new SslClientAuthenticationOptions
-                {
-                    AllowRenegotiation = true,
-                },
-            });
-
-        // Save-time DAWA geocoding for the radius filter (R-105). Short timeout on purpose:
-        // a slow or offline lookup degrades to a save without coordinates, never a failed save.
-        services.AddHttpClient<IGeocodingService, DawaGeocodingService>(c => c.Timeout = TimeSpan.FromSeconds(5));
-
-        // Singleton so the in-flight download's live progress outlives the request that started it
-        // (the SPA polls /api/llm/status to reconnect after navigation/reload).
-        services.AddSingleton<ModelDownloadManager>();
-
-        // Singleton for the same reason: a CV extraction takes 30-90s on CPU and must survive the
-        // SPA navigating away (the client polls /api/skillset/extract/status to reconnect).
-        services.AddSingleton<CvExtractionManager>();
-
-        // Handlers
-        services.AddScoped<ISetupHandler, SetupHandler>();
-        services.AddScoped<ISettingsHandler, SettingsHandler>();
-        services.AddScoped<ISystemHandler, SystemHandler>();
-        services.AddScoped<IWhoamiHandler, WhoamiHandler>();
-        services.AddScoped<IMarksHandler, MarksHandler>();
-        services.AddScoped<IApplicationsHandler, ApplicationsHandler>();
-        services.AddScoped<IHistoryHandler, HistoryHandler>();
-        services.AddScoped<ISkillsetHandler, SkillsetHandler>();
-        services.AddScoped<ISkillsetExtractHandler, SkillsetExtractHandler>();
-        services.AddScoped<IProvidersHandler, ProvidersHandler>();
-        services.AddScoped<IJobSearchHandler, JobSearchHandler>();
-        services.AddScoped<ILlmHandler, LlmHandler>();
-        services.AddScoped<IConfigTransferHandler, ConfigTransferHandler>();
-
-        return services;
-    }
-
-    // hangfire.db is transient job-queue infrastructure that Hangfire opens at server start — before
-    // first-run setup may have chosen a data directory. Use the configured data dir when available,
-    // else a stable per-user fallback, so the job server starts without forcing the deferred
-    // UserContext (which throws SetupRequiredException until setup completes).
-    private static string HangfireDbPath(IServiceProvider sp)
-    {
-        var provider = sp.GetRequiredService<IUserContextProvider>();
-        var root = provider.IsConfigured ? provider.Current.RootDir : DataRoot.EnsureFallback();
-        return Path.Combine(root, "hangfire.db");
     }
 
     public static WebApplication MapJobmatchApi(this WebApplication app)
     {
-        // Translate "setup not done yet" into 428 so a stray data call while unconfigured returns a
-        // clean signal (the GUI gates on /api/setup/status, so this is defence-in-depth).
-        app.Use(async (context, next) =>
-        {
-            try
-            {
-                await next(context);
-            }
-            catch (SetupRequiredException) when (!context.Response.HasStarted)
-            {
-                context.Response.StatusCode = StatusCodes.Status428PreconditionRequired;
-                await context.Response.WriteAsJsonAsync(new { setupRequired = true });
-            }
-        });
+        app.UseSetupRequired();
 
-        IEndpointRegistration[] registrations =
-        [
-            new SetupEndpoints(),
-            new SettingsEndpoints(),
-            new SystemEndpoints(),
-            new WhoamiEndpoints(),
-            new MarksEndpoints(),
-            new ApplicationsEndpoints(),
-            new HistoryEndpoints(),
-            new SkillsetEndpoints(),
-            new SkillsetExtractEndpoints(),
-            new ProvidersEndpoints(),
-            new SearchEndpoints(),
-            new LlmEndpoints(),
-            new ConfigTransferEndpoints(),
-        ];
-
-        foreach (var registration in registrations)
-        {
-            registration.Register(app);
-        }
+        app.MapHealth();
+        app.MapWhoami();
+        app.MapSetup();
+        app.MapSettings();
+        app.MapProviders();
+        app.MapSkillsets();
+        app.MapSearch();
+        app.MapHistory();
+        app.MapApplications();
+        app.MapLlm();
+        app.MapTransfer();
 
         return app;
     }

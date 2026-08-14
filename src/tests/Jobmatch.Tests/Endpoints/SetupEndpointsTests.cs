@@ -1,11 +1,13 @@
 using System.Net.Http.Json;
 using System.Net;
-using Jobmatch.Api.Models;
 using Jobmatch.Api;
 using Jobmatch.Features.Identity;
 using Jobmatch.Platform.Paths;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Jobmatch.Api.Features.Setup;
+using Jobmatch.Api.Features.Skillsets;
+using Jobmatch.Api.Features.Whoami;
 
 namespace Jobmatch.Tests.Endpoints;
 

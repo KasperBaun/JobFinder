@@ -1,11 +1,11 @@
 using System.Runtime.CompilerServices;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Api.Jobs;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Jobs;
 using Jobmatch.Pipeline;
 using Microsoft.Extensions.Logging.Abstractions;
 using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using Jobmatch.Api.Features.Search;
 
 namespace Jobmatch.Tests.Jobs;
 
