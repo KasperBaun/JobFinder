@@ -23,7 +23,6 @@ public sealed class UserContext
     public required string AllListingsPath { get; init; }
     public required string RankedListingsPath { get; init; }
     public required string TopJobsPath { get; init; }
-    public required string VerificationReportPath { get; init; }
     public required string HistoryDir { get; init; }
     public required string JobSearchDir { get; init; }
     public required string MarksPath { get; init; }
@@ -84,7 +83,6 @@ public sealed class UserContext
             AllListingsPath = Path.Combine(rootDir, "all-listings.json"),
             RankedListingsPath = Path.Combine(rootDir, "ranked-listings.json"),
             TopJobsPath = Path.Combine(rootDir, "top-jobs.md"),
-            VerificationReportPath = Path.Combine(rootDir, "verification-report.md"),
             HistoryDir = Path.Combine(rootDir, "history"),
             JobSearchDir = Path.Combine(rootDir, "jobsearch"),
             MarksPath = Path.Combine(rootDir, "marks.json"),

@@ -83,12 +83,6 @@ One-line requirements for `jobfinder`. Each line is a single thing the system sh
 - **R-054** The system should let a user supply seed listings — hand-picked archetypes of the kind of role they want, independent of any prior search run — so the ranking algorithm has positive signal to learn from from day one.
 - **R-055** The system should accept seed listings of either polarity (liked or disliked) and treat them as input to ranking improvements, not as fixtures or test data.
 
-## Verification
-
-- **R-060** The system should let a user verify that config files exist, parse, point at reachable endpoints, and have manual imports where required.
-- **R-061** The system should report verification results as pass / warn / fail per check, never crashing on a single failure.
-- **R-062** The system should persist a verification report alongside an in-app summary.
-
 ## Entry points
 
 - **R-070** The system should run as a single binary that launches a browser-based desktop app on start.
