@@ -1,10 +1,5 @@
 namespace Jobmatch.Infrastructure.IO;
 
-/// <summary>
-/// Write-to-temp then replace, so a reader never observes a half-written file and a crash mid-write
-/// leaves the previous contents intact. Every persisted file under <c>data/&lt;email&gt;/</c> goes
-/// through here.
-/// </summary>
 public static class AtomicFile
 {
     // A concurrent reader (SSE replay, history list) or an AV / file-sync scanner can briefly hold the

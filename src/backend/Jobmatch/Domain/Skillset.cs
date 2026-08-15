@@ -23,8 +23,7 @@ public sealed record Skillset(
     public IReadOnlyList<string> Metro { get; init; } = [];
     public IReadOnlyList<string> PreferredCompanies { get; init; } = [];
 
-    // Radius filter (R-105). Coordinates are server-computed at save time (DAWA);
-    // the filter is active only when both coordinates and a positive RadiusKm exist.
+    // Radius filter. Coordinates are server-computed at save time; the filter is active only when both coordinates and a positive RadiusKm exist.
     public string? Address { get; init; }
     public double? RadiusKm { get; init; }
     public double? Latitude { get; init; }
