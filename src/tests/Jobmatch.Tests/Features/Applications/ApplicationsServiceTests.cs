@@ -70,11 +70,11 @@ public sealed class ApplicationsServiceTests : IDisposable
 
         var entries = _applications.List();
         Assert.Equal(2, entries.Count);
-        var interview = entries.Single(e => e.Status == "interview");
+        var interview = entries.Single(e => e.Status == ApplicationStatus.Interview);
         Assert.Equal("Role B", interview.Title);
-        Assert.Equal("good", interview.Mark);
+        Assert.Equal(MarkKind.Good, interview.Mark);
         Assert.Equal("nice fit", interview.Reason);
-        var applied = entries.Single(e => e.Status == "applied");
+        var applied = entries.Single(e => e.Status == ApplicationStatus.Applied);
         Assert.Null(applied.Mark);
     }
 
@@ -96,7 +96,7 @@ public sealed class ApplicationsServiceTests : IDisposable
         _marks.SetStatus("20260701-100000-newaaa", "l1", "interview");
 
         var entry = Assert.Single(_applications.List());
-        Assert.Equal("interview", entry.Status);
+        Assert.Equal(ApplicationStatus.Interview, entry.Status);
         Assert.Equal("20260701-100000-newaaa", entry.RunId);
     }
 
@@ -130,7 +130,7 @@ public sealed class ApplicationsServiceTests : IDisposable
         _marks.SetStatus("20260701-100000-aaaaaa", "l4", "interview");
 
         var statuses = _applications.List().Select(e => e.Status).ToList();
-        Assert.Equal(["offer", "interview", "applied", "rejected"], statuses);
+        Assert.Equal([ApplicationStatus.Offer, ApplicationStatus.Interview, ApplicationStatus.Applied, ApplicationStatus.Rejected], statuses);
     }
 
     [Fact]
@@ -173,6 +173,6 @@ public sealed class ApplicationsServiceTests : IDisposable
 
         var entry = Assert.Single(_applications.List());
         Assert.Equal("20260601-100000-oldaaa", entry.RunId);
-        Assert.Equal("applied", entry.Status);
+        Assert.Equal(ApplicationStatus.Applied, entry.Status);
     }
 }

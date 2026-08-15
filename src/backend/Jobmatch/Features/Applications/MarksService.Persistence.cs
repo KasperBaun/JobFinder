@@ -51,17 +51,15 @@ public sealed partial class MarksService
     {
         if (value.ValueKind == JsonValueKind.String)
         {
-            var v = value.GetString();
-            return v is "good" or "bad" ? new ListingMark(v, null) : null;
+            var mark = MarkKinds.TryParse(value.GetString());
+            return mark is null ? null : new ListingMark(mark, null);
         }
 
         if (value.ValueKind == JsonValueKind.Object)
         {
-            var mark = ReadString(value, "mark");
-            if (mark is not ("good" or "bad")) mark = null;
+            var mark = MarkKinds.TryParse(ReadString(value, "mark"));
             var reason = ReadString(value, "reason");
-            var status = ReadString(value, "status");
-            if (status is not null && !ApplicationStatus.IsValid(status)) status = null;
+            var status = ApplicationStatuses.TryParse(ReadString(value, "status"));
             if (mark is null && status is null) return null;
             var statusAt = status is null ? null : ReadTimestamp(value, "statusAt");
             return new ListingMark(mark, string.IsNullOrWhiteSpace(reason) ? null : reason, status, statusAt);
@@ -93,13 +91,13 @@ public sealed partial class MarksService
 
     private static object Project(ListingMark mark)
     {
-        if (mark is { Reason: null, Status: null, StatusChangedAt: null } && mark.Mark is not null)
-            return mark.Mark;
+        if (mark is { Reason: null, Status: null, StatusChangedAt: null, Mark: { } only })
+            return only.ToWire();
 
         var fields = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (mark.Mark is not null) fields["mark"] = mark.Mark;
+        if (mark.Mark is { } kind) fields["mark"] = kind.ToWire();
         if (mark.Reason is not null) fields["reason"] = mark.Reason;
-        if (mark.Status is not null) fields["status"] = mark.Status;
+        if (mark.Status is { } status) fields["status"] = status.ToWire();
         if (mark.StatusChangedAt is not null)
             fields["statusAt"] = mark.StatusChangedAt.Value.ToString("O", CultureInfo.InvariantCulture);
         return fields;

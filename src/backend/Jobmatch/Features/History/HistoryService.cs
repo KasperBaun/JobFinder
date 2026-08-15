@@ -118,13 +118,13 @@ public sealed class HistoryService(IRunHistoryStore runs, IMarksService marks, I
     {
         var marksMap = runMarks
             .Where(kvp => kvp.Value.Mark is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Mark!, StringComparer.Ordinal);
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Mark!.Value.ToWire(), StringComparer.Ordinal);
         var reasonsMap = runMarks
             .Where(kvp => kvp.Value.Reason is not null)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Reason!, StringComparer.Ordinal);
         var statusesMap = runMarks
             .Where(kvp => kvp.Value.Status is not null)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Status!, StringComparer.Ordinal);
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Status!.Value.ToWire(), StringComparer.Ordinal);
         var statusAtMap = runMarks
             .Where(kvp => kvp.Value.StatusChangedAt is not null)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.StatusChangedAt!.Value, StringComparer.Ordinal);
@@ -134,7 +134,7 @@ public sealed class HistoryService(IRunHistoryStore runs, IMarksService marks, I
             reasonsMap.Count > 0 ? reasonsMap : null,
             statusesMap.Count > 0 ? statusesMap : null,
             statusAtMap.Count > 0 ? statusAtMap : null,
-            runMarks.Values.Count(v => string.Equals(v.Mark, "good", StringComparison.OrdinalIgnoreCase)));
+            runMarks.Values.Count(v => v.Mark == MarkKind.Good));
     }
 
     public HistoryDeleteResult Delete(IReadOnlyList<string> runIds)
@@ -180,6 +180,6 @@ public sealed class HistoryService(IRunHistoryStore runs, IMarksService marks, I
         string runId)
     {
         if (!marks.TryGetValue(runId, out var byListing)) return 0;
-        return byListing.Values.Count(v => string.Equals(v.Mark, "good", StringComparison.OrdinalIgnoreCase));
+        return byListing.Values.Count(v => v.Mark == MarkKind.Good);
     }
 }

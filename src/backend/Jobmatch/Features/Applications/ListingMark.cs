@@ -7,7 +7,7 @@ namespace Jobmatch.Features.Applications;
 // StatusChangedAt records when the status last changed (R-107); entries recorded
 // before timestamps existed stay valid without one.
 public sealed record ListingMark(
-    string? Mark,
+    MarkKind? Mark,
     string? Reason,
-    string? Status = null,
+    ApplicationStatus? Status = null,
     DateTimeOffset? StatusChangedAt = null);

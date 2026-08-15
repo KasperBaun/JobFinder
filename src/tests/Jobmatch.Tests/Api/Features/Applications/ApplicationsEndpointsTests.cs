@@ -1,3 +1,4 @@
+using Jobmatch.Features.Applications;
 using System.Net.Http.Json;
 using System.Net;
 using Jobmatch.Api;
@@ -53,7 +54,7 @@ public sealed class ApplicationsEndpointsTests : IDisposable
 
         // No history file exists for the run, so the entry is unresolvable — but the endpoint
         // must still answer cleanly with an empty aggregation.
-        var list = await client.GetFromJsonAsync<ApplicationsResponse>(Routes.Applications.GetAll);
+        var list = await client.GetFromJsonAsync<ApplicationsResponse>(Routes.Applications.GetAll, Jobmatch.Infrastructure.Json.JobmatchJsonOptions.Default);
         Assert.NotNull(list);
         Assert.Empty(list!.Applications);
     }
@@ -74,9 +75,9 @@ public sealed class ApplicationsEndpointsTests : IDisposable
             Routes.Marks.SetStatus, new MarkStatusRequest(runId, "l1", "applied"));
         Assert.Equal(HttpStatusCode.OK, set.StatusCode);
 
-        var list = await client.GetFromJsonAsync<ApplicationsResponse>(Routes.Applications.GetAll);
+        var list = await client.GetFromJsonAsync<ApplicationsResponse>(Routes.Applications.GetAll, Jobmatch.Infrastructure.Json.JobmatchJsonOptions.Default);
         var entry = Assert.Single(list!.Applications);
-        Assert.Equal("applied", entry.Status);
+        Assert.Equal(ApplicationStatus.Applied, entry.Status);
         Assert.NotNull(entry.StatusChangedAt);
         Assert.InRange(entry.StatusChangedAt!.Value, before, DateTimeOffset.UtcNow);
     }

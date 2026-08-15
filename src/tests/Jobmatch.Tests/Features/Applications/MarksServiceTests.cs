@@ -39,7 +39,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.Set("run-1", "l1", "bad", "I'm not a student");
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal("bad", mark.Mark);
+        Assert.Equal(MarkKind.Bad, mark.Mark);
         Assert.Equal("I'm not a student", mark.Reason);
     }
 
@@ -68,8 +68,8 @@ public sealed class MarksServiceTests : IDisposable
         File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": "good", "l2": "bad" } }""");
 
         var run = _marks.LoadAll()["run-1"];
-        Assert.Equal(new ListingMark("good", null), run["l1"]);
-        Assert.Equal(new ListingMark("bad", null), run["l2"]);
+        Assert.Equal(new ListingMark(MarkKind.Good, null), run["l1"]);
+        Assert.Equal(new ListingMark(MarkKind.Bad, null), run["l2"]);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.Set("run-1", "l1", "good", null);
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark("good", null), mark);
+        Assert.Equal(new ListingMark(MarkKind.Good, null), mark);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.SetStatus("run-1", "l1", "applied");
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark("good", "great fit", "applied", _clock.UtcNow), mark);
+        Assert.Equal(new ListingMark(MarkKind.Good, "great fit", ApplicationStatus.Applied, _clock.UtcNow), mark);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.SetStatus("run-1", "l1", "interview");
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark(null, null, "interview", _clock.UtcNow), mark);
+        Assert.Equal(new ListingMark(null, null, ApplicationStatus.Interview, _clock.UtcNow), mark);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.Set("run-1", "l1", null, null);
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark(null, null, "applied", _clock.UtcNow), mark);
+        Assert.Equal(new ListingMark(null, null, ApplicationStatus.Applied, _clock.UtcNow), mark);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.SetStatus("run-1", "l1", null);
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal(new ListingMark("good", "great fit"), mark);
+        Assert.Equal(new ListingMark(MarkKind.Good, "great fit"), mark);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public sealed class MarksServiceTests : IDisposable
         _marks.SetStatus("run-1", "l1", "Interview");
 
         var mark = Assert.Single(_marks.GetForRun("run-1")).Value;
-        Assert.Equal("interview", mark.Status);
+        Assert.Equal(ApplicationStatus.Interview, mark.Status);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public sealed class MarksServiceTests : IDisposable
         File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "status": "offer" } } }""");
 
         var run = _marks.LoadAll()["run-1"];
-        Assert.Equal(new ListingMark(null, null, "offer"), run["l1"]);
+        Assert.Equal(new ListingMark(null, null, ApplicationStatus.Offer), run["l1"]);
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public sealed class MarksServiceTests : IDisposable
         File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "mark": "good", "status": "ghosted" } } }""");
 
         var run = _marks.LoadAll()["run-1"];
-        Assert.Equal(new ListingMark("good", null), run["l1"]);
+        Assert.Equal(new ListingMark(MarkKind.Good, null), run["l1"]);
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public sealed class MarksServiceTests : IDisposable
         File.WriteAllText(_ctx.MarksPath, """{ "run-1": { "l1": { "mark": "bad", "status": "applied" } } }""");
 
         var run = _marks.LoadAll()["run-1"];
-        Assert.Equal(new ListingMark("bad", null, "applied"), run["l1"]);
+        Assert.Equal(new ListingMark(MarkKind.Bad, null, ApplicationStatus.Applied), run["l1"]);
     }
 
     [Fact]

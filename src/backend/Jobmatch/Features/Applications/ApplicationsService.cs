@@ -9,7 +9,7 @@ namespace Jobmatch.Features.Applications;
 // makes the newest run's status win (same convention as MarkedExamplesLoader).
 public sealed class ApplicationsService(IRunHistoryStore runs, IMarksService marks) : IApplicationsService
 {
-    private static readonly IReadOnlyDictionary<string, int> ActivityOrder = new Dictionary<string, int>(StringComparer.Ordinal)
+    private static readonly IReadOnlyDictionary<ApplicationStatus, int> ActivityOrder = new Dictionary<ApplicationStatus, int>()
     {
         [ApplicationStatus.Offer] = 0,
         [ApplicationStatus.Interview] = 1,
@@ -59,7 +59,7 @@ public sealed class ApplicationsService(IRunHistoryStore runs, IMarksService mar
         var scored = detail.Scored?.FirstOrDefault(s => string.Equals(s.Id, listingId, StringComparison.Ordinal));
         if (scored is not null)
         {
-            return new ApplicationEntry(listingId, detail.RunId, detail.StartedAt, mark.Status!,
+            return new ApplicationEntry(listingId, detail.RunId, detail.StartedAt, mark.Status!.Value,
                 mark.Mark, mark.Reason, scored.Title, scored.Company, scored.Location,
                 scored.Url, scored.Portal, scored.PortalDisplayName, scored.Score,
                 mark.StatusChangedAt);
@@ -68,7 +68,7 @@ public sealed class ApplicationsService(IRunHistoryStore runs, IMarksService mar
         var match = detail.Shortlist.FirstOrDefault(m => string.Equals(m.Id, listingId, StringComparison.Ordinal));
         if (match is not null)
         {
-            return new ApplicationEntry(listingId, detail.RunId, detail.StartedAt, mark.Status!,
+            return new ApplicationEntry(listingId, detail.RunId, detail.StartedAt, mark.Status!.Value,
                 mark.Mark, mark.Reason, match.Title, match.Company, match.Location,
                 match.Url, match.Portal, match.PortalDisplayName, match.Score,
                 mark.StatusChangedAt);

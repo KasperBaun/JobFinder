@@ -30,8 +30,8 @@ public sealed partial class MarksService(UserContext ctx, TimeProvider? clock = 
     {
         ValidateIds(runId, listingId);
 
-        var normalised = mark?.ToLowerInvariant();
-        if (normalised is not (null or "good" or "bad"))
+        var normalised = MarkKinds.TryParse(mark);
+        if (normalised is null && !string.IsNullOrWhiteSpace(mark))
             throw new InvalidRequestException("mark must be 'good', 'bad', or null");
 
         var trimmedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
@@ -48,10 +48,10 @@ public sealed partial class MarksService(UserContext ctx, TimeProvider? clock = 
     {
         ValidateIds(runId, listingId);
 
-        var normalised = status?.ToLowerInvariant();
-        if (normalised is not null && !ApplicationStatus.IsValid(normalised))
+        var normalised = ApplicationStatuses.TryParse(status);
+        if (normalised is null && !string.IsNullOrWhiteSpace(status))
             throw new InvalidRequestException(
-                $"status must be one of {string.Join(", ", ApplicationStatus.All)}, or null");
+                $"status must be one of {string.Join(", ", ApplicationStatuses.AllWire)}, or null");
 
         Update(runId, listingId, existing => existing with
         {
@@ -62,11 +62,11 @@ public sealed partial class MarksService(UserContext ctx, TimeProvider? clock = 
 
     // Re-selecting the same status keeps the original timestamp (unless a legacy
     // entry never had one); a real change re-stamps; clearing drops it (R-107).
-    private DateTimeOffset? StampStatusChange(ListingMark existing, string? status)
+    private DateTimeOffset? StampStatusChange(ListingMark existing, ApplicationStatus? status)
     {
         if (status is null) return null;
         var now = (clock ?? TimeProvider.System).GetUtcNow();
-        return string.Equals(existing.Status, status, StringComparison.Ordinal)
+        return existing.Status == status
             ? existing.StatusChangedAt ?? now
             : now;
     }

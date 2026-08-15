@@ -71,7 +71,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_MarkedScoredListing_BecomesExampleWithReason()
     {
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "AI Engineer - Student", "Uni Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("bad", "I'm not a student")));
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(MarkKind.Bad, "I'm not a student")));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("disliked", example.Polarity);
@@ -85,7 +85,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_GoodMark_BecomesLikedExample()
     {
         WriteHistory("20260701-100000-aaaaaa", shortlist: [Match("l1", "Senior .NET Developer", "Great Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", null)));
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(MarkKind.Good, null)));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("liked", example.Polarity);
@@ -98,7 +98,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260701-100000-aaaaaa",
             scored: [Scored("other", "Other", "Other Co")],
             shortlist: [Match("l1", "Backend Developer", "Fallback Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", "great stack")));
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(MarkKind.Good, "great stack")));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("Fallback Co", example.Company);
@@ -111,8 +111,8 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
         WriteHistory("20260601-100000-old", scored: [Scored("l1", "Backend Developer", "Same Co")]);
         WriteHistory("20260701-100000-new", scored: [Scored("l9", "Backend Developer", "Same Co")]);
         var marks = Marks(
-            ("20260601-100000-old", "l1", new ListingMark("good", "old opinion")),
-            ("20260701-100000-new", "l9", new ListingMark("bad", "new opinion")));
+            ("20260601-100000-old", "l1", new ListingMark(MarkKind.Good, "old opinion")),
+            ("20260701-100000-new", "l9", new ListingMark(MarkKind.Bad, "new opinion")));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("disliked", example.Polarity);
@@ -122,7 +122,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     [Fact]
     public void Load_MissingHistoryFile_IsSkipped()
     {
-        var marks = Marks(("20260701-100000-gone", "l1", new ListingMark("bad", "whatever")));
+        var marks = Marks(("20260701-100000-gone", "l1", new ListingMark(MarkKind.Bad, "whatever")));
         Assert.Empty(MarkedExamplesLoader.Load(Runs(), marks));
     }
 
@@ -130,7 +130,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_UnknownListingId_IsSkipped()
     {
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Some Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "no-such-listing", new ListingMark("bad", null)));
+        var marks = Marks(("20260701-100000-aaaaaa", "no-such-listing", new ListingMark(MarkKind.Bad, null)));
 
         Assert.Empty(MarkedExamplesLoader.Load(Runs(), marks));
     }
@@ -139,7 +139,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_StatusOnlyInterview_BecomesLikedWithOutcomeNote()
     {
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Interview Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, "interview")));
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, ApplicationStatus.Interview)));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("liked", example.Polarity);
@@ -150,7 +150,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_OfferWithGoodMarkAndReason_MergesNote()
     {
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Offer Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("good", "great stack", "offer")));
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(MarkKind.Good, "great stack", ApplicationStatus.Offer)));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("liked", example.Polarity);
@@ -161,7 +161,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     public void Load_BadMarkOverridesPositiveOutcome()
     {
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Mixed Co")]);
-        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark("bad", "toxic culture", "interview")));
+        var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(MarkKind.Bad, "toxic culture", ApplicationStatus.Interview)));
 
         var example = Assert.Single(MarkedExamplesLoader.Load(Runs(), marks));
         Assert.Equal("disliked", example.Polarity);
@@ -169,10 +169,10 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     }
 
     [Theory]
-    [InlineData("applied")]
-    [InlineData("rejected")]
-    [InlineData("no-response")]
-    public void Load_StatusOnlyNeutralOutcome_ProducesNoExample(string status)
+    [InlineData(ApplicationStatus.Applied)]
+    [InlineData(ApplicationStatus.Rejected)]
+    [InlineData(ApplicationStatus.NoResponse)]
+    public void Load_StatusOnlyNeutralOutcome_ProducesNoExample(ApplicationStatus status)
     {
         WriteHistory("20260701-100000-aaaaaa", scored: [Scored("l1", "Backend Developer", "Some Co")]);
         var marks = Marks(("20260701-100000-aaaaaa", "l1", new ListingMark(null, null, status)));
@@ -190,9 +190,9 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
 
         // 13 plain good marks fill the cap; the interview and offer at the end must still make it.
         var entries = Enumerable.Range(1, 12)
-            .Select(i => ("20260701-100000-aaaaaa", $"l{i}", new ListingMark("good", null)))
-            .Append(("20260701-100000-aaaaaa", "l13", new ListingMark(null, null, "interview")))
-            .Append(("20260701-100000-aaaaaa", "l14", new ListingMark(null, null, "offer")))
+            .Select(i => ("20260701-100000-aaaaaa", $"l{i}", new ListingMark(MarkKind.Good, null)))
+            .Append(("20260701-100000-aaaaaa", "l13", new ListingMark(null, null, ApplicationStatus.Interview)))
+            .Append(("20260701-100000-aaaaaa", "l14", new ListingMark(null, null, ApplicationStatus.Offer)))
             .ToArray();
         var marks = Marks(entries);
 

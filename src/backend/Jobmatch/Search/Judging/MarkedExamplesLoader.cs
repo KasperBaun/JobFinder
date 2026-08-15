@@ -51,7 +51,7 @@ public static class MarkedExamplesLoader
 
     private static int Priority(ListingMark mark) => mark switch
     {
-        { Mark: "bad" } => 0,
+        { Mark: MarkKind.Bad } => 0,
         { Status: ApplicationStatus.Offer } => 2,
         { Status: ApplicationStatus.Interview } => 1,
         _ => 0,
@@ -61,8 +61,8 @@ public static class MarkedExamplesLoader
     private static ExampleListing? Resolve(RunDetail detail, string listingId, ListingMark mark)
     {
         var positiveOutcome = mark.Status is ApplicationStatus.Interview or ApplicationStatus.Offer;
-        var polarity = mark.Mark == "good" ? "liked"
-            : mark.Mark == "bad" ? "disliked"
+        var polarity = mark.Mark == MarkKind.Good ? "liked"
+            : mark.Mark == MarkKind.Bad ? "disliked"
             : positiveOutcome ? "liked"
             : null;
         if (polarity is null) return null;
