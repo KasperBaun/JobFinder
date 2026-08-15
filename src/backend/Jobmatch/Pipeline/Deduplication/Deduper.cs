@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Jobmatch.Domain;
+using Jobmatch.Domain.Runs;
 using Jobmatch.Pipeline.Geo;
 
 namespace Jobmatch.Pipeline.Deduplication;

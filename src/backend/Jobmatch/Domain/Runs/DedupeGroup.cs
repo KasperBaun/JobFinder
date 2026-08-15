@@ -1,4 +1,4 @@
-namespace Jobmatch.Pipeline.Deduplication;
+namespace Jobmatch.Domain.Runs;
 
 /// <summary>
 /// One canonical listing plus the IDs of duplicates that collapsed into it.

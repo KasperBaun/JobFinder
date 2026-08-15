@@ -1,4 +1,5 @@
 using Jobmatch.Domain;
+using Jobmatch.Domain.Runs;
 
 namespace Jobmatch.Pipeline.Deduplication;
 

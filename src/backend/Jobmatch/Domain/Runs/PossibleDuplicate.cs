@@ -1,4 +1,4 @@
-namespace Jobmatch.Pipeline.Deduplication;
+namespace Jobmatch.Domain.Runs;
 
 /// <summary>
 /// A pair the probabilistic matcher (R-117) could not settle: probably related, not confidently
