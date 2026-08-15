@@ -1,6 +1,6 @@
 using System.Net.Security;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Features.AiModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 

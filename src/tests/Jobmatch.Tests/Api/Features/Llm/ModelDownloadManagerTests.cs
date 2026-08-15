@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Features.AiModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Jobmatch.Api.Features.Llm;

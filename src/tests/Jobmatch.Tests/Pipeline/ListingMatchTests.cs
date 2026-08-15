@@ -2,9 +2,9 @@ using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Providers;
 using Jobmatch.Pipeline;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Json;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Json;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Pipeline;
 

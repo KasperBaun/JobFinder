@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Json;
 
 namespace Jobmatch.Features.Providers;
 

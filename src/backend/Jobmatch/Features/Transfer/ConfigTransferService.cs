@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json;
-using Jobmatch.Platform.Json;
-using Jobmatch.Platform.Paths;
-using Jobmatch.Platform;
+using Jobmatch.Infrastructure.Json;
+using Jobmatch.Infrastructure.Paths;
+using Jobmatch.Infrastructure;
 
 namespace Jobmatch.Features.Transfer;
 

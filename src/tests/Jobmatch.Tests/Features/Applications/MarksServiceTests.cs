@@ -1,5 +1,5 @@
 using Jobmatch.Features.Applications;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Features.Applications;
 

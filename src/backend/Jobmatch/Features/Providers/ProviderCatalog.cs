@@ -1,4 +1,4 @@
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 
 namespace Jobmatch.Features.Providers;
 

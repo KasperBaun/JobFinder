@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Text;
+using Jobmatch.Infrastructure.Llm;
 using Jobmatch.Domain;
 using Microsoft.Extensions.Logging;
 using Match = Jobmatch.Domain.Match;

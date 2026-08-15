@@ -8,7 +8,7 @@ using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Jobs;
 using Jobmatch.Pipeline;
 using Microsoft.Extensions.Logging.Abstractions;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 using Jobmatch.Api.Features.Search;
 
 namespace Jobmatch.Tests.Api.Features.Search;

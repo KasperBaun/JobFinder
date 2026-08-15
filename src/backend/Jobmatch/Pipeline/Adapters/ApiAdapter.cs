@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Pipeline.Adapters;

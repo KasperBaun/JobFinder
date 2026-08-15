@@ -6,7 +6,7 @@ using LLama.Sampling;
 using LLama;
 using Microsoft.Extensions.Logging;
 
-namespace Jobmatch.Pipeline.Llm;
+namespace Jobmatch.Infrastructure.Llm;
 
 // In-process LLM via llama.cpp (LLamaSharp NuGet). The default shipped backend.
 // Loads a GGUF model file from disk; if the file isn't present, IsReachableAsync

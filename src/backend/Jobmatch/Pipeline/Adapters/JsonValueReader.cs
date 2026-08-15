@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Jobmatch.Platform.Json;
+namespace Jobmatch.Pipeline.Adapters;
 
 public static class JsonValueReader
 {

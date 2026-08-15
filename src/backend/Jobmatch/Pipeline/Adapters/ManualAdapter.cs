@@ -2,8 +2,8 @@ using System.Globalization;
 using System.Text.Json;
 using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Pipeline.Adapters;

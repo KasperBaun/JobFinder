@@ -1,4 +1,4 @@
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Platform.Paths;
 

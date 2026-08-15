@@ -2,8 +2,8 @@ using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
 using Jobmatch.Features.Applications;
-using Jobmatch.Platform.Json;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using Jobmatch.Infrastructure.Json;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Features.Applications;
 

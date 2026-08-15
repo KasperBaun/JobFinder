@@ -1,7 +1,7 @@
 using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
 using Jobmatch.Pipeline.Adapters;
-using Jobmatch.Platform.IO;
+using Jobmatch.Infrastructure.IO;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Pipeline.Adapters;

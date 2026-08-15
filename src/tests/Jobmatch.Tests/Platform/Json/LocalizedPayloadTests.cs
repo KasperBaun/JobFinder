@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.Json;
 
 namespace Jobmatch.Tests.Platform.Json;
 

@@ -1,5 +1,6 @@
+using Jobmatch.Pipeline.Adapters;
 using System.Text.Json;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.Json;
 
 namespace Jobmatch.Tests.Platform.Json;
 

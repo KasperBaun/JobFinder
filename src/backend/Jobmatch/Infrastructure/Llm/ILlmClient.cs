@@ -1,4 +1,4 @@
-namespace Jobmatch.Pipeline.Llm;
+namespace Jobmatch.Infrastructure.Llm;
 
 // Minimal LLM transport. Two implementations: LlamaSharpClient (in-process,
 // llama.cpp via NuGet, no external deps — the default for shipped builds) and

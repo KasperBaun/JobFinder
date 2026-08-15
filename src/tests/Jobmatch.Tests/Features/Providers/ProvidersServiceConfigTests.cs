@@ -1,6 +1,6 @@
 using Jobmatch.Features.Providers;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Paths;
 using Jobmatch;
 using Microsoft.Extensions.Logging.Abstractions;
 

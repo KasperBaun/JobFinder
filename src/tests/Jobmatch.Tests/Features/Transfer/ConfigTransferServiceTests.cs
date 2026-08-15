@@ -2,8 +2,8 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Text;
 using Jobmatch.Features.Transfer;
-using Jobmatch.Platform.Json;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Json;
+using Jobmatch.Infrastructure.Paths;
 using Jobmatch;
 
 namespace Jobmatch.Tests.Features.Transfer;

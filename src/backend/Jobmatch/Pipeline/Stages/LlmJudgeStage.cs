@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Jobmatch.Domain;
 using Jobmatch.Pipeline.Geo;
+using Jobmatch.Infrastructure.Llm;
 using Jobmatch.Pipeline.Llm;
 using Microsoft.Extensions.Logging;
 using Match = Jobmatch.Domain.Match;

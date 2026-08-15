@@ -1,7 +1,7 @@
 using Jobmatch.Features.Applications;
 using Jobmatch.Features.History;
 using Jobmatch.Pipeline.Llm;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 
 namespace Jobmatch.Pipeline.Stages;
 

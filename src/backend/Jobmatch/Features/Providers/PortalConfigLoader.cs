@@ -1,4 +1,4 @@
-using Jobmatch.Platform.IO;
+using Jobmatch.Infrastructure.IO;
 using YamlDotNet.Serialization;
 
 namespace Jobmatch.Features.Providers;

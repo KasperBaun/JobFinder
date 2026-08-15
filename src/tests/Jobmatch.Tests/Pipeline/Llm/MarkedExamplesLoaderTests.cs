@@ -1,11 +1,11 @@
 using Jobmatch.Features.History;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
 using Jobmatch.Features.Applications;
 using Jobmatch.Pipeline.Llm;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.Json;
 
 namespace Jobmatch.Tests.Pipeline.Llm;
 

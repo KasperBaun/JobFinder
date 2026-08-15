@@ -1,5 +1,5 @@
 using Jobmatch.Features.Identity;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobmatch.Api.Infrastructure;

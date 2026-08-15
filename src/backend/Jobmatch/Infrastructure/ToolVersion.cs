@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Jobmatch.Platform;
+namespace Jobmatch.Infrastructure;
 
 /// <summary>
 /// The running build's version, as shown in the GUI and stamped into config exports. Read from the

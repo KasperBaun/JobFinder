@@ -1,4 +1,4 @@
-namespace Jobmatch.Platform.IO;
+namespace Jobmatch.Infrastructure.IO;
 
 /// <summary>
 /// Write-to-temp then replace, so a reader never observes a half-written file and a crash mid-write

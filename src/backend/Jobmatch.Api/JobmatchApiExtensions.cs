@@ -11,8 +11,8 @@ using Jobmatch.Api.Features.Transfer;
 using Jobmatch.Api.Features.Whoami;
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Features.Identity;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Paths;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 

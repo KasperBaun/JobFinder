@@ -100,7 +100,7 @@ public sealed class ApplicationsEndpointsTests : IDisposable
         Directory.CreateDirectory(historyDir);
         File.WriteAllText(
             Path.Combine(historyDir, $"{runId}.json"),
-            System.Text.Json.JsonSerializer.Serialize(detail, Jobmatch.Platform.Json.JobmatchJsonOptions.Indented));
+            System.Text.Json.JsonSerializer.Serialize(detail, Jobmatch.Infrastructure.Json.JobmatchJsonOptions.Indented));
     }
 
     [Fact]

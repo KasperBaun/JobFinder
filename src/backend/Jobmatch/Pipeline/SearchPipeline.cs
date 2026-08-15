@@ -8,8 +8,8 @@ using Jobmatch.Pipeline.Deduplication;
 using Jobmatch.Pipeline.Geo;
 using Jobmatch.Pipeline.Ranking;
 using Jobmatch.Pipeline.Stages;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

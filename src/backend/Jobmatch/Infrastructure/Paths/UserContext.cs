@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Jobmatch.Platform.Paths;
+namespace Jobmatch.Infrastructure.Paths;
 
 /// <summary>
 /// Every path the app is allowed to read or write for the active user, derived once from

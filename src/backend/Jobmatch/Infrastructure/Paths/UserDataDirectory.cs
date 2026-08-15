@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Jobmatch.Platform.Paths;
+namespace Jobmatch.Infrastructure.Paths;
 
 /// <summary>
 /// Creating the user's data directory: the standard subdirectories, and the first-run seed of

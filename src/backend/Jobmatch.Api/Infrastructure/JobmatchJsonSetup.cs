@@ -1,10 +1,10 @@
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.Json;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobmatch.Api.Infrastructure;
 
 /// <summary>
-/// The wire's JSON policy, taken from Platform.Json so HTTP responses, the SSE feed and the
+/// The wire's JSON policy, taken from Infrastructure.Json so HTTP responses, the SSE feed and the
 /// on-disk records cannot drift apart: camelCase members, enums as camelCase strings (so
 /// JobSearchState/Phase serialise as "running"/"llmJudging", not 4), and nulls omitted.
 /// </summary>

@@ -8,7 +8,7 @@ using Hangfire.Dashboard;
 using Hangfire;
 using Jobmatch.Api;
 using Jobmatch.Features.Identity;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 using Jobmatch;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;

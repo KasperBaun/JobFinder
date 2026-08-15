@@ -1,6 +1,6 @@
 using Jobmatch.Features.Providers;
-using Jobmatch.Platform.Json;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Json;
+using Jobmatch.Infrastructure.Paths;
 using System.Text.Json;
 
 namespace Jobmatch.Tests.Features.Providers;

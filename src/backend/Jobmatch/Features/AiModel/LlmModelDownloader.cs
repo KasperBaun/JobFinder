@@ -4,7 +4,7 @@ using System.Net;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 
-namespace Jobmatch.Pipeline.Llm;
+namespace Jobmatch.Features.AiModel;
 
 public sealed record DownloadProgress(long DownloadedBytes, long? TotalBytes);
 

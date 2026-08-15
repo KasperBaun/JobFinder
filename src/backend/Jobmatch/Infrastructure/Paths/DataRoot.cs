@@ -1,4 +1,4 @@
-namespace Jobmatch.Platform.Paths;
+namespace Jobmatch.Infrastructure.Paths;
 
 /// <summary>
 /// Where the user's data directory lives, before any of the files inside it exist. Two callers need

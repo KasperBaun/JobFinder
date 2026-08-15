@@ -7,7 +7,7 @@ namespace Jobmatch.Pipeline.Output;
 
 public static class JsonReportWriter
 {
-    // The one writer that does not take Platform.Json's shared policy. all-listings.json and
+    // The one writer that does not take Infrastructure.Json's shared policy. all-listings.json and
     // ranked-listings.json are artefacts the user reads, not files the app reads back, and they
     // have carried PascalCase members and PascalCase enum values since the first run. Adopting
     // camelCase here would change every existing file's shape for no reader's benefit.

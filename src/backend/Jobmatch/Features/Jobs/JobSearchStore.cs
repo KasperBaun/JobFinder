@@ -1,8 +1,8 @@
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Json;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Json;
+using Jobmatch.Infrastructure.Paths;
 
 namespace Jobmatch.Features.Jobs;
 

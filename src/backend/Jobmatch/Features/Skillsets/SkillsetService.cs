@@ -1,6 +1,6 @@
 using Jobmatch.Domain;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Paths;
 
 namespace Jobmatch.Features.Skillsets;
 

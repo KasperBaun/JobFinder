@@ -3,7 +3,7 @@ using Jobmatch.Domain.Runs;
 using Jobmatch.Features.History;
 using Jobmatch.Pipeline.Deduplication;
 using Jobmatch.Pipeline.Output;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 using Match = Jobmatch.Domain.Match;
 
 namespace Jobmatch.Pipeline.Stages;

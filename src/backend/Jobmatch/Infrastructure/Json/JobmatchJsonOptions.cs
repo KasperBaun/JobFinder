@@ -2,7 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 
-namespace Jobmatch.Platform.Json;
+namespace Jobmatch.Infrastructure.Json;
 
 public static class JobmatchJsonOptions
 {

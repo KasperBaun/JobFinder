@@ -1,7 +1,8 @@
+using Jobmatch.Infrastructure.Llm;
 using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 
-namespace Jobmatch.Pipeline.Llm;
+namespace Jobmatch.Features.AiModel;
 
 /// <summary>Where the model file is, and whether it is usable right now.</summary>
 public interface ILlmModelLocator

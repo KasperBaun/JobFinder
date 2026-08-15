@@ -4,8 +4,8 @@ using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
 using Jobmatch.Features.History;
 using Jobmatch.Features.Jobs;
-using Jobmatch.Platform.Json;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using Jobmatch.Infrastructure.Json;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Features.History;
 

@@ -6,8 +6,8 @@ using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
 using Jobmatch.Pipeline;
-using Jobmatch.Platform.IO;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using Jobmatch.Infrastructure.IO;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Pipeline;
 

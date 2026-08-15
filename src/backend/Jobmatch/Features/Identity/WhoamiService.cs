@@ -1,5 +1,5 @@
-using Jobmatch.Platform.Paths;
-using Jobmatch.Platform;
+using Jobmatch.Infrastructure.Paths;
+using Jobmatch.Infrastructure;
 
 namespace Jobmatch.Features.Identity;
 

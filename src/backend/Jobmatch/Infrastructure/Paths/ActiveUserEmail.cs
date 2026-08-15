@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Jobmatch.Platform.Paths;
+namespace Jobmatch.Infrastructure.Paths;
 
 /// <summary>
 /// Who the active user is. Resolution order is explicit override → <c>JOBFINDER_USER</c> →

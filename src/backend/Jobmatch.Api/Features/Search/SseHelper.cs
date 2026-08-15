@@ -5,7 +5,7 @@ namespace Jobmatch.Api.Features.Search;
 
 public static class SseHelper
 {
-    public static readonly JsonSerializerOptions JsonOptions = Jobmatch.Platform.Json.JobmatchJsonOptions.Default;
+    public static readonly JsonSerializerOptions JsonOptions = Jobmatch.Infrastructure.Json.JobmatchJsonOptions.Default;
 
     public static void SetHeaders(HttpContext ctx)
     {

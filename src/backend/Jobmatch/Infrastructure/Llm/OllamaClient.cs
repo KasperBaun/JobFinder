@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using Jobmatch.Platform.Json;
+using Jobmatch.Infrastructure.Json;
 
-namespace Jobmatch.Pipeline.Llm;
+namespace Jobmatch.Infrastructure.Llm;
 
 // Minimal Ollama /api/chat wrapper. No streaming (we want the full response in one
 // go), no embedding endpoint, no agentic tools — just send messages and get the

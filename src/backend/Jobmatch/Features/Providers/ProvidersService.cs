@@ -2,8 +2,8 @@ using Jobmatch.Features.History;
 using System.Diagnostics;
 using System.Net;
 using Jobmatch.Pipeline.Adapters;
-using Jobmatch.Platform.IO;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.IO;
+using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 

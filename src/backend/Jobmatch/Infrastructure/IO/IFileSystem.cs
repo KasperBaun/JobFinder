@@ -1,4 +1,4 @@
-namespace Jobmatch.Platform.IO;
+namespace Jobmatch.Infrastructure.IO;
 
 public interface IFileSystem
 {

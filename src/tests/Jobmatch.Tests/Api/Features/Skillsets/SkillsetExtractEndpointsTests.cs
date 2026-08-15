@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Api;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Jobmatch.Api.Features.Skillsets;

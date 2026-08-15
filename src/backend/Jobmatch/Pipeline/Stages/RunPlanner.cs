@@ -2,7 +2,7 @@ using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Providers;
 using Jobmatch.Features.Skillsets;
 using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 
 namespace Jobmatch.Pipeline.Stages;
 

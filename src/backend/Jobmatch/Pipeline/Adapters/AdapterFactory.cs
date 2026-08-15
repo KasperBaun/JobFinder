@@ -1,5 +1,5 @@
 using Jobmatch.Features.Providers;
-using Jobmatch.Platform.IO;
+using Jobmatch.Infrastructure.IO;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Pipeline.Adapters;

@@ -1,7 +1,7 @@
 using Jobmatch.Pipeline.Ranking;
 using Microsoft.Extensions.Logging;
 
-namespace Jobmatch.Pipeline.Llm;
+namespace Jobmatch.Infrastructure.Llm;
 
 // Builds an ILlmClient from LlmConfig. Returns null when disabled — callers
 // should treat null as "skip LLM judging, fall back to keyword scores". The

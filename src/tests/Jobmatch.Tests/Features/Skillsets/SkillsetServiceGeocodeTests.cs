@@ -1,6 +1,6 @@
 using Jobmatch.Domain;
 using Jobmatch.Features.Skillsets;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Features.Skillsets;
 

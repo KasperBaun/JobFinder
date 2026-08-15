@@ -1,5 +1,5 @@
-using Jobmatch.Pipeline.Llm;
-using JobmatchUserContext = Jobmatch.Platform.Paths.UserContext;
+using Jobmatch.Features.AiModel;
+using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 
 namespace Jobmatch.Tests.Pipeline.Llm;
 

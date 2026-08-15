@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text;
 using Jobmatch.Domain;
+using Jobmatch.Infrastructure.Llm;
 using Jobmatch.Pipeline.Llm;
 using Microsoft.Extensions.Logging;
 

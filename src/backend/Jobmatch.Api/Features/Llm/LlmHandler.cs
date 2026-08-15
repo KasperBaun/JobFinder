@@ -1,5 +1,5 @@
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Features.AiModel;
 using Jobmatch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

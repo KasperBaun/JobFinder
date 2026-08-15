@@ -1,6 +1,6 @@
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Infrastructure.Llm;
 using Jobmatch.Pipeline.Ranking;
-using Jobmatch.Platform.Paths;
+using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Features.Cv;
