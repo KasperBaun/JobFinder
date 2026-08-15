@@ -179,7 +179,7 @@ public sealed class SearchDurabilityTests : IDisposable
         return received;
     }
 
-    private sealed class FakeSearchService(IReadOnlyList<SearchProgressEvent> events) : ISearchService
+    private sealed class FakeSearchService(IReadOnlyList<SearchProgressEvent> events) : ISearchRunner
     {
         public IAsyncEnumerable<SearchProgressEvent> RunAsync(SearchRequest req, CancellationToken ct = default)
             => RunAsync(req, "x", ct);

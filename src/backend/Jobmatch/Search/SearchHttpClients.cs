@@ -12,7 +12,7 @@ namespace Jobmatch.Search;
 /// <para><see cref="Judge"/> talks to the local model. It is deliberately untimed — an Ollama
 /// generation legitimately exceeds 30s, and cutting one off would silently drop a verdict.</para>
 /// </remarks>
-public sealed class PipelineHttpClients : IDisposable
+public sealed class SearchHttpClients : IDisposable
 {
     public HttpClient Fetch { get; } = new(new SocketsHttpHandler { MaxConnectionsPerServer = 8 })
     {

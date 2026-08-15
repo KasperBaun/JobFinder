@@ -29,6 +29,13 @@ public sealed record RunResults(
 public sealed class RunRecorder(UserContext ctx, IRunHistoryStore history)
 {
     /// <summary>
+    /// The longlist, written as soon as dedupe settles rather than at the end — it is the input the
+    /// rest of the run works from, and it survives a run that fails after this point.
+    /// </summary>
+    public void WriteLonglist(IReadOnlyList<Listing> deduped)
+        => JsonReportWriter.WriteListings(deduped, ctx.AllListingsPath);
+
+    /// <summary>
     /// Writes the reports and the run record, and returns the shortlist projected to
     /// <see cref="ListingMatch"/> for the completion event.
     /// </summary>

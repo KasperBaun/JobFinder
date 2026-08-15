@@ -2,7 +2,7 @@ using Jobmatch.Domain.Runs;
 
 namespace Jobmatch.Search;
 
-public interface ISearchService
+public interface ISearchRunner
 {
     IAsyncEnumerable<SearchProgressEvent> RunAsync(SearchRequest req, CancellationToken ct = default);
 

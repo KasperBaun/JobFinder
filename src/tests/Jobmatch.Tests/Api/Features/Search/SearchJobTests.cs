@@ -127,7 +127,7 @@ public sealed class SearchJobTests : IDisposable
         await job.Run("does-not-exist", CancellationToken.None); // must not throw
     }
 
-    private sealed class FakeSearchService(IReadOnlyList<SearchProgressEvent> events, Exception? throwAfter = null) : ISearchService
+    private sealed class FakeSearchService(IReadOnlyList<SearchProgressEvent> events, Exception? throwAfter = null) : ISearchRunner
     {
         public IAsyncEnumerable<SearchProgressEvent> RunAsync(SearchRequest req, CancellationToken ct = default)
             => RunAsync(req, "x", ct);

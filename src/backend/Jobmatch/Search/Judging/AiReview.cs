@@ -18,7 +18,7 @@ namespace Jobmatch.Search.Judging;
 /// degrades to keyword-only scoring rather than failing the run: the model file may be missing,
 /// Ollama may not be running, a pass may return nothing.
 /// </remarks>
-public sealed class LlmJudgeStage(string modelRootDir, ILoggerFactory loggers)
+public sealed class AiReview(string modelRootDir, ILoggerFactory loggers)
 {
     /// <summary>
     /// Judges pass after pass until the shortlist is stable and fully judged, blending each pass's

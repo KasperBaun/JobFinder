@@ -22,13 +22,12 @@ namespace Jobmatch.Search;
 /// Runs one search: plan → fetch → dedupe → rank → judge → shortlist → record. Each phase is a folder
 /// beside this file; this sequences them and yields the progress events a caller streams to the GUI.
 /// </summary>
-public sealed class SearchPipeline : ISearchService
+public sealed class SearchRunner : ISearchRunner
 {
-    private readonly UserContext _ctx;
     private readonly IProviderCatalog _catalog;
     private readonly RunPlanner _planner;
-    private readonly ProviderFetchStage _fetch;
-    private readonly LlmJudgeStage _judge;
+    private readonly ProviderFetch _fetch;
+    private readonly AiReview _review;
     private readonly ExampleSet _examples;
     private readonly RunRecorder _recorder;
     private readonly Gazetteer? _gazetteer;
@@ -40,7 +39,7 @@ public sealed class SearchPipeline : ISearchService
     // always uses the default.
     private static readonly TimeSpan DefaultPerSourceTimeout = TimeSpan.FromSeconds(120);
 
-    public SearchPipeline(
+    public SearchRunner(
         UserContext ctx,
         IProviderCatalog catalog,
         IRunHistoryStore history,
@@ -51,12 +50,11 @@ public sealed class SearchPipeline : ISearchService
         Gazetteer? gazetteer = null)
     {
         var loggers = loggerFactory ?? NullLoggerFactory.Instance;
-        _ctx = ctx;
         _catalog = catalog;
         _planner = new RunPlanner(ctx);
-        _fetch = new ProviderFetchStage(
+        _fetch = new ProviderFetch(
             ctx.ImportsDir, fs, loggers, perSourceTimeout ?? DefaultPerSourceTimeout);
-        _judge = new LlmJudgeStage(ctx.RootDir, loggers);
+        _review = new AiReview(ctx.RootDir, loggers);
         _examples = new ExampleSet(ctx, history, marks ?? new MarksService(ctx));
         _recorder = new RunRecorder(ctx, history);
         _gazetteer = gazetteer;
@@ -91,30 +89,25 @@ public sealed class SearchPipeline : ISearchService
         var plan = _planner.Plan(req, allPortals);
         yield return new StartedEvent(runId, plan.Enabled.Count);
 
-        using var clients = new PipelineHttpClients();
+        using var clients = new SearchHttpClients();
 
         FetchOutcome fetched = null!;
         await foreach (var evt in _fetch.FetchAll(plan.Enabled, clients.Fetch, o => fetched = o, ct).ConfigureAwait(false))
             yield return evt;
 
-        // Two dedupe passes before anything is ranked (R-115, R-117): the exact-key merge, then
-        // the probabilistic same-ad merge on its survivors — so no duplicate ad reaches the
-        // scored list, the LLM judge budget, or the shortlist.
-        var gazetteer = _gazetteer ?? Gazetteer.LoadBundled();
-        var exactDedupe = Deduper.Deduplicate(fetched.Listings, gazetteer);
-        var probDedupe = ProbabilisticDeduper.Merge(exactDedupe.Deduped, new ProbabilisticMatcher(gazetteer));
-        var deduped = probDedupe.Deduped;
-        yield return new DedupeEvent(deduped.Count);
-        JsonReportWriter.WriteListings(deduped, _ctx.AllListingsPath);
+        var places = _gazetteer ?? Gazetteer.LoadBundled();
+        var unique = DuplicateMerger.Merge(fetched.Listings, places);
+        yield return new DedupeEvent(unique.Deduped.Count);
+        _recorder.WriteLonglist(unique.Deduped);
 
-        var scored = Ranker.Score(deduped, plan.Skillset, plan.Ranking).ToList();
-        var radiusFilter = RadiusFilter.Create(plan.Skillset, gazetteer);
+        var scored = Ranker.Score(unique.Deduped, plan.Skillset, plan.Ranking).ToList();
+        var radiusFilter = RadiusFilter.Create(plan.Skillset, places);
 
         // Optional AI re-rank layer. Falls back transparently to keyword-only scoring whenever the
         // model can't be reached, so an unavailable model costs ranking quality, never the run.
         if (plan.Ranking.Llm.Enabled)
         {
-            var judgeEvents = _judge.JudgeUntilShortlistStable(
+            var judgeEvents = _review.JudgeUntilShortlistStable(
                 scored, plan, radiusFilter, _examples.Load(), clients.Judge, ct);
             await foreach (var evt in judgeEvents.ConfigureAwait(false))
                 yield return evt;
@@ -129,12 +122,12 @@ public sealed class SearchPipeline : ISearchService
             Statuses: fetched.Statuses,
             RawByProvider: fetched.ByProvider,
             FetchedCount: fetched.Listings.Count,
-            DedupedCount: deduped.Count,
-            DedupeMerges: [.. exactDedupe.Merges, .. probDedupe.Merges],
+            DedupedCount: unique.Deduped.Count,
+            DedupeMerges: unique.Merges,
             Scored: scored,
             Shortlist: shortlist,
             Dropped: dropped,
-            ProbabilisticDedupe: probDedupe));
+            ProbabilisticDedupe: unique.Probabilistic));
 
         yield return new CompleteEvent(runId, listingMatches);
     }

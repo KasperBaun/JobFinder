@@ -9,13 +9,13 @@ namespace Jobmatch.Tests.Pipeline;
 
 /// <summary>End-to-end radius filter behaviour (R-105) through the SearchService pipeline,
 /// resolving against the real bundled gazetteer.</summary>
-public sealed class SearchPipelineRadiusTests : IDisposable
+public sealed class SearchRunnerRadiusTests : IDisposable
 {
     private static readonly IFileSystem Fs = new PhysicalFileSystem();
     private readonly string _tempRoot;
     private readonly string? _envBackup;
 
-    public SearchPipelineRadiusTests()
+    public SearchRunnerRadiusTests()
     {
         _tempRoot = Path.Combine(Path.GetTempPath(), "jobmatch-radius-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempRoot);
@@ -90,7 +90,7 @@ public sealed class SearchPipelineRadiusTests : IDisposable
         ctx = JobmatchUserContext.Resolve(emailOverride: "radius@example.com", repoRoot: _tempRoot, seedExamples: false);
         File.WriteAllText(Path.Combine(ctx.ImportsDir, "mine-1.json"), listingsJson);
 
-        var service = new SearchPipeline(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
+        var service = new SearchRunner(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = new List<SearchProgressEvent>();
         await foreach (var evt in service.RunAsync(new SearchRequest(), PortalConfigLoader.Parse(ManualPortal)))
             events.Add(evt);

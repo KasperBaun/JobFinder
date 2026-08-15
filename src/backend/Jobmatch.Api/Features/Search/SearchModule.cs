@@ -19,7 +19,7 @@ public static class SearchModule
     /// </param>
     public static IServiceCollection AddSearch(this IServiceCollection services, bool enableBackgroundJobs)
     {
-        services.AddScoped<ISearchService, SearchPipeline>();
+        services.AddScoped<ISearchRunner, SearchRunner>();
 
         // The JobSearch lifecycle store, the live SSE fan-out bus, and the orchestrating service and
         // job. The bus is a singleton (one in-proc broker); the rest are per request or per job scope.

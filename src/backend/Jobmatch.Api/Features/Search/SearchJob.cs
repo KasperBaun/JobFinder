@@ -9,13 +9,13 @@ namespace Jobmatch.Api.Features.Search;
 /// <summary>
 /// The background search. Hangfire invokes <see cref="Run"/> on a worker thread, decoupled from any HTTP
 /// request, so the run survives client navigation / reload / host restart. It drives the
-/// <see cref="ISearchService"/> pipeline, projects each progress event onto the persisted
+/// <see cref="ISearchRunner"/> pipeline, projects each progress event onto the persisted
 /// <see cref="JobSearch"/> record + timeline, and publishes snapshots to the <see cref="JobSearchBus"/>
 /// for live SSE viewers. The rich result <c>RunDetail</c> is written by the pipeline on success.
 /// </summary>
 [AutomaticRetry(Attempts = 1)]
 public sealed partial class SearchJob(
-    ISearchService search,
+    ISearchRunner search,
     IJobSearchStore store,
     JobSearchBus bus,
     ILogger<SearchJob> logger)

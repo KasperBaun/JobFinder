@@ -24,7 +24,7 @@ public sealed record FetchOutcome(
 /// A source that fails or hangs is recorded as failed and the run continues on the ones that
 /// returned — a single unreachable board must never cost the user their whole search.
 /// </remarks>
-public sealed class ProviderFetchStage(
+public sealed class ProviderFetch(
     string importsDirectory,
     IFileSystem fs,
     ILoggerFactory loggers,
