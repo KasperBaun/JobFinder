@@ -1,3 +1,4 @@
+using Jobmatch.Features.Providers.Legacy;
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Providers;
@@ -92,7 +93,7 @@ public sealed class SearchRunnerRadiusTests : IDisposable
 
         var service = new SearchRunner(ctx, TestServices.Catalog(ctx), TestServices.Runs(ctx), Fs);
         var events = new List<SearchProgressEvent>();
-        await foreach (var evt in service.RunAsync(new SearchRequest(), PortalConfigLoader.Parse(ManualPortal)))
+        await foreach (var evt in service.RunAsync(new SearchRequest(), PortalsYamlLoader.Parse(ManualPortal)))
             events.Add(evt);
         var complete = Assert.IsType<CompleteEvent>(events[^1]);
 

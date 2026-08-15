@@ -1,5 +1,5 @@
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Features.Identity;
+using Jobmatch.Features.Bootstrap;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 

@@ -1,9 +1,14 @@
 using Jobmatch.Infrastructure.IO;
 using YamlDotNet.Serialization;
 
-namespace Jobmatch.Features.Providers;
+namespace Jobmatch.Features.Providers.Legacy;
 
-public static class PortalConfigLoader
+/// <summary>
+/// Parses the retired <c>portals.yml</c> format. The live catalog is JSON and loads through
+/// <see cref="PortalCatalogLoader"/>; this exists only so <see cref="PortalsMigration"/> can read a
+/// pre-migration file once. Nothing writes YAML any more — do not add a caller.
+/// </summary>
+public static class PortalsYamlLoader
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder().Build();
     private static readonly ISerializer Serializer = new SerializerBuilder().Build();

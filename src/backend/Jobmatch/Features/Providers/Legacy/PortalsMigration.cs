@@ -1,6 +1,6 @@
-namespace Jobmatch.Features.Providers;
+namespace Jobmatch.Features.Providers.Legacy;
 
-public static class PortalsMigrationShim
+public static class PortalsMigration
 {
     /// <summary>
     /// One-shot migration: if <c>{userDataDir}/portals.yml</c> exists, parse it,
@@ -14,7 +14,7 @@ public static class PortalsMigrationShim
         if (!File.Exists(yamlPath)) return false;
 
         IReadOnlyList<PortalConfig> portals;
-        try { portals = PortalConfigLoader.Load(yamlPath); }
+        try { portals = PortalsYamlLoader.Load(yamlPath); }
         catch { return false; }  // unreadable yaml — leave it; user can sort out manually
 
         var statePath = Path.Combine(userDataDir, "provider-state.json");

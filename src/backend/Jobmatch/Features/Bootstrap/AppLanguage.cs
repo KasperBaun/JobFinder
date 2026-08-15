@@ -1,4 +1,4 @@
-namespace Jobmatch.Features.Identity;
+namespace Jobmatch.Features.Bootstrap;
 
 /// <summary>
 /// The interface languages the GUI ships catalogs for. Mirrors

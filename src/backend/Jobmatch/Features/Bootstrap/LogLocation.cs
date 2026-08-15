@@ -1,4 +1,4 @@
-namespace Jobmatch.Features.Identity;
+namespace Jobmatch.Features.Bootstrap;
 
 /// <summary>
 /// Resolves the directory the host's log file lives in. Logs must land in the <em>same</em> data

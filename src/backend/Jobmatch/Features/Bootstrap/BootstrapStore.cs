@@ -2,7 +2,7 @@ using System.Text.Json;
 using Jobmatch.Infrastructure.IO;
 using Jobmatch.Infrastructure.Json;
 
-namespace Jobmatch.Features.Identity;
+namespace Jobmatch.Features.Bootstrap;
 
 /// <summary>
 /// The one setting the app persists <em>outside</em> the user's data directory: which directory that

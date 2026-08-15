@@ -1,4 +1,4 @@
-namespace Jobmatch.Features.Identity;
+namespace Jobmatch.Features.Bootstrap;
 
 public sealed record WhoamiInfo(string Email, string DataDir, string ToolVersion);
 

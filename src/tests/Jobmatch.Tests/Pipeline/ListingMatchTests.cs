@@ -1,3 +1,4 @@
+using Jobmatch.Features.Providers.Legacy;
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Providers;
@@ -93,7 +94,7 @@ public sealed class ListingMatchTests : IDisposable
         File.WriteAllText(ctx.SkillsetPath, MinimalSkillset);
         File.WriteAllText(Path.Combine(ctx.RootDir, "ranking.yml"), MinimalRanking);
         ctx = JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
-        var portals = PortalConfigLoader.Parse("""
+        var portals = PortalsYamlLoader.Parse("""
             portals:
               - name: mine
                 type: manual

@@ -1,7 +1,8 @@
 using Jobmatch.Features.Providers;
+using Jobmatch.Features.Providers.Legacy;
 using Jobmatch.Infrastructure.Paths;
 
-namespace Jobmatch.Features.Identity;
+namespace Jobmatch.Features.Bootstrap;
 
 /// <summary>What the setup screen needs: whether we're configured, and sensible pre-filled hints.</summary>
 public sealed record SetupState(
@@ -116,7 +117,7 @@ public sealed class UserContextProvider : IUserContextProvider
         // seedExamples: false — first run guides the user to create their own profile instead of
         // dropping in a generic example. The profile is written by the setup wizard (PUT /api/skillset).
         var ctx = UserContext.Resolve(emailOverride: email, dataDirOverride: dataDir, seedExamples: false);
-        PortalsMigrationShim.RunIfNeeded(ctx.RootDir);
+        PortalsMigration.RunIfNeeded(ctx.RootDir);
         return ctx;
     }
 }

@@ -10,7 +10,7 @@ using Jobmatch.Api.Features.Skillsets;
 using Jobmatch.Api.Features.Transfer;
 using Jobmatch.Api.Features.Whoami;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Features.Identity;
+using Jobmatch.Features.Bootstrap;
 using Jobmatch.Infrastructure.IO;
 using Jobmatch.Infrastructure.Paths;
 using Microsoft.AspNetCore.Builder;

@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Net;
 using Jobmatch.Api;
-using Jobmatch.Features.Identity;
+using Jobmatch.Features.Bootstrap;
 using Jobmatch.Infrastructure.Paths;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

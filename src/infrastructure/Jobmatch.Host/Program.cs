@@ -7,7 +7,7 @@ using System.Text.Json;
 using Hangfire.Dashboard;
 using Hangfire;
 using Jobmatch.Api;
-using Jobmatch.Features.Identity;
+using Jobmatch.Features.Bootstrap;
 using Jobmatch.Infrastructure.Paths;
 using Jobmatch;
 using Microsoft.Extensions.FileProviders;

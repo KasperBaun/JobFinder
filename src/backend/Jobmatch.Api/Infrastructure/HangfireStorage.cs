@@ -1,4 +1,4 @@
-using Jobmatch.Features.Identity;
+using Jobmatch.Features.Bootstrap;
 using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,4 +1,4 @@
-using Jobmatch.Features.Identity;
+using Jobmatch.Features.Bootstrap;
 
 namespace Jobmatch.Tests.Features.Identity;
 

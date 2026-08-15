@@ -1,3 +1,4 @@
+using Jobmatch.Features.Providers.Legacy;
 using System.Net.Sockets;
 using System.Net;
 using System.Text.Json.Serialization;
@@ -94,7 +95,7 @@ public sealed class SearchRunnerTests : IDisposable
         File.WriteAllText(Path.Combine(ctx.RootDir, "ranking.yml"), rankingYaml ?? MinimalRanking);
         // Re-resolve so RankingPath now points at the user-local file.
         ctx = JobmatchUserContext.Resolve(emailOverride: email, repoRoot: _tempRoot, seedExamples: false);
-        var portals = PortalConfigLoader.Parse(portalsYaml);
+        var portals = PortalsYamlLoader.Parse(portalsYaml);
         return (ctx, portals);
     }
 

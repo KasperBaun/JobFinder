@@ -1,7 +1,7 @@
 using Jobmatch.Infrastructure.Paths;
 using Jobmatch.Infrastructure;
 
-namespace Jobmatch.Features.Identity;
+namespace Jobmatch.Features.Bootstrap;
 
 public sealed class WhoamiService(UserContext ctx) : IWhoamiService
 {

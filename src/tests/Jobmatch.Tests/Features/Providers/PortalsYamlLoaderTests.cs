@@ -1,9 +1,10 @@
+using Jobmatch.Features.Providers.Legacy;
 using Jobmatch.Features.Providers;
 using Jobmatch;
 
 namespace Jobmatch.Tests.Features.Providers;
 
-public sealed class PortalConfigLoaderTests
+public sealed class PortalsYamlLoaderTests
 {
     [Fact]
     public void Parse_Valid_Yaml_Returns_Portals()
@@ -26,7 +27,7 @@ public sealed class PortalConfigLoaderTests
                 enabled: false
             """;
 
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
 
         Assert.Equal(3, portals.Count);
         Assert.Equal("jobnet", portals[0].Name);
@@ -49,7 +50,7 @@ public sealed class PortalConfigLoaderTests
             somethingelse:
               - name: x
             """;
-        var ex = Assert.Throws<ConfigException>(() => PortalConfigLoader.Parse(yaml));
+        var ex = Assert.Throws<ConfigException>(() => PortalsYamlLoader.Parse(yaml));
         Assert.Contains("portals", ex.Message);
     }
 
@@ -61,7 +62,7 @@ public sealed class PortalConfigLoaderTests
               - name: bad
                 type: telepathy
             """;
-        var ex = Assert.Throws<ConfigException>(() => PortalConfigLoader.Parse(yaml));
+        var ex = Assert.Throws<ConfigException>(() => PortalsYamlLoader.Parse(yaml));
         Assert.Contains("type", ex.Message);
     }
 
@@ -73,7 +74,7 @@ public sealed class PortalConfigLoaderTests
               - type: api
                 endpoint: https://example.com
             """;
-        var ex = Assert.Throws<ConfigException>(() => PortalConfigLoader.Parse(yaml));
+        var ex = Assert.Throws<ConfigException>(() => PortalsYamlLoader.Parse(yaml));
         Assert.Contains("name", ex.Message);
     }
 
@@ -85,7 +86,7 @@ public sealed class PortalConfigLoaderTests
               - name: x
                 type: manual
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         Assert.True(portals[0].Enabled);
     }
 
@@ -102,7 +103,7 @@ public sealed class PortalConfigLoaderTests
                   location: "Copenhagen"
             """;
 
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
 
         Assert.NotNull(portals[0].StaticFields);
         Assert.Equal("Pleo", portals[0].StaticFields!["company"]);
@@ -117,7 +118,7 @@ public sealed class PortalConfigLoaderTests
               - name: x
                 type: manual
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         Assert.Null(portals[0].StaticFields);
     }
 
@@ -136,7 +137,7 @@ public sealed class PortalConfigLoaderTests
                   keywords: "software"
                   page: 1
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
 
         Assert.Equal("post", portals[0].Method, ignoreCase: true);
         Assert.NotNull(portals[0].BodyTemplate);
@@ -160,7 +161,7 @@ public sealed class PortalConfigLoaderTests
                   size: 50
                   max_pages: 3
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         var p = portals[0].Pagination;
         Assert.NotNull(p);
         Assert.Equal("page", p!.Param);
@@ -180,7 +181,7 @@ public sealed class PortalConfigLoaderTests
                 type: api
                 endpoint: https://example.com
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         Assert.Null(portals[0].Pagination);
     }
 
@@ -193,7 +194,7 @@ public sealed class PortalConfigLoaderTests
                 type: api
                 endpoint: https://example.com
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         Assert.Null(portals[0].Method);
         Assert.Null(portals[0].BodyTemplate);
     }
@@ -207,7 +208,7 @@ public sealed class PortalConfigLoaderTests
                 type: api
                 endpoint: "::not-a-url::"
             """;
-        var ex = Assert.Throws<ConfigException>(() => PortalConfigLoader.Parse(yaml));
+        var ex = Assert.Throws<ConfigException>(() => PortalsYamlLoader.Parse(yaml));
         Assert.Contains("endpoint", ex.Message);
     }
 
@@ -220,7 +221,7 @@ public sealed class PortalConfigLoaderTests
                 name: x
                 type: manual
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         Assert.Equal(7, portals[0].Id);
     }
 
@@ -232,7 +233,7 @@ public sealed class PortalConfigLoaderTests
               - name: x
                 type: manual
             """;
-        var portals = PortalConfigLoader.Parse(yaml);
+        var portals = PortalsYamlLoader.Parse(yaml);
         Assert.Equal(0, portals[0].Id);
     }
 
@@ -250,7 +251,7 @@ public sealed class PortalConfigLoaderTests
                     type: manual
                 """);
 
-            var portals = PortalConfigLoader.Load(path);
+            var portals = PortalsYamlLoader.Load(path);
             Assert.Equal(1, portals[0].Id);
             Assert.Equal(2, portals[1].Id);
 
@@ -284,7 +285,7 @@ public sealed class PortalConfigLoaderTests
 
             // wait long enough that any rewrite would change the timestamp
             Thread.Sleep(50);
-            _ = PortalConfigLoader.Load(path);
+            _ = PortalsYamlLoader.Load(path);
 
             var afterWriteTime = File.GetLastWriteTimeUtc(path);
             Assert.Equal(beforeWriteTime, afterWriteTime);
@@ -315,7 +316,7 @@ public sealed class PortalConfigLoaderTests
                     type: manual
                 """);
 
-            var portals = PortalConfigLoader.Load(path);
+            var portals = PortalsYamlLoader.Load(path);
             Assert.Equal(5, portals[0].Id);
             Assert.Equal(10, portals[1].Id);
             Assert.Equal(9, portals[2].Id);

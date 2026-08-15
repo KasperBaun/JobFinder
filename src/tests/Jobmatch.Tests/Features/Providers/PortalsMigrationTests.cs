@@ -1,15 +1,16 @@
+using Jobmatch.Features.Providers.Legacy;
 using Jobmatch.Features.Providers;
 
 namespace Jobmatch.Tests.Features.Providers;
 
-public sealed class PortalsMigrationShimTests
+public sealed class PortalsMigrationTests
 {
     [Fact]
     public void NoYaml_NoOp()
     {
         var dir = Directory.CreateTempSubdirectory("shim-noop");
         var stateBefore = ProviderStateLoader.LoadOrEmpty(Path.Combine(dir.FullName, "provider-state.json"));
-        var migrated = PortalsMigrationShim.RunIfNeeded(dir.FullName);
+        var migrated = PortalsMigration.RunIfNeeded(dir.FullName);
         Assert.False(migrated);
         Assert.False(File.Exists(Path.Combine(dir.FullName, "provider-state.json")));
     }
@@ -37,7 +38,7 @@ public sealed class PortalsMigrationShimTests
             """;
         File.WriteAllText(Path.Combine(dir.FullName, "portals.yml"), yaml);
 
-        var migrated = PortalsMigrationShim.RunIfNeeded(dir.FullName);
+        var migrated = PortalsMigration.RunIfNeeded(dir.FullName);
         Assert.True(migrated);
 
         var state = ProviderStateLoader.LoadOrEmpty(Path.Combine(dir.FullName, "provider-state.json"));
@@ -56,7 +57,7 @@ public sealed class PortalsMigrationShimTests
         File.WriteAllText(
             Path.Combine(dir.FullName, "portals.yml"),
             "portals:\n  - id: 1\n    name: a\n    type: manual\n    enabled: false\n");
-        Assert.True(PortalsMigrationShim.RunIfNeeded(dir.FullName));
-        Assert.False(PortalsMigrationShim.RunIfNeeded(dir.FullName)); // no yaml left
+        Assert.True(PortalsMigration.RunIfNeeded(dir.FullName));
+        Assert.False(PortalsMigration.RunIfNeeded(dir.FullName)); // no yaml left
     }
 }
