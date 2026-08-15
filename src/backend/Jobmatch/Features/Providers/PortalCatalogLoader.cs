@@ -76,6 +76,7 @@ public static class PortalCatalogLoader
         var bodyTemplate = ReadObjectDict(el, "bodyTemplate");
         var pagination = ReadPagination(el, name);
         var html = ReadHtmlSelectors(el, name, type);
+        RequireFieldsFor(type, name, endpoint, responseMapping, method);
 
         return new PortalConfig(
             Name: name,
@@ -98,6 +99,31 @@ public static class PortalCatalogLoader
             EnrichBody: enrichBody,
             NotesDa: notesDa);
     }
+
+    // PortalConfig holds every type's fields, so which ones are required depends on the type. The
+    // adapters each re-assert this when they run; checking it here means a catalog entry that can
+    // never work fails as the catalog is read, not part-way through the run that first reaches it.
+    private static void RequireFieldsFor(
+        PortalType type,
+        string name,
+        Uri? endpoint,
+        IReadOnlyDictionary<string, string>? responseMapping,
+        string? method)
+    {
+        // Manual sources are files dropped in the imports directory — there is nothing to call.
+        if (type is not PortalType.Manual && endpoint is null)
+            throw new ConfigException($"portal '{name}': '{type}' portals require 'endpoint'");
+
+        if (type is PortalType.Api && responseMapping is null)
+            throw new ConfigException($"portal '{name}': api portals require 'responseMapping'");
+
+        if (method is not null && !HttpMethods.Contains(method.Trim()))
+            throw new ConfigException(
+                $"portal '{name}': 'method' must be one of [{string.Join(", ", HttpMethods)}], got '{method}'");
+    }
+
+    private static readonly HashSet<string> HttpMethods =
+        new(["GET", "POST"], StringComparer.OrdinalIgnoreCase);
 
     private static PaginationConfig? ReadPagination(JsonElement el, string portalName)
     {

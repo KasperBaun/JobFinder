@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Jobmatch;
 using Jobmatch.Features.Providers;
 
 namespace Jobmatch.Tests.Features.Providers;
@@ -178,5 +179,67 @@ public sealed class PortalCatalogLoaderTests
             && p.StaticFields.TryGetValue("company", out var c)
             && !string.IsNullOrWhiteSpace(c));
         Assert.NotNull(greenhouseWithCompany);
+    }
+
+    [Theory]
+    [InlineData("api")]
+    [InlineData("rss")]
+    [InlineData("html")]
+    [InlineData("teamtailor")]
+    [InlineData("hrmanager")]
+    public void Parse_Rejects_A_Fetching_Portal_With_No_Endpoint(string type)
+    {
+        var json = $$"""
+            { "version": 1, "providers": [
+              { "id": 1, "name": "no-endpoint", "type": "{{type}}", "enabled": true,
+                "html": { "listSelector": ".job", "titleSelector": ".t" },
+                "responseMapping": { "items_path": "x", "id": "i", "title": "t" } }
+            ] }
+            """;
+
+        var ex = Assert.Throws<ConfigException>(() => PortalCatalogLoader.Parse(json));
+        Assert.Contains("endpoint", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_Allows_A_Manual_Portal_With_No_Endpoint()
+    {
+        var json = """
+            { "version": 1, "providers": [
+              { "id": 1, "name": "manual-x", "type": "manual", "enabled": true }
+            ] }
+            """;
+
+        var portal = Assert.Single(PortalCatalogLoader.Parse(json));
+        Assert.Null(portal.Endpoint);
+    }
+
+    [Fact]
+    public void Parse_Rejects_An_Api_Portal_With_No_ResponseMapping()
+    {
+        var json = """
+            { "version": 1, "providers": [
+              { "id": 1, "name": "no-mapping", "type": "api", "enabled": true,
+                "endpoint": "https://example.com/jobs" }
+            ] }
+            """;
+
+        var ex = Assert.Throws<ConfigException>(() => PortalCatalogLoader.Parse(json));
+        Assert.Contains("responseMapping", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_Rejects_An_Unsupported_Http_Method()
+    {
+        var json = """
+            { "version": 1, "providers": [
+              { "id": 1, "name": "odd-method", "type": "api", "enabled": true,
+                "endpoint": "https://example.com/jobs", "method": "PUT",
+                "responseMapping": { "items_path": "x", "id": "i", "title": "t" } }
+            ] }
+            """;
+
+        var ex = Assert.Throws<ConfigException>(() => PortalCatalogLoader.Parse(json));
+        Assert.Contains("PUT", ex.Message, StringComparison.Ordinal);
     }
 }
