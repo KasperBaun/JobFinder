@@ -50,7 +50,7 @@ public static class ShortlistBuilder
             }
         }
 
-        if (radius?.Evaluate(m.Listing) is RadiusVerdict verdict)
+        if (radius?.EvaluateDrop(m.Listing) is RadiusVerdict verdict)
         {
             return new("outside_radius",
                 $"located ~{verdict.Km} km away ({verdict.Place}), max {verdict.MaxKm} km",

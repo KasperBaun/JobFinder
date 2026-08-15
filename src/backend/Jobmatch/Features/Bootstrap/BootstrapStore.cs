@@ -54,6 +54,6 @@ public sealed class BootstrapStore
 
     public void Save(BootstrapConfig config)
     {
-        AtomicFile.Write(Path, stream => JsonSerializer.Serialize(stream, config, JobmatchJsonOptions.Indented));
+        AtomicFile.WriteStream(Path, stream => JsonSerializer.Serialize(stream, config, JobmatchJsonOptions.Indented));
     }
 }

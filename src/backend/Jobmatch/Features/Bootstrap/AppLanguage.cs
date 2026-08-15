@@ -15,8 +15,7 @@ public static class AppLanguage
     public static bool IsSupported(string? language) =>
         !string.IsNullOrWhiteSpace(language) && Supported.Contains(language.Trim());
 
-    /// <summary>The canonical lower-case tag, or null when absent or unsupported.</summary>
-    public static string? Normalize(string? language)
+    public static string? TryNormalize(string? language)
     {
         if (!IsSupported(language)) return null;
         return language!.Trim().ToLowerInvariant();

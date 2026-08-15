@@ -53,7 +53,7 @@ public sealed class AtomicFileTests : IDisposable
     {
         var path = Path.Combine(_dir, "stream.json");
 
-        AtomicFile.Write(path, stream =>
+        AtomicFile.WriteStream(path, stream =>
         {
             using var writer = new StreamWriter(stream);
             writer.Write("streamed");

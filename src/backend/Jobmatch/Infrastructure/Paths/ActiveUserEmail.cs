@@ -11,7 +11,6 @@ public static class ActiveUserEmail
 {
     public const string EnvironmentVariable = "JOBFINDER_USER";
 
-    /// <summary>Best-effort resolution; null rather than throwing when nothing identifies the user.</summary>
     public static string? TryResolve(string? emailOverride = null)
     {
         if (!string.IsNullOrWhiteSpace(emailOverride))

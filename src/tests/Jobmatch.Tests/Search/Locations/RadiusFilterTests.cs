@@ -53,7 +53,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Remote_Listing_Is_Exempt()
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        Assert.Null(filter.Evaluate(L("Warsaw", RemoteMode.Remote)));
+        Assert.Null(filter.EvaluateDrop(L("Warsaw", RemoteMode.Remote)));
     }
 
     [Theory]
@@ -64,7 +64,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Missing_Or_Unresolvable_Location_Passes(string? location)
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        Assert.Null(filter.Evaluate(L(location)));
+        Assert.Null(filter.EvaluateDrop(L(location)));
     }
 
     [Theory]
@@ -74,7 +74,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Far_Listing_Drops_For_Every_NonRemote_Mode(RemoteMode mode)
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        var verdict = filter.Evaluate(L("Warsaw, Poland", mode));
+        var verdict = filter.EvaluateDrop(L("Warsaw, Poland", mode));
         Assert.NotNull(verdict);
         Assert.InRange(verdict!.Km, 660, 680);
         Assert.Equal(50, verdict.MaxKm);
@@ -85,7 +85,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Within_Radius_Passes()
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        Assert.Null(filter.Evaluate(L("Copenhagen")));
+        Assert.Null(filter.EvaluateDrop(L("Copenhagen")));
     }
 
     [Fact]
@@ -93,10 +93,10 @@ public sealed class RadiusFilterTests
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
         // One site is home — passes even though the other is far away.
-        Assert.Null(filter.Evaluate(L("Warsaw / Copenhagen")));
+        Assert.Null(filter.EvaluateDrop(L("Warsaw / Copenhagen")));
 
         // Both sites out of range — verdict names the nearest one.
-        var verdict = filter.Evaluate(L("Warsaw, Aarhus"));
+        var verdict = filter.EvaluateDrop(L("Warsaw, Aarhus"));
         Assert.NotNull(verdict);
         Assert.Equal("Aarhus", verdict!.Place);
         Assert.InRange(verdict.Km, 154, 160);
@@ -106,7 +106,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_TrailingCountry_Does_Not_Rescue_A_Far_City()
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        var verdict = filter.Evaluate(L("Aarhus, Denmark"));
+        var verdict = filter.EvaluateDrop(L("Aarhus, Denmark"));
         Assert.NotNull(verdict);
         Assert.Equal("Aarhus", verdict!.Place);
         Assert.InRange(verdict.Km, 154, 160);
@@ -118,7 +118,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Conjunction_Finds_The_Near_Site(string location)
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        Assert.Null(filter.Evaluate(L(location)));
+        Assert.Null(filter.EvaluateDrop(L(location)));
     }
 
     [Theory]
@@ -127,7 +127,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Conjunction_Verdict_Names_The_Nearest_Site(string location, string expected)
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        var verdict = filter.Evaluate(L(location));
+        var verdict = filter.EvaluateDrop(L(location));
         Assert.NotNull(verdict);
         Assert.Equal(expected, verdict!.Place);
     }
@@ -143,7 +143,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_Area_In_The_Home_Country_Is_Not_A_Site(string location)
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(radiusKm: 5), TestGazetteer)!;
-        Assert.Null(filter.Evaluate(L(location)));
+        Assert.Null(filter.EvaluateDrop(L(location)));
     }
 
     // The city named beside the home country is still a site — only the coarse match is waived.
@@ -151,7 +151,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_HomeCountry_Waiver_Does_Not_Rescue_A_Named_City()
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        var verdict = filter.Evaluate(L("Aarhus, Danmark"));
+        var verdict = filter.EvaluateDrop(L("Aarhus, Danmark"));
         Assert.NotNull(verdict);
         Assert.Equal("Aarhus", verdict!.Place);
     }
@@ -160,7 +160,7 @@ public sealed class RadiusFilterTests
     public void Evaluate_CountryOnly_Location_Still_Drops()
     {
         var filter = RadiusFilter.Create(HomeInCopenhagen(), TestGazetteer)!;
-        var verdict = filter.Evaluate(L("Poland"));
+        var verdict = filter.EvaluateDrop(L("Poland"));
         Assert.NotNull(verdict);
         Assert.Equal("Poland", verdict!.Place);
         Assert.InRange(verdict.Km, 660, 680);

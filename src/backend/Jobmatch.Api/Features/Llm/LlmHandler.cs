@@ -23,7 +23,7 @@ public sealed class LlmHandler(
         () =>
         {
             var llm = model.Config;
-            var status = downloader.GetStatus(model.ModelPath, llm.ModelDownloadUrl);
+            var status = downloader.GetStatus(model.AbsoluteModelPath, llm.ModelDownloadUrl);
             var dl = downloads.Snapshot();
             var response = new LlmStatusResponse(
                 Enabled: llm.Enabled,
@@ -43,7 +43,7 @@ public sealed class LlmHandler(
         "start llm model download",
         () =>
         {
-            var snapshot = downloads.Start(model.Config.ModelDownloadUrl, model.ModelPath);
+            var snapshot = downloads.Start(model.Config.ModelDownloadUrl, model.AbsoluteModelPath);
             Logger.LogInformation("LLM model download requested → state {State}", snapshot.State);
             var body = new LlmDownloadStatus(snapshot.State, snapshot.DownloadedBytes, snapshot.TotalBytes, snapshot.Error);
             return Task.FromResult<IResult>(Results.Ok(body));

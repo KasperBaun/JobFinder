@@ -51,7 +51,6 @@ public static class UserProviderStore
         return created;
     }
 
-    /// <summary>Removes the user provider with <paramref name="id"/>. Returns false if not present.</summary>
     public static bool Remove(string path, int id)
     {
         var existing = Load(path);

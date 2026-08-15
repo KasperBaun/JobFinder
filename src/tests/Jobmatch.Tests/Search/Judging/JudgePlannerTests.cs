@@ -92,12 +92,12 @@ public sealed class JudgePlannerTests
         var scored = Corpus(6);
         var planner = Planner(firstPassN: 3, topN: 3);
 
-        var first = planner.Next(scored);
-        var second = planner.Next(scored);
+        var first = planner.NextCandidates(scored);
+        var second = planner.NextCandidates(scored);
 
         Assert.Equal(["l1", "l2", "l3"], Ids(first));
         Assert.Empty(second);
-        Assert.Equal(1, planner.Pass);
+        Assert.Equal(1, planner.PassesHandedOut);
     }
 
     [Fact]
@@ -106,10 +106,10 @@ public sealed class JudgePlannerTests
         var scored = Corpus(6);
         var planner = Planner(firstPassN: 3, topN: 3);
 
-        planner.Next(scored);
+        planner.NextCandidates(scored);
         scored = Demote(scored, "l1", "l2");
 
-        Assert.Equal(["l4", "l5"], Ids(planner.Next(scored)));
+        Assert.Equal(["l4", "l5"], Ids(planner.NextCandidates(scored)));
     }
 
     [Fact]
@@ -118,12 +118,12 @@ public sealed class JudgePlannerTests
         var scored = Corpus(6);
         var planner = Planner(firstPassN: 1, topN: 3);
 
-        Assert.Equal(["l1"], Ids(planner.Next(scored)));
+        Assert.Equal(["l1"], Ids(planner.NextCandidates(scored)));
 
         // l1 keeps its shortlist seat after judging; the follow-up must not pay for it twice.
-        var second = planner.Next(scored);
+        var second = planner.NextCandidates(scored);
         Assert.Equal(["l2", "l3"], Ids(second));
-        Assert.Empty(planner.Next(scored));
+        Assert.Empty(planner.NextCandidates(scored));
     }
 
     [Fact]
@@ -138,12 +138,12 @@ public sealed class JudgePlannerTests
         };
         var planner = Planner(firstPassN: 1, topN: 3, minScore: 0.5);
 
-        Assert.Equal(["near-1"], Ids(planner.Next(scored)));
+        Assert.Equal(["near-1"], Ids(planner.NextCandidates(scored)));
 
         // outside_radius stays dropped and below_min_score keeps `weak` off the shortlist, so the
         // follow-up buys verdicts for near-2 only.
-        Assert.Equal(["near-2"], Ids(planner.Next(scored)));
-        Assert.Empty(planner.Next(scored));
+        Assert.Equal(["near-2"], Ids(planner.NextCandidates(scored)));
+        Assert.Empty(planner.NextCandidates(scored));
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public sealed class JudgePlannerTests
         var spent = 0;
         for (var pass = 0; pass < 10; pass++)
         {
-            var batch = planner.Next(scored);
+            var batch = planner.NextCandidates(scored);
             if (batch.Count == 0) break;
             spent += batch.Count;
             scored = Demote(scored, [.. Ids(batch)]);
@@ -163,7 +163,7 @@ public sealed class JudgePlannerTests
 
         Assert.Equal(6, spent);
         Assert.Equal(0, planner.Remaining);
-        Assert.Empty(planner.Next(scored));
+        Assert.Empty(planner.NextCandidates(scored));
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class JudgePlannerTests
         var passes = 0;
         for (var i = 0; i < 10; i++)
         {
-            var batch = planner.Next(scored);
+            var batch = planner.NextCandidates(scored);
             if (batch.Count == 0) break;
             passes++;
             scored = Demote(scored, batch[0].Listing.Id);
@@ -192,8 +192,8 @@ public sealed class JudgePlannerTests
         var scored = Corpus(5);
         var planner = Planner(firstPassN: 0, topN: 3);
 
-        Assert.Equal(5, planner.Next(scored).Count);
-        Assert.Empty(planner.Next(Demote(scored, "l1", "l2")));
+        Assert.Equal(5, planner.NextCandidates(scored).Count);
+        Assert.Empty(planner.NextCandidates(Demote(scored, "l1", "l2")));
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public sealed class JudgePlannerTests
         var scored = new List<Match> { Scored("far", 0.95, location: "Aalborg") };
         var planner = Planner(firstPassN: 3, topN: 3);
 
-        Assert.Empty(planner.Next(scored));
-        Assert.Equal(0, planner.Pass);
+        Assert.Empty(planner.NextCandidates(scored));
+        Assert.Equal(0, planner.PassesHandedOut);
     }
 }

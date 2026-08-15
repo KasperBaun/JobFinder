@@ -58,11 +58,10 @@ public sealed class UserContext
         if (UserDataDirectory.Ensure(rootDir) && seedExamples)
             UserDataDirectory.SeedFromExamples(rootDir, logger);
 
-        return For(email, rootDir);
+        return Layout(email, rootDir);
     }
 
-    /// <summary>The path layout for an already-resolved user and directory. Creates nothing.</summary>
-    public static UserContext For(string email, string rootDir)
+    public static UserContext Layout(string email, string rootDir)
     {
         // A per-user ranking.yml wins; otherwise the shipped default is used in place, never copied,
         // so an upgrade's tuning reaches users who never customised theirs.

@@ -9,8 +9,7 @@ public interface ILlmModelLocator
 {
     LlmConfig Config { get; }
 
-    /// <summary>The configured model path made absolute, relative to the user's data directory.</summary>
-    string ModelPath { get; }
+    string AbsoluteModelPath { get; }
 
     /// <summary>
     /// Throws <see cref="InvalidRequestException"/> with a message the GUI can show if AI cannot run:
@@ -27,9 +26,10 @@ public interface ILlmModelLocator
 /// </summary>
 public sealed class LlmModelLocator(UserContext ctx) : ILlmModelLocator
 {
+    // Every read re-parses ranking.yml, so callers that need it twice hold onto one copy.
     public LlmConfig Config => RankingConfigLoader.Load(ctx.RankingPath).Llm;
 
-    public string ModelPath => Resolve(Config.ModelPath, ctx.RootDir);
+    public string AbsoluteModelPath => Config.AbsoluteModelPath(ctx.RootDir);
 
     public void EnsureReady()
     {
@@ -42,10 +42,7 @@ public sealed class LlmModelLocator(UserContext ctx) : ILlmModelLocator
         if (!llm.Provider.Equals("llamasharp", StringComparison.OrdinalIgnoreCase))
             return;
 
-        if (!File.Exists(Resolve(llm.ModelPath, ctx.RootDir)))
+        if (!File.Exists(llm.AbsoluteModelPath(ctx.RootDir)))
             throw new InvalidRequestException("The AI model has not been downloaded yet — download it first.");
     }
-
-    private static string Resolve(string configured, string userDataDir) =>
-        Path.IsPathRooted(configured) ? configured : Path.Combine(userDataDir, configured);
 }

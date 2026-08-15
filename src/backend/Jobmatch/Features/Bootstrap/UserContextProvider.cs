@@ -89,7 +89,7 @@ public sealed class UserContextProvider : IUserContextProvider
                 trimmedEmail,
                 ctx.RootDir,
                 DateTimeOffset.UtcNow,
-                AppLanguage.Normalize(language)));
+                AppLanguage.TryNormalize(language)));
             _ctx = ctx;
             return ctx;
         }
@@ -97,7 +97,7 @@ public sealed class UserContextProvider : IUserContextProvider
 
     public string SetLanguage(string? language)
     {
-        var normalized = AppLanguage.Normalize(language)
+        var normalized = AppLanguage.TryNormalize(language)
             ?? throw new InvalidRequestException(
                 $"'{language}' is not a supported language. Supported: {string.Join(", ", AppLanguage.Supported)}.");
 

@@ -34,25 +34,24 @@ public sealed class JudgePlanner(
     private readonly HashSet<string> _attempted = new(StringComparer.Ordinal);
     private int _remaining = Budget(firstPassN, topN);
 
-    /// <summary>Passes handed out so far — 1 while the first pass is judging.</summary>
-    public int Pass { get; private set; }
+    public int PassesHandedOut { get; private set; }
 
     public int Remaining => _remaining;
 
-    /// <summary>Candidates for the next pass against the scores as they now stand; empty when done.</summary>
-    public List<Match> Next(IReadOnlyList<Match> scored)
+    /// <summary>Empty when the budget or the pass ceiling is spent, or nothing is left unjudged.</summary>
+    public List<Match> NextCandidates(IReadOnlyList<Match> currentScores)
     {
-        if (Pass >= MaxPasses || _remaining <= 0) return [];
+        if (PassesHandedOut >= MaxPasses || _remaining <= 0) return [];
 
-        var candidates = Pass == 0
-            ? JudgeCandidates.ForFirstPass(scored, ranking, radius, firstPassN)
-            : JudgeCandidates.UnjudgedShortlist(scored, ranking, minScore, topN, radius, _attempted);
+        var candidates = PassesHandedOut == 0
+            ? JudgeCandidates.ForFirstPass(currentScores, ranking, radius, firstPassN)
+            : JudgeCandidates.UnjudgedShortlist(currentScores, ranking, minScore, topN, radius, _attempted);
         if (candidates.Count > _remaining) candidates = [.. candidates.Take(_remaining)];
         if (candidates.Count == 0) return [];
 
         foreach (var m in candidates) _attempted.Add(m.Listing.Id);
         _remaining -= candidates.Count;
-        Pass++;
+        PassesHandedOut++;
         return candidates;
     }
 

@@ -41,8 +41,7 @@ public sealed class RadiusFilter
         return new RadiusFilter(gazetteer, lat, lon, skillset.RadiusKm.Value, HomeCountryCode(skillset, gazetteer));
     }
 
-    /// <summary>Null = keep (exempt, unresolvable, or within radius); a verdict = drop.</summary>
-    public RadiusVerdict? Evaluate(Listing listing)
+    public RadiusVerdict? EvaluateDrop(Listing listing)
     {
         if (listing.RemoteMode == RemoteMode.Remote) return null;
 

@@ -17,6 +17,11 @@ public sealed record LlmConfig(
     int ContextSize,        // llamasharp only — model context window in tokens
     int GpuLayerCount)      // llamasharp only — layers offloaded to GPU (0 = CPU-only)
 {
+    // A relative ModelPath is relative to the user's own data directory, so the default
+    // `models/gemma-3-4b-it-q4_k_m.gguf` lands at data/<email>/models/gemma-3-4b-it-q4_k_m.gguf.
+    public string AbsoluteModelPath(string userDataDir) =>
+        Path.IsPathRooted(ModelPath) ? ModelPath : Path.Combine(userDataDir, ModelPath);
+
     public static LlmConfig Disabled { get; } = new(
         Enabled: false,
         Provider: "llamasharp",

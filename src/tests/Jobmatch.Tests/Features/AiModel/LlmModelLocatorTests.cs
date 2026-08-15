@@ -42,7 +42,7 @@ public sealed class LlmModelLocatorTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_ctx.RootDir, "ranking.yml"), RankingPreamble + llmBlock);
         // RankingPath resolves the per-user file first, so re-resolving picks up what was just written.
-        return new LlmModelLocator(JobmatchUserContext.For(_ctx.Email, _ctx.RootDir));
+        return new LlmModelLocator(JobmatchUserContext.Layout(_ctx.Email, _ctx.RootDir));
     }
 
     private const string EnabledLlamaSharp = """
@@ -57,7 +57,7 @@ public sealed class LlmModelLocatorTests : IDisposable
     {
         var locator = Locator(EnabledLlamaSharp);
 
-        Assert.Equal(Path.Combine(_ctx.RootDir, "models/gemma.gguf"), locator.ModelPath);
+        Assert.Equal(Path.Combine(_ctx.RootDir, "models/gemma.gguf"), locator.AbsoluteModelPath);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class LlmModelLocatorTests : IDisposable
               model_path: {absolute}
             """);
 
-        Assert.Equal(absolute, locator.ModelPath);
+        Assert.Equal(absolute, locator.AbsoluteModelPath);
     }
 
     [Fact]
@@ -87,8 +87,8 @@ public sealed class LlmModelLocatorTests : IDisposable
     public void EnsureReadyPassesOnceTheModelIsPresent()
     {
         var locator = Locator(EnabledLlamaSharp);
-        Directory.CreateDirectory(Path.GetDirectoryName(locator.ModelPath)!);
-        File.WriteAllText(locator.ModelPath, "gguf");
+        Directory.CreateDirectory(Path.GetDirectoryName(locator.AbsoluteModelPath)!);
+        File.WriteAllText(locator.AbsoluteModelPath, "gguf");
 
         locator.EnsureReady();
     }

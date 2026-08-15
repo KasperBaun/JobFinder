@@ -35,7 +35,7 @@ public sealed class AiReview(string modelRootDir, ILoggerFactory loggers)
     {
         var llm = plan.Ranking.Llm;
         var planner = new JudgePlanner(plan.Ranking, plan.MinScore, plan.TopN, radius, llm.TopN);
-        var toJudge = planner.Next(scored);
+        var toJudge = planner.NextCandidates(scored);
         if (toJudge.Count == 0) yield break;
 
         ILlmClient? client = null;
@@ -43,7 +43,7 @@ public sealed class AiReview(string modelRootDir, ILoggerFactory loggers)
         {
             while (toJudge.Count > 0)
             {
-                yield return new LlmJudgingEvent(toJudge.Count, Followup: planner.Pass > 1);
+                yield return new LlmJudgingEvent(toJudge.Count, Followup: planner.PassesHandedOut > 1);
 
                 client ??= LlmClientFactory.Create(llm, modelRootDir, http, loggers);
                 if (client is null) yield break;
@@ -54,7 +54,7 @@ public sealed class AiReview(string modelRootDir, ILoggerFactory loggers)
                 // particular listings confused it — further passes would only burn the budget.
                 if (verdicts == 0) yield break;
 
-                toJudge = planner.Next(scored);
+                toJudge = planner.NextCandidates(scored);
             }
         }
         finally

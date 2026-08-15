@@ -16,8 +16,7 @@ public static class AtomicFile
     public static void WriteAllText(string path, string contents)
         => Replace(path, temp => File.WriteAllText(temp, contents));
 
-    /// <summary>For payloads written through a stream (serialisers that take one) rather than a string.</summary>
-    public static void Write(string path, Action<Stream> writeContents)
+    public static void WriteStream(string path, Action<Stream> writeContents)
         => Replace(path, temp =>
         {
             using var stream = File.Create(temp);

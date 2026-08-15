@@ -27,7 +27,7 @@ public sealed class MarkedExamplesLoaderTests : IDisposable
     }
 
     private IRunHistoryStore Runs() =>
-        new RunHistoryStore(UserContext.For("marked@example.com", _root));
+        new RunHistoryStore(UserContext.Layout("marked@example.com", _root));
 
     private void WriteHistory(string runId, IReadOnlyList<ScoredEntry>? scored = null, IReadOnlyList<ListingMatch>? shortlist = null)
     {
