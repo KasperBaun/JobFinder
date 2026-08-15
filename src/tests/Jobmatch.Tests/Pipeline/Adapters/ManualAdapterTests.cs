@@ -1,6 +1,6 @@
 using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
-using Jobmatch.Pipeline.Adapters;
+using Jobmatch.Search.Fetching.Adapters;
 using Jobmatch.Infrastructure.IO;
 using Microsoft.Extensions.Logging.Abstractions;
 

@@ -1,6 +1,6 @@
 using Hangfire;
 using Jobmatch.Domain.Runs;
-using Jobmatch.Features.Jobs;
+using Jobmatch.Search;
 
 namespace Jobmatch.Api.Features.Search;
 

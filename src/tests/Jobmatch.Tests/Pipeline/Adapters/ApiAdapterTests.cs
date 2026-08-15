@@ -2,8 +2,8 @@ using System.Net;
 using System.Text.Json;
 using System.Text;
 using Jobmatch.Features.Providers;
-using Jobmatch.Pipeline.Adapters;
-using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Search.Fetching.Adapters;
+using Jobmatch.Search.Ranking;
 using Jobmatch;
 using Microsoft.Extensions.Logging.Abstractions;
 

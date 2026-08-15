@@ -1,6 +1,6 @@
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Providers;
-using Jobmatch.Pipeline;
+using Jobmatch.Search;
 using Jobmatch.Infrastructure.IO;
 using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 

@@ -1,8 +1,8 @@
-using Jobmatch.Pipeline.Stages;
+using Jobmatch.Search.Judging;
 using System.Text.Json;
 using Jobmatch.Domain;
-using Jobmatch.Pipeline.Geo;
-using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Search.Locations;
+using Jobmatch.Search.Ranking;
 using Match = Jobmatch.Domain.Match;
 
 namespace Jobmatch.Tests.Pipeline.Stages;

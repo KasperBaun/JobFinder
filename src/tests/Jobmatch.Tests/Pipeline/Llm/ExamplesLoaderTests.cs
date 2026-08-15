@@ -1,4 +1,4 @@
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Search.Judging;
 
 namespace Jobmatch.Tests.Pipeline.Llm;
 

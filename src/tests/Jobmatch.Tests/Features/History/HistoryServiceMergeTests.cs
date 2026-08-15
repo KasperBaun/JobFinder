@@ -3,7 +3,7 @@ using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
 using Jobmatch.Features.History;
-using Jobmatch.Features.Jobs;
+using Jobmatch.Search;
 using Jobmatch.Infrastructure.Json;
 using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 

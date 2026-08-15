@@ -1,7 +1,7 @@
 using Jobmatch.Features.History;
 using System.Diagnostics;
 using System.Net;
-using Jobmatch.Pipeline.Adapters;
+using Jobmatch.Search.Fetching.Adapters;
 using Jobmatch.Infrastructure.IO;
 using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -148,7 +148,7 @@ public sealed partial class ProvidersService(
                 Error: results.Count == 0 ? "This source is reachable but returned no jobs right now." : null,
                 TestedAt: DateTimeOffset.UtcNow, Samples: samples,
                 HitPageCap: adapter.HitPageCap,
-                PossiblyCapped: Jobmatch.Pipeline.ProviderCapHeuristic.LimitReached(portal, results.Count));
+                PossiblyCapped: Jobmatch.Search.Fetching.ProviderCapHeuristic.LimitReached(portal, results.Count));
         }
         catch (Exception ex)
         {

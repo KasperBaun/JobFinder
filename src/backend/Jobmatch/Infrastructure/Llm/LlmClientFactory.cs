@@ -1,4 +1,4 @@
-using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Search.Ranking;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Infrastructure.Llm;

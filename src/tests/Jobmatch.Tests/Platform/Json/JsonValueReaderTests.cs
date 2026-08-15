@@ -1,4 +1,4 @@
-using Jobmatch.Pipeline.Adapters;
+using Jobmatch.Search.Fetching.Adapters;
 using System.Text.Json;
 using Jobmatch.Infrastructure.Json;
 

@@ -28,7 +28,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>portals.json</TargetPath>
     </None>
-    <None Update="Pipeline/Geo/gazetteer.tsv">
+    <None Update="Search/Locations/gazetteer.tsv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>geo/gazetteer.tsv</TargetPath>
     </None>

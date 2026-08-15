@@ -4,7 +4,7 @@ using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Domain;
 using Jobmatch.Features.Applications;
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Search.Judging;
 using Jobmatch.Infrastructure.Json;
 
 namespace Jobmatch.Tests.Pipeline.Llm;

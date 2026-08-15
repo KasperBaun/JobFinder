@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
-using Jobmatch.Pipeline.Stages;
+using Jobmatch.Search.Judging;
 using Jobmatch.Infrastructure.Json;
 using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 

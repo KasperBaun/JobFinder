@@ -1,8 +1,7 @@
 using System.Runtime.CompilerServices;
 using Jobmatch.Api.Infrastructure;
 using Jobmatch.Domain.Runs;
-using Jobmatch.Features.Jobs;
-using Jobmatch.Pipeline;
+using Jobmatch.Search;
 using Microsoft.Extensions.Logging.Abstractions;
 using JobmatchUserContext = Jobmatch.Infrastructure.Paths.UserContext;
 using Jobmatch.Api.Features.Search;

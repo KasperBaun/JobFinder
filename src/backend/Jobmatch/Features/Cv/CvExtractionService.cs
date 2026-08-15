@@ -1,5 +1,5 @@
 using Jobmatch.Infrastructure.Llm;
-using Jobmatch.Pipeline.Ranking;
+using Jobmatch.Search.Ranking;
 using Jobmatch.Infrastructure.Paths;
 using Microsoft.Extensions.Logging;
 

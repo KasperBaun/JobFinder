@@ -1,0 +1,40 @@
+using System.Text.Json.Serialization;
+using Jobmatch.Domain.Runs;
+
+namespace Jobmatch.Search;
+
+/// <summary>
+/// Polymorphic progress event emitted while a search is running. The wire shape uses
+/// a `type` discriminator so the SPA can route by event type.
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(StartedEvent), "started")]
+[JsonDerivedType(typeof(ProviderRunningEvent), "provider_running")]
+[JsonDerivedType(typeof(ProviderDoneEvent), "provider_done")]
+[JsonDerivedType(typeof(ProviderFailedEvent), "provider_failed")]
+[JsonDerivedType(typeof(DedupeEvent), "dedupe")]
+[JsonDerivedType(typeof(RankEvent), "rank")]
+[JsonDerivedType(typeof(LlmJudgingEvent), "llm_judging")]
+[JsonDerivedType(typeof(CompleteEvent), "complete")]
+[JsonDerivedType(typeof(ErrorEvent), "error")]
+public abstract record SearchProgressEvent;
+
+public sealed record StartedEvent(string RunId, int Total) : SearchProgressEvent;
+
+public sealed record ProviderRunningEvent(string Provider, int Index, int Total) : SearchProgressEvent;
+
+public sealed record ProviderDoneEvent(string Provider, int FetchedCount, int Index, int Total, long DurationMs, bool HitPageCap = false, bool PossiblyCapped = false) : SearchProgressEvent;
+
+public sealed record ProviderFailedEvent(string Provider, string Error, int Index, int Total, long DurationMs) : SearchProgressEvent;
+
+public sealed record DedupeEvent(int MergedCount) : SearchProgressEvent;
+
+public sealed record RankEvent(int RankedCount, double TopScore) : SearchProgressEvent;
+
+/// <summary>A judging pass is starting. <paramref name="Followup"/> marks the passes that top up the
+/// shortlist after blending reordered it, so the timeline can say "N more" instead of "top N".</summary>
+public sealed record LlmJudgingEvent(int Total, bool Followup = false) : SearchProgressEvent;
+
+public sealed record CompleteEvent(string RunId, IReadOnlyList<ListingMatch> Shortlist) : SearchProgressEvent;
+
+public sealed record ErrorEvent(string Message) : SearchProgressEvent;

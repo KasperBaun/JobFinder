@@ -2,7 +2,7 @@ using System.Net;
 using System.Text;
 using Jobmatch.Domain;
 using Jobmatch.Features.Providers;
-using Jobmatch.Pipeline.Adapters;
+using Jobmatch.Search.Fetching.Adapters;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jobmatch.Tests.Pipeline.Adapters;

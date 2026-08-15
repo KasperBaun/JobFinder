@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Jobmatch.Domain;
-using Jobmatch.Pipeline.Geo;
+using Jobmatch.Search.Locations;
 
 namespace Jobmatch.Tests.Pipeline.Geo;
 

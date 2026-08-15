@@ -1,8 +1,7 @@
 using Hangfire;
 using Hangfire.Storage.SQLite;
 using Jobmatch.Api.Infrastructure;
-using Jobmatch.Features.Jobs;
-using Jobmatch.Pipeline;
+using Jobmatch.Search;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 

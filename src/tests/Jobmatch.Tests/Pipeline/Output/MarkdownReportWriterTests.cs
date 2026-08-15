@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Jobmatch.Domain;
-using Jobmatch.Pipeline.Output;
+using Jobmatch.Search.Recording;
 
 namespace Jobmatch.Tests.Pipeline.Output;
 

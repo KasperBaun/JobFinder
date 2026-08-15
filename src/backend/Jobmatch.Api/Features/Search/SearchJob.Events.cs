@@ -1,5 +1,5 @@
 using Jobmatch.Domain.Runs;
-using Jobmatch.Pipeline;
+using Jobmatch.Search;
 
 namespace Jobmatch.Api.Features.Search;
 

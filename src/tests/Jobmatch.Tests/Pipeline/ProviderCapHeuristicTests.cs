@@ -1,5 +1,6 @@
+using Jobmatch.Search.Fetching;
 using Jobmatch.Features.Providers;
-using Jobmatch.Pipeline;
+using Jobmatch.Search;
 
 namespace Jobmatch.Tests.Pipeline;
 

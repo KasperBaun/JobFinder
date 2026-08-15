@@ -1,4 +1,4 @@
-using Jobmatch.Pipeline.Deduplication;
+using Jobmatch.Search.Deduplication;
 
 namespace Jobmatch.Tests.Pipeline.Deduplication;
 

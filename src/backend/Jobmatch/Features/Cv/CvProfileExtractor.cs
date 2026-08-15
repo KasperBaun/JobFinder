@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text;
 using Jobmatch.Domain;
 using Jobmatch.Infrastructure.Llm;
-using Jobmatch.Pipeline.Llm;
+using Jobmatch.Search.Judging;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Features.Cv;

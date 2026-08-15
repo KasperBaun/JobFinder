@@ -1,6 +1,6 @@
 using Jobmatch.Domain.Runs;
 using Jobmatch.Features.Applications;
-using Jobmatch.Features.Jobs;
+using Jobmatch.Search;
 
 namespace Jobmatch.Features.History;
 

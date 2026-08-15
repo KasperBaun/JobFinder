@@ -1,5 +1,5 @@
 using Jobmatch.Domain;
-using Jobmatch.Pipeline.Adapters;
+using Jobmatch.Search.Fetching.Adapters;
 
 namespace Jobmatch.Tests.Pipeline.Adapters;
 
