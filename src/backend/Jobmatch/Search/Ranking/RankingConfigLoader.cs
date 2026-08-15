@@ -52,27 +52,59 @@ public static class RankingConfigLoader
         {
             LocationTierWeights = tierWeights,
             Llm = llm,
+            Judge = BuildJudgeConfig(map),
         };
     }
 
+    private static IReadOnlyDictionary<string, object?>? LlmSection(IReadOnlyDictionary<string, object?> root)
+        => root.TryGetValue("llm", out var raw) && raw is IDictionary<object, object?> map ? Normalise(map) : null;
+
     private static LlmConfig BuildLlmConfig(IReadOnlyDictionary<string, object?> root)
     {
-        if (!root.TryGetValue("llm", out var raw) || raw is not IDictionary<object, object?> map)
-            return LlmConfig.Disabled;
-        var n = Normalise(map);
+        var n = LlmSection(root);
+        if (n is null) return LlmConfig.Disabled;
         var d = LlmConfig.Disabled;
         return new LlmConfig(
             Enabled: ReadBool(n, "enabled", d.Enabled),
-            Provider: ReadString(n, "provider", d.Provider),
-            Model: ReadString(n, "model", d.Model),
-            ModelPath: ReadString(n, "model_path", d.ModelPath),
-            ModelDownloadUrl: ReadString(n, "model_download_url", d.ModelDownloadUrl),
-            BaseUrl: ReadString(n, "base_url", d.BaseUrl),
-            TopN: ReadInt(n, "top_n", d.TopN),
-            Weight: ReadDouble(n, "weight", d.Weight),
-            Temperature: ReadDouble(n, "temperature", d.Temperature),
-            ContextSize: ReadInt(n, "context_size", d.ContextSize),
-            GpuLayerCount: ReadInt(n, "gpu_layer_count", d.GpuLayerCount));
+            Provider: BuildProvider(n),
+            Temperature: ReadDouble(n, "temperature", d.Temperature));
+    }
+
+    private static LlmProvider BuildProvider(IReadOnlyDictionary<string, object?> llm)
+    {
+        var llama = LlmProvider.LlamaSharp.Defaults;
+        var ollama = LlmProvider.Ollama.Defaults;
+        var name = ReadString(llm, "provider", llama.Name).Trim().ToLowerInvariant();
+
+        // The one place a provider name is turned into a provider. Rejecting it here rather than
+        // where a client gets built means a typo fails while ranking.yml is read — not deep in a
+        // search run, after every source has already been fetched.
+        return name switch
+        {
+            LlmProvider.LlamaSharp.ConfigName => new LlmProvider.LlamaSharp(
+                new LlmModelFile(
+                    ReadString(llm, "model_path", llama.Model.ConfiguredPath),
+                    ReadUri(llm, "model_download_url", llama.Model.DownloadUrl)),
+                ContextSize: ReadInt(llm, "context_size", llama.ContextSize),
+                GpuLayerCount: ReadInt(llm, "gpu_layer_count", llama.GpuLayerCount)),
+
+            LlmProvider.Ollama.ConfigName => new LlmProvider.Ollama(
+                ReadUri(llm, "base_url", ollama.BaseUrl),
+                ReadString(llm, "model", ollama.ModelTag)),
+
+            _ => throw new ConfigException(
+                $"llm.provider must be one of [{LlmProvider.SupportedNames}]; got '{name}'"),
+        };
+    }
+
+    private static JudgeConfig BuildJudgeConfig(IReadOnlyDictionary<string, object?> root)
+    {
+        var n = LlmSection(root);
+        if (n is null) return JudgeConfig.Default;
+        var d = JudgeConfig.Default;
+        return new JudgeConfig(
+            FirstPassBudget: ReadInt(n, "top_n", d.FirstPassBudget),
+            Weight: ReadDouble(n, "weight", d.Weight));
     }
 
     private static string ReadString(IReadOnlyDictionary<string, object?> map, string key, string defaultValue)
@@ -80,6 +112,19 @@ public static class RankingConfigLoader
         if (!map.TryGetValue(key, out var v) || v is null) return defaultValue;
         var s = v.ToString();
         return string.IsNullOrWhiteSpace(s) ? defaultValue : s;
+    }
+
+    private static Uri ReadUri(IReadOnlyDictionary<string, object?> map, string key, Uri defaultValue)
+    {
+        var s = ReadString(map, key, defaultValue.ToString()).Trim();
+
+        // The scheme check is the point: Uri.TryCreate accepts "localhost:11434" as absolute,
+        // reading "localhost" as the scheme, so a missing http:// would otherwise pass here and
+        // fail much later as an unrelated-looking transport error.
+        return Uri.TryCreate(s, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            ? uri
+            : throw new ConfigException($"llm.{key} must be an absolute http(s) URL; got '{s}'");
     }
 
     private static LocationTierWeights BuildTierWeights(IReadOnlyDictionary<string, object?> root)

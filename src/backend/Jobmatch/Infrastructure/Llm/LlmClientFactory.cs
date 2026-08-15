@@ -1,4 +1,4 @@
-using Jobmatch.Search.Ranking;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Jobmatch.Infrastructure.Llm;
@@ -14,18 +14,21 @@ public static class LlmClientFactory
     {
         if (!config.Enabled) return null;
 
-        return config.Provider.ToLowerInvariant() switch
+        return config.Provider switch
         {
-            "ollama" => new OllamaClient(http, config.BaseUrl, config.Model, config.Temperature),
-            "llamasharp" => new LlamaSharpClient(
-                config.AbsoluteModelPath(userDataDir),
+            LlmProvider.Ollama ollama =>
+                new OllamaClient(http, ollama.BaseUrl.ToString(), ollama.ModelTag, config.Temperature),
+
+            LlmProvider.LlamaSharp llama => new LlamaSharpClient(
+                llama.Model.AbsolutePath(userDataDir),
                 loggers.CreateLogger<LlamaSharpClient>(),
-                contextSize: config.ContextSize,
-                gpuLayerCount: config.GpuLayerCount,
+                contextSize: llama.ContextSize,
+                gpuLayerCount: llama.GpuLayerCount,
                 maxTokens: maxTokens,
                 temperature: (float)config.Temperature),
-            _ => throw new ConfigException(
-                $"llm.provider must be one of [llamasharp, ollama]; got '{config.Provider}'"),
+
+            // LlmProvider's constructor is private, so these are the only two cases that exist.
+            _ => throw new UnreachableException(),
         };
     }
 }

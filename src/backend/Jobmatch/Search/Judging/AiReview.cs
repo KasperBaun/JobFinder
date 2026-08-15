@@ -34,7 +34,8 @@ public sealed class AiReview(string modelRootDir, ILoggerFactory loggers)
         [EnumeratorCancellation] CancellationToken ct)
     {
         var llm = plan.Ranking.Llm;
-        var planner = new JudgePlanner(plan.Ranking, plan.MinScore, plan.TopN, radius, llm.TopN);
+        var judge = plan.Ranking.Judge;
+        var planner = new JudgePlanner(plan.Ranking, plan.MinScore, plan.TopN, radius, judge.FirstPassBudget);
         var toJudge = planner.NextCandidates(scored);
         if (toJudge.Count == 0) yield break;
 
@@ -48,7 +49,7 @@ public sealed class AiReview(string modelRootDir, ILoggerFactory loggers)
                 client ??= LlmClientFactory.Create(llm, modelRootDir, http, loggers);
                 if (client is null) yield break;
 
-                var verdicts = await JudgePass(scored, toJudge, client, plan.Skillset, examples, llm.Weight, ct)
+                var verdicts = await JudgePass(scored, toJudge, client, plan.Skillset, examples, judge.Weight, ct)
                     .ConfigureAwait(false);
                 // A pass that returned nothing means the model is unreachable, not that these
                 // particular listings confused it — further passes would only burn the budget.

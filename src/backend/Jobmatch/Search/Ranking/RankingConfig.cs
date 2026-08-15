@@ -16,6 +16,19 @@ public sealed record RankingConfig(
 {
     public LocationTierWeights LocationTierWeights { get; init; } = LocationTierWeights.Default;
     public LlmConfig Llm { get; init; } = LlmConfig.Disabled;
+    public JudgeConfig Judge { get; init; } = JudgeConfig.Default;
+}
+
+/// <summary>
+/// What the AI judge may spend and how far its verdict moves a score. Read from the <c>llm:</c>
+/// block of ranking.yml alongside <see cref="LlmConfig"/>, but ranking policy rather than plumbing:
+/// changing these changes the shortlist, not how the model is reached.
+/// </summary>
+public sealed record JudgeConfig(
+    int FirstPassBudget,   // verdicts the first pass may spend (0 = every eligible listing)
+    double Weight)         // 0.0 = keyword-only, 1.0 = LLM-only
+{
+    public static JudgeConfig Default { get; } = new(FirstPassBudget: 50, Weight: 0.5);
 }
 
 public sealed record RankingWeights(

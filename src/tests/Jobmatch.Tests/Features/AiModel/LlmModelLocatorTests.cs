@@ -57,7 +57,7 @@ public sealed class LlmModelLocatorTests : IDisposable
     {
         var locator = Locator(EnabledLlamaSharp);
 
-        Assert.Equal(Path.Combine(_ctx.RootDir, "models/gemma.gguf"), locator.AbsoluteModelPath);
+        Assert.Equal(Path.Combine(_ctx.RootDir, "models/gemma.gguf"), locator.RequiredModel!.AbsolutePath);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class LlmModelLocatorTests : IDisposable
               model_path: {absolute}
             """);
 
-        Assert.Equal(absolute, locator.AbsoluteModelPath);
+        Assert.Equal(absolute, locator.RequiredModel!.AbsolutePath);
     }
 
     [Fact]
@@ -87,8 +87,8 @@ public sealed class LlmModelLocatorTests : IDisposable
     public void EnsureReadyPassesOnceTheModelIsPresent()
     {
         var locator = Locator(EnabledLlamaSharp);
-        Directory.CreateDirectory(Path.GetDirectoryName(locator.AbsoluteModelPath)!);
-        File.WriteAllText(locator.AbsoluteModelPath, "gguf");
+        Directory.CreateDirectory(Path.GetDirectoryName(locator.RequiredModel!.AbsolutePath)!);
+        File.WriteAllText(locator.RequiredModel!.AbsolutePath, "gguf");
 
         locator.EnsureReady();
     }

@@ -61,6 +61,9 @@ non_engineering_title_multiplier: 0.2
 #   ollama     — HTTP to a user-managed Ollama install at base_url. For
 #                power users who already run Ollama; uses model field as the
 #                model tag (e.g. "gemma3:4b").
+# provider decides which of the keys below apply: llamasharp reads model_path,
+# model_download_url, context_size and gpu_layer_count; ollama reads base_url and
+# model. Anything else is rejected when this file is read, naming what it got.
 llm:
   enabled: true
   provider: llamasharp

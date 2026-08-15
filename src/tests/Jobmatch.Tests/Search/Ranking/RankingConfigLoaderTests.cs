@@ -1,3 +1,4 @@
+using Jobmatch.Infrastructure.Llm;
 using Jobmatch.Search.Ranking;
 using Jobmatch;
 
@@ -178,5 +179,113 @@ public sealed class RankingConfigLoaderTests
         Assert.Equal(0.0, cfg.DisqualifierPenalty);
         Assert.Equal(14.0, cfg.FreshnessHalfLifeDays);
         Assert.Equal(0.25, cfg.MinScoreToInclude);
+    }
+
+    private const string Weights = """
+        weights:
+          primary_stack: 1.0
+          secondary_stack: 0.0
+          seniority: 0.0
+          location_remote: 0.0
+          domain: 0.0
+          freshness: 0.0
+        """;
+
+    [Fact]
+    public void Parse_LlamaSharp_Provider_Carries_Only_Its_Own_Settings()
+    {
+        var cfg = RankingConfigLoader.Parse($"""
+            {Weights}
+            llm:
+              enabled: true
+              provider: llamasharp
+              model_path: models/custom.gguf
+              model_download_url: https://example.com/custom.gguf
+              context_size: 8192
+              gpu_layer_count: 33
+            """);
+
+        Assert.True(cfg.Llm.Enabled);
+        var llama = Assert.IsType<LlmProvider.LlamaSharp>(cfg.Llm.Provider);
+        Assert.Equal("models/custom.gguf", llama.Model.ConfiguredPath);
+        Assert.Equal(new Uri("https://example.com/custom.gguf"), llama.Model.DownloadUrl);
+        Assert.Equal(8192, llama.ContextSize);
+        Assert.Equal(33, llama.GpuLayerCount);
+    }
+
+    [Fact]
+    public void Parse_Ollama_Provider_Carries_Only_Its_Own_Settings()
+    {
+        var cfg = RankingConfigLoader.Parse($"""
+            {Weights}
+            llm:
+              enabled: true
+              provider: ollama
+              base_url: http://127.0.0.1:9999
+              model: llama3:8b
+            """);
+
+        var ollama = Assert.IsType<LlmProvider.Ollama>(cfg.Llm.Provider);
+        Assert.Equal(new Uri("http://127.0.0.1:9999"), ollama.BaseUrl);
+        Assert.Equal("llama3:8b", ollama.ModelTag);
+    }
+
+    [Fact]
+    public void Parse_Unknown_Provider_Throws_While_Reading_Config()
+    {
+        var ex = Assert.Throws<ConfigException>(() => RankingConfigLoader.Parse($"""
+            {Weights}
+            llm:
+              enabled: true
+              provider: llamashrp
+            """));
+
+        Assert.Contains("llamashrp", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("llamasharp", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("ollama", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("model_download_url", "not a url")]
+    [InlineData("base_url", "localhost:11434")]
+    public void Parse_Malformed_Url_Throws_While_Reading_Config(string key, string value)
+    {
+        var provider = key == "base_url" ? "ollama" : "llamasharp";
+
+        var ex = Assert.Throws<ConfigException>(() => RankingConfigLoader.Parse($"""
+            {Weights}
+            llm:
+              enabled: true
+              provider: {provider}
+              {key}: {value}
+            """));
+
+        Assert.Contains(key, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_Judge_Policy_Reads_From_The_Llm_Block()
+    {
+        var cfg = RankingConfigLoader.Parse($"""
+            {Weights}
+            llm:
+              enabled: true
+              top_n: 25
+              weight: 0.75
+            """);
+
+        Assert.Equal(25, cfg.Judge.FirstPassBudget);
+        Assert.Equal(0.75, cfg.Judge.Weight);
+    }
+
+    [Fact]
+    public void Parse_No_Llm_Block_Leaves_Ai_Off_With_Shipped_Defaults()
+    {
+        var cfg = RankingConfigLoader.Parse(Weights);
+
+        Assert.False(cfg.Llm.Enabled);
+        Assert.Equal(JudgeConfig.Default, cfg.Judge);
+        var llama = Assert.IsType<LlmProvider.LlamaSharp>(cfg.Llm.Provider);
+        Assert.Equal(LlmModelFile.ShippedDefault, llama.Model);
     }
 }
