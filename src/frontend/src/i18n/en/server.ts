@@ -3,8 +3,8 @@ import { list, num, str } from '../serverText'
 import type { ServerArgs, ServerRenderer } from '../serverText'
 
 // Keys mirror what the backend emits and are persisted in run history — additive only.
-// Backend sources: Jobs/JobSearch.cs, Jobmatch.Api/Jobs/SearchJob.Events.cs,
-// Ranking/Ranker.Notes.cs, Search/SearchService.Ranking.cs.
+// Backend sources: Domain/Runs/JobSearch.cs, Jobmatch.Api/Features/Search/SearchJob.Events.cs,
+// Search/Ranking/Ranker.Notes.cs, Search/Ranking/ShortlistBuilder.cs.
 export const server = {
   remoteMode: {
     remote: 'remote',

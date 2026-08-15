@@ -8,13 +8,15 @@ Working notes for agents (Claude Code, sub-agents) operating in this repo.
 docs/                                prd.md, requirements.md, tasks/T-007/ (portal reference), screenshots/
 src/                                 ALL source, tests, configs, build infra
   backend/
-    Jobmatch/                        class library — four top-level concerns, namespaces follow folders:
-      Domain/                        the entities everything shares; Runs/ holds the run record + state machine
-      Pipeline/                      the search engine — Adapters/, Deduplication/, Geo/, Llm/, Output/,
-                                     Ranking/, Stages/ (one type per step), and SearchPipeline over them
-      Features/                      user-facing capabilities — Providers/, Skillsets/, History/,
-                                     Applications/, Cv/, Jobs/, Transfer/, Identity/
-      Platform/                      cross-cutting — Paths/, Json/, IO/ (AtomicFile); Exceptions.cs at the root
+    Jobmatch/                        class library — see src/backend/Jobmatch/README.md for the map.
+      Domain/                        the nouns — Listing, Match, Skillset, Runs/ (a run's persisted record)
+      Search/                        the verb — one run, one folder per phase: Planning/, Fetching/
+                                     (+Adapters/), Deduplication/, Ranking/, Judging/, Recording/, and
+                                     Locations/ (shared, not a phase). SearchRunner sequences them.
+      Features/                      the other verbs — Providers/, Skillsets/, History/, Applications/,
+                                     Cv/, Transfer/, Bootstrap/, AiModel/
+      Infrastructure/                the plumbing — Paths/, Json/, IO/ (AtomicFile), Llm/ (model clients);
+                                     Exceptions.cs stays at the library root, in namespace `Jobmatch`
     Jobmatch.Api/                    Minimal API server (runnable). Features/<Name>/ holds that feature's
                                      endpoints, handler, DTOs, mappings and <Name>Module.cs (its Add*/Map*);
                                      Infrastructure/ (HandlerBase, IEndpointRegistration, middleware, setup);
@@ -26,8 +28,8 @@ src/                                 ALL source, tests, configs, build infra
     Jobmatch.Host/                   bundle (runnable + .NET tool). Ephemeral Kestrel + browser-open + serves bundled SPA + jobfinder tool packaging
   scripts/                           Node build/dev wrappers (dev.mjs, package*.mjs, *-tool.mjs, clean/refresh) — driven by root package.json.
   tests/
-    Jobmatch.Tests/                  xUnit — mirrors the source tree (Domain/, Pipeline/, Features/,
-                                     Platform/, and Api/Features/<Name>/ for the HTTP layer)
+    Jobmatch.Tests/                  xUnit — mirrors the source tree (Domain/, Search/, Features/,
+                                     Infrastructure/, and Api/Features/<Name>/ for the HTTP layer)
     playwright/                      Playwright e2e (bootstrap; specs added incrementally)
   Directory.Build.props
   Directory.Packages.props
@@ -61,6 +63,7 @@ The SDK is pinned only by `<TargetFramework>net10.0</TargetFramework>` in `src/D
 - **What the system must do** → [`docs/requirements.md`](docs/requirements.md) (one-line requirements with `R-NNN` IDs)
 - **What's in flight** → [`todo.md`](todo.md) (backlog + in-progress only)
 - **What's shipped** → [`CHANGELOG.md`](CHANGELOG.md)
+- **How the library is laid out** → [`src/backend/Jobmatch/README.md`](src/backend/Jobmatch/README.md) — the four concerns, the run's phases, and where the things that look misplaced actually live
 - **Why each DK portal got the verdict it did** → [`docs/tasks/T-007/`](docs/tasks/T-007/) — per-portal evaluation worksheets (api / rss / html / manual / dead) + the playbook for evaluating a new one. Reference data, not a task spec — keep when adding or reconsidering portals.
 - **How the backend should look** → the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md) — SKILL.md plus the full rule set under its `reference/`): Endpoint → Handler → Service layering, HandlerBase + ExecuteAsync, IEndpointRegistration, typed Routes, custom exceptions, module pattern, file-size limits, coding conventions. Then read `src/backend/Jobmatch.Api/` to see the pattern applied. The structural/quality rules are the standard here; a few infra rules are deliberately excepted — see **Backend rules: adopted vs. exceptions** below.
 
@@ -75,7 +78,7 @@ The backend conventions live in the `dotnet-backend-standards` skill ([`.claude/
 - **SQLite, not SQL Server**, for Hangfire storage (`data/<email>/hangfire.db`).
 - **String timestamp run-ids, not GUID primary keys** (id == the history run id).
 - **Hangfire dashboard local-only / unsecured by design** (no auth provider).
-- **Retry policy (intentional):** the search job uses `[AutomaticRetry(Attempts = 1)]`, not the rule's default of 3. A full re-run is expensive, and per-provider failures are already handled gracefully inside the `SearchPipeline` (each adapter wrapped in try/catch, logged, skipped). Do **not** "fix" this back to 3.
+- **Retry policy (intentional):** the search job uses `[AutomaticRetry(Attempts = 1)]`, not the rule's default of 3. A full re-run is expensive, and per-provider failures are already handled gracefully inside the `SearchRunner` (each adapter wrapped in try/catch, logged, skipped). Do **not** "fix" this back to 3.
 - **`Routes.cs` stays central**, not one per feature as the skill's `<Module>/Endpoints/Routes.cs` suggests. With twelve small features the single file is the API's table of contents — the thing you open to answer "what URLs exist?" — and splitting it would scatter that answer without making any feature more self-contained.
 - **`JobSearchHandler.Stream` does not use `HandlerBase.ExecuteAsync`.** Every other handler method does. An SSE feed writes its own status and headers and then streams for the life of the run, so there is no single `IResult` for the base wrapper to map an exception onto. The method says so in place.
 - **Two folder names are plural to avoid shadowing a type**: `Features/Skillsets` (the `Skillset` domain type) in both projects, and `Api/Features/Health` rather than `System` (the global `System` namespace). Renaming either back breaks every file inside it.
@@ -86,7 +89,7 @@ Everything else in the skill's `reference/` applies without carve-out: Endpoint 
 
 - C# nullable reference types are on; treat warnings as errors. Keep them on.
 - One concern per file. Models are immutable records. Validation lives in services — services throw `ConfigException` / `InvalidRequestException` / `NotFoundException` and `HandlerBase.ExecuteAsync` translates to HTTP responses.
-- Adapters throw on failure. The `SearchService` orchestrator wraps each adapter in try/catch, logs structured warnings, and continues.
+- Adapters throw on failure. The `SearchRunner` orchestrator wraps each adapter in try/catch, logs structured warnings, and continues.
 - No comments unless the *why* is non-obvious. No docstrings on simple methods. No "added for X" or "used by Y" notes — those rot.
 - Tests live under `src/tests/Jobmatch.Tests/` mirroring the source tree. xUnit. No live network calls in CI.
 
@@ -197,10 +200,10 @@ returns the namespace object, so call sites are property accesses, not string ke
   a boot hint so reloads don't flash English.
 - **Backend prose travels as `key + args`, never as finished sentences.** Timeline entries
   (`Domain/Runs/JobSearch.cs`, `Jobmatch.Api/Features/Search/SearchJob.Events.cs`) and match rationale
-  (`Pipeline/Ranking/Ranker.Notes.cs`) emit a stable key plus the values it interpolates; the
+  (`Search/Ranking/Ranker.Notes.cs`) emit a stable key plus the values it interpolates; the
   frontend's `server` namespace owns the wording. Each also keeps its English string
   (`Message`, `Notes`) — that is what logs, `top-jobs.md` and runs recorded before the keys
-  show. Drop reasons (`Pipeline/Ranking/ShortlistBuilder.cs`) still emit key + args + English
+  show. Drop reasons (`Search/Ranking/ShortlistBuilder.cs`) still emit key + args + English
   context into run history, but nothing renders them since the removed view was retired.
   **Keys are persisted in run history, so they are additive only: never rename or repurpose
   one.** Add a key to both `en/server.ts` and `da/server.ts` in the same change.
@@ -231,8 +234,8 @@ decoupled from the HTTP request, so it survives navigation, reload, and host res
 Do **not** "fix" this back to a synchronous in-request run.
 
 - Domain model: `Jobmatch/Domain/Runs/JobSearch.cs` (immutable record + state machine), persisted per-run via
-  `Features/Jobs/JobSearchStore.cs` under `data/<email>/jobsearch/<id>.json`. Id == the history run id.
-- Execution: `Jobmatch.Api/Features/Search/SearchJob.cs` (the Hangfire job) drives the `SearchPipeline`,
+  `Search/JobSearchStore.cs` under `data/<email>/jobsearch/<id>.json`. Id == the history run id.
+- Execution: `Jobmatch.Api/Features/Search/SearchJob.cs` (the Hangfire job) drives the `SearchRunner`,
   projects progress onto the `JobSearch` + timeline, and publishes snapshots to `JobSearchBus` for SSE.
 - API: `POST /api/search` enqueues and returns `{ id }`; `GET /api/search/{id}/stream` is the SSE feed;
   `/api/search/active` for reconnect; `POST /api/search/{id}/cancel`.
@@ -252,4 +255,5 @@ Durable decisions that outlive any single task — migrated here from earlier ha
 - Re-read [`docs/prd.md`](docs/prd.md) for principle.
 - Re-read [`docs/requirements.md`](docs/requirements.md) for the contract.
 - Re-read the `dotnet-backend-standards` skill ([`.claude/skills/dotnet-backend-standards/`](.claude/skills/dotnet-backend-standards/SKILL.md)) for backend conventions.
+- Read [`src/backend/Jobmatch/README.md`](src/backend/Jobmatch/README.md) for where things live in the library.
 - Read `src/backend/Jobmatch.Api/` for the conventions applied to actual code.
