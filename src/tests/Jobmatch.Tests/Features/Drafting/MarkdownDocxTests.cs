@@ -89,6 +89,55 @@ public sealed class MarkdownDocxTests
         Assert.Equal(expectedStyle, style);
     }
 
+    // Asked for "## " headings, the model still produced "**SUMMARY**" in half the real drafts, and
+    // bold-as-heading renders as body text — so that section came out not looking like a section.
+    [Theory]
+    [InlineData("**SUMMARY**", "Heading2")]
+    [InlineData("**Summary**", "Heading2")]
+    [InlineData("**ERHVERVSERFARING**", "Heading2")]
+    [InlineData("**Senior .NET Developer, Netcompany A/S (2022-2026)**", "Heading3")]
+    [InlineData("**Cand.polyt., Aarhus Universitet, 2018**", "Heading3")]
+    public void Render_WhollyBoldLine_IsReadAsTheHeadingItWasMeantToBe(string line, string expected)
+    {
+        var paragraph = Assert.Single(MarkdownDocx.Render(line));
+
+        Assert.Equal(expected, paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value);
+        Assert.DoesNotContain("*", paragraph.InnerText);
+    }
+
+    [Theory]
+    [InlineData("I was **very** pleased with the result")]        // emphasis inside a sentence
+    [InlineData("**bold** and **more bold**")]                    // two runs, not a heading
+    [InlineData("- **Senior** dev")]                              // a bullet stays a bullet
+    public void Render_BoldThatIsNotAHeading_IsLeftAlone(string line)
+    {
+        var paragraph = Assert.Single(MarkdownDocx.Render(line));
+
+        Assert.NotEqual("Heading2", paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value);
+        Assert.NotEqual("Heading3", paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value);
+    }
+
+    [Fact]
+    public void Render_LongWhollyBoldLine_IsASentence_NotAHeading()
+    {
+        var line = "**" + new string('x', MarkdownDocx.MaxBoldHeadingLength + 1) + "**";
+
+        var paragraph = Assert.Single(MarkdownDocx.Render(line));
+
+        Assert.Null(paragraph.ParagraphProperties?.ParagraphStyleId);
+    }
+
+    // One real draft opened with a stray "---", which Word has no glyph for and which rendered as
+    // three literal dashes at the top of the resume.
+    [Theory]
+    [InlineData("---")]
+    [InlineData("***")]
+    [InlineData("___")]
+    public void Render_ThematicBreak_IsDropped(string line)
+    {
+        Assert.Empty(MarkdownDocx.Render(line));
+    }
+
     // Word only has three heading levels wired up here; deeper hashes are body text, not a crash.
     [Fact]
     public void Render_TooManyHashes_StaysBodyText()

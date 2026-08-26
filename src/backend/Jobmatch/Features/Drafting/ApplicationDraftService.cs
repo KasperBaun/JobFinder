@@ -55,7 +55,8 @@ public sealed class ApplicationDraftService(
         try
         {
             var writer = new ApplicationDraftWriter(client, loggers.CreateLogger<ApplicationDraftWriter>());
-            var inputs = new DraftInputs(cvText, skillsets.Find(), ad.Title, ad.Company, ad.Text);
+            var inputs = new DraftInputs(
+                cvText, skillsets.Find(), ad.Title, ad.Company, ad.Text, JobAdLanguage.Of(ad.Text));
             draft = await writer.WriteAsync(inputs, ct).ConfigureAwait(false);
         }
         finally

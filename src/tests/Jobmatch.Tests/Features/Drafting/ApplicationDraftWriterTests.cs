@@ -15,11 +15,106 @@ public sealed class ApplicationDraftWriterTests
     [Fact]
     public void BuildSystemPrompt_ForbidsInvention_AndDeclaresSchema()
     {
-        var prompt = ApplicationDraftWriter.BuildSystemPrompt();
+        var prompt = ApplicationDraftWriter.BuildSystemPrompt(DraftLanguage.English);
 
         Assert.Contains("NEVER invent", prompt);
         Assert.Contains("resumeMarkdown", prompt);
         Assert.Contains("coverLetterMarkdown", prompt);
+    }
+
+    // The ban used to sit only in the preamble and in the resume's own rule, and the model obeyed it
+    // where it was restated: resumes stayed thin on a weak match while the letter claimed the ad's
+    // requirements back as experience. The letter is the document a human reads first.
+    [Fact]
+    public void BuildSystemPrompt_ExtendsTheInventionBanToTheCoverLetter()
+    {
+        var prompt = ApplicationDraftWriter.BuildSystemPrompt(DraftLanguage.English);
+
+        Assert.Contains("applies to the cover letter", prompt);
+        Assert.Contains("write LESS rather than filling the space", prompt);
+        // The abstract ban alone still let a weak match claim "my experience with Azure Data Factory",
+        // a tool the CV never names. A rule about names is one the model can actually check itself against.
+        Assert.Contains("NEVER name a technology, tool, platform or methodology", prompt);
+        Assert.Contains("unless that exact name appears in the CV", prompt);
+    }
+
+    [Theory]
+    [InlineData(DraftLanguage.Danish, "Danish")]
+    [InlineData(DraftLanguage.English, "English")]
+    public void BuildSystemPrompt_StatesTheLanguageRatherThanLeavingItToBeInferred(
+        DraftLanguage language, string expected)
+    {
+        var prompt = ApplicationDraftWriter.BuildSystemPrompt(language);
+
+        Assert.Contains($"Write both documents in {expected}", prompt);
+        Assert.Contains("including the section headings and the closing", prompt);
+    }
+
+    [Fact]
+    public void BuildSystemPrompt_BansThePlaceholderAndTheClicheOpening()
+    {
+        var prompt = ApplicationDraftWriter.BuildSystemPrompt(DraftLanguage.English);
+
+        Assert.Contains("NEVER write a placeholder in square or angle brackets", prompt);
+        Assert.Contains("no letterhead, no address block, no date line", prompt);
+        Assert.Contains("I am writing to express my interest", prompt);
+    }
+
+    // Four of six letters came back with no sign-off at all when this was one trailing rule among
+    // several. It is content the letter is missing, so it is spelled out as a step, with the closing
+    // the language actually uses.
+    [Theory]
+    [InlineData(DraftLanguage.English, "Sincerely")]
+    [InlineData(DraftLanguage.Danish, "Med venlig hilsen")]
+    public void BuildSystemPrompt_SpellsOutTheClosing(DraftLanguage language, string closing)
+    {
+        var prompt = ApplicationDraftWriter.BuildSystemPrompt(language);
+
+        Assert.Contains($"The closing line \"{closing},\"", prompt);
+        Assert.Contains("a letter without it is incomplete", prompt);
+    }
+
+    // Spelling the closing out as a literal template made the model copy the template: one letter
+    // shipped ending "<the candidate's name>". The prompt describes the shape now, and this is the
+    // net under it — a line that is only a bracket placeholder is never something to send.
+    [Theory]
+    [InlineData("Dear team,\n\nBody.\n\nSincerely,\n<the candidate's name>", "Sincerely,")]
+    [InlineData("[Recruiting Team]\n[Date]\n\nDear team,\n\nBody.", "Dear team,")]
+    public void ParseDraft_DropsPlaceholderLines(string letter, string expectedTail)
+    {
+        var json = $$"""{"resumeMarkdown":"r","coverLetterMarkdown":{{System.Text.Json.JsonSerializer.Serialize(letter)}}}""";
+
+        var draft = ApplicationDraftWriter.ParseDraft(json, "Backend Developer", "Acme A/S");
+
+        Assert.NotNull(draft);
+        Assert.DoesNotContain("<the candidate's name>", draft!.CoverLetterMarkdown);
+        Assert.DoesNotContain("[Date]", draft.CoverLetterMarkdown);
+        Assert.Contains(expectedTail, draft.CoverLetterMarkdown);
+    }
+
+    // The marker that tells the model an over-long ad was cut is our note to it, not prose — one
+    // letter copied it into the sign-off.
+    [Fact]
+    public void ParseDraft_StripsOurOwnTruncationMarker()
+    {
+        var draft = ApplicationDraftWriter.ParseDraft(
+            $$"""{"resumeMarkdown":"## Skills {{ApplicationDraftWriter.TruncationMarker}}","coverLetterMarkdown":"Body. {{ApplicationDraftWriter.TruncationMarker}} Sincerely,\nJane"}""",
+            "Backend Developer", "Acme A/S");
+
+        Assert.NotNull(draft);
+        Assert.DoesNotContain(ApplicationDraftWriter.TruncationMarker, draft!.CoverLetterMarkdown);
+        Assert.DoesNotContain(ApplicationDraftWriter.TruncationMarker, draft.ResumeMarkdown);
+    }
+
+    [Fact]
+    public void ParseDraft_KeepsRealProseContainingBrackets()
+    {
+        var draft = ApplicationDraftWriter.ParseDraft(
+            """{"resumeMarkdown":"r","coverLetterMarkdown":"I worked on [the] platform team.\n\nSincerely,\nJane"}""",
+            "Backend Developer", "Acme A/S");
+
+        Assert.NotNull(draft);
+        Assert.Contains("[the] platform team", draft!.CoverLetterMarkdown);
     }
 
     [Fact]

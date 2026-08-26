@@ -14,9 +14,15 @@ Current status of work on `jobfinder`.
   another listing is drafting, which the UI has to show rather than swallow. English + Danish catalog
   keys for all of it. Filenames are now derived from the listing record, so a draft's paths can be
   recomputed without a lookup — but nothing lists `documents/`, so decide whether a draft is
-  remembered per listing before building around the newest-run-only status. Still open: whether Gemma
-  3 4B is good enough at long-form prose to be the default here — the judge only ever asks it for one
-  line. Ollama with a larger model may be the honest recommendation for this feature specifically.
+  remembered per listing before building around the newest-run-only status.
+
+- **Is Gemma 3 4B good enough for long-form drafting (R-121)?** Evidence now, rather than a hunch:
+  across six drafts it produces sendable Danish and English letters that stay inside the CV's facts,
+  but on a weak match it still reaches for one unbacked generic claim ("working with data pipelines
+  and ensuring data quality", against a CV that mentions neither). Three prompt revisions removed the
+  severe form — invented employers, dates and technology names — and did not remove that one, which
+  is the shape of a model limit rather than a prompt bug. A larger model via Ollama may be the honest
+  recommendation for this feature specifically.
 
 - **Nine ESLint warnings left standing, deliberately.** `npm run lint -w jobfinder-gui`
   passes with zero errors and nine warnings, and CI now runs it. Seven are

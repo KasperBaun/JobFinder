@@ -41,6 +41,8 @@ public static class MarkdownDocx
                 continue;
             }
 
+            if (IsThematicBreak(line)) continue;
+
             if (TryHeading(line, out var level, out var headingText))
             {
                 yield return Styled(headingText, $"Heading{level}");
@@ -51,6 +53,12 @@ public static class MarkdownDocx
             if (trimmed.Length > 2 && (trimmed[0] is '-' or '*') && trimmed[1] == ' ')
             {
                 yield return Bulleted(trimmed[2..].Trim());
+                continue;
+            }
+
+            if (TryBoldHeading(trimmed, out var boldLevel, out var boldText))
+            {
+                yield return Styled(boldText, $"Heading{boldLevel}");
                 continue;
             }
 
@@ -70,6 +78,44 @@ public static class MarkdownDocx
         level = hashes;
         text = line[(hashes + 1)..].Trim();
         return true;
+    }
+
+    /// <summary>Longer than this and a wholly-bold line is a sentence someone emphasised, not a heading.</summary>
+    internal const int MaxBoldHeadingLength = 80;
+
+    /// <summary>
+    /// A line that is nothing but one short bold run is the heading it was meant to be. Asked for
+    /// <c>## </c> headings a small model still reaches for <c>**SUMMARY**</c> in half the drafts, and
+    /// bold-as-heading renders as body text — so the alternative to reading it this way is a resume
+    /// with a section that is not a section. A section label is a bare word or two; an entry carries a
+    /// comma, a bracket or a year, and sits one level below it.
+    /// </summary>
+    internal static bool TryBoldHeading(string line, out int level, out string text)
+    {
+        level = 0;
+        text = string.Empty;
+
+        var trimmed = line.Trim();
+        if (trimmed.Length <= 4
+            || !trimmed.StartsWith("**", StringComparison.Ordinal)
+            || !trimmed.EndsWith("**", StringComparison.Ordinal)) return false;
+
+        var inner = trimmed[2..^2].Trim();
+        // Two bold runs on one line is a sentence with emphasis in it, not a heading.
+        if (inner.Length == 0 || inner.Length > MaxBoldHeadingLength
+            || inner.Contains("**", StringComparison.Ordinal)) return false;
+
+        text = inner;
+        level = inner.Any(c => c is ',' or '(' or ')') || inner.Any(char.IsDigit) ? 3 : 2;
+        return true;
+    }
+
+    /// <summary>A rule carries no content in a resume, and Word has no glyph for it — drop it.</summary>
+    private static bool IsThematicBreak(string line)
+    {
+        var trimmed = line.Trim();
+        return trimmed.Length >= 3
+            && (trimmed.All(c => c == '-') || trimmed.All(c => c == '*') || trimmed.All(c => c == '_'));
     }
 
     private static Paragraph Styled(string text, string styleId)
