@@ -36,10 +36,11 @@ src/                                 ALL source, tests, configs, build infra
   Jobmatch.slnx
 data/                                GITIGNORED — per-user state under data/<email>/ (may be a junction/symlink to a personal sync folder; never tracked). Live dir can be redirected on first run — see Per-user data.
   <email>/
-    skillset.md, portals.yml, [ranking.yml override]
+    skillset.md, cv.md, portals.yml, [ranking.yml override]
     raw/, imports/
     all-listings.json, ranked-listings.json, top-jobs.md
     examples/                        user-curated seed listings (liked / disliked archetypes)
+    documents/                       drafted .docx (R-121) — regenerable, so excluded from config export
     history/<run-id>.json, jobsearch/<id>.json, hangfire.db
     marks.json
 package.json                         root npm wrapper — npm workspaces root (src/frontend, src/desktop,

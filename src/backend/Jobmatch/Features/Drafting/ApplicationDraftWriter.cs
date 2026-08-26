@@ -33,7 +33,7 @@ public sealed class ApplicationDraftWriter(ILlmClient client, ILogger<Applicatio
         var user = BuildUserPrompt(inputs);
 
         var raw = await client.ChatAsync(system, user, ct).ConfigureAwait(false);
-        var draft = ParseDraft(raw);
+        var draft = ParseDraft(raw, inputs.JobTitle, inputs.CompanyName);
         if (draft is not null) return draft;
 
         logger.LogWarning("Draft reply didn't parse; retrying once");
@@ -41,7 +41,7 @@ public sealed class ApplicationDraftWriter(ILlmClient client, ILogger<Applicatio
             system,
             user + "\nReturn ONLY the JSON object — no explanation, no code fence.",
             ct).ConfigureAwait(false);
-        draft = ParseDraft(raw);
+        draft = ParseDraft(raw, inputs.JobTitle, inputs.CompanyName);
         if (draft is not null) return draft;
 
         logger.LogWarning("Drafting failed after retry; raw reply: {Raw}", Truncate(raw, 500));
@@ -55,11 +55,10 @@ public sealed class ApplicationDraftWriter(ILlmClient client, ILogger<Applicatio
         sb.AppendLine("You are an expert resume writer. You write ATS-friendly, achievement-oriented resumes and tailored cover letters.");
         sb.AppendLine("You NEVER invent employers, job titles, dates, degrees, certifications or skills the candidate did not provide — you only select, reorder, and rephrase what the CV already states. If the candidate is a weak match, do the best you can with what is true rather than fabricating experience.");
         sb.AppendLine("Output exactly one JSON object, nothing else — no code fence, no commentary. Schema:");
-        sb.AppendLine("""{"jobTitle":string,"companyName":string,"resumeMarkdown":string,"coverLetterMarkdown":string}""");
+        sb.AppendLine("""{"resumeMarkdown":string,"coverLetterMarkdown":string}""");
         sb.AppendLine("Rules:");
-        sb.AppendLine("  - jobTitle and companyName are read off the job ad; use \"\" if the ad does not state one.");
-        sb.AppendLine("  - resumeMarkdown: a full resume in Markdown (## headings, \"- \" bullets, **bold**). About one page. Lead with the experience the ad asks for.");
-        sb.AppendLine("  - coverLetterMarkdown: 3-4 short paragraphs addressed to the hiring team, naming the role and company when the ad states them.");
+        sb.AppendLine("  - resumeMarkdown: a full resume in Markdown. Use \"## \" for every section heading (never bold text as a heading), \"- \" for bullets, **bold** for emphasis within a line. About one page. Lead with the experience the ad asks for.");
+        sb.AppendLine("  - coverLetterMarkdown: 3-4 short paragraphs addressed to the hiring team, naming the role and company given in the ROLE section.");
         sb.AppendLine("  - Mirror the ad's terminology only where it is truthful of the candidate.");
         sb.AppendLine("  - Write both documents in the same language as the job ad.");
         return sb.ToString();
@@ -78,6 +77,12 @@ public sealed class ApplicationDraftWriter(ILlmClient client, ILogger<Applicatio
             sb.AppendLine(DescribeSkillset(inputs.Skillset));
             sb.AppendLine();
         }
+
+        sb.AppendLine("## ROLE APPLIED FOR (from the listing record — authoritative)");
+        sb.AppendLine($"Title: {inputs.JobTitle}");
+        if (!string.IsNullOrWhiteSpace(inputs.CompanyName))
+            sb.AppendLine($"Company: {inputs.CompanyName}");
+        sb.AppendLine();
 
         sb.AppendLine("## JOB AD");
         sb.AppendLine(Truncate(inputs.JobAdText, MaxAdChars));
@@ -100,8 +105,12 @@ public sealed class ApplicationDraftWriter(ILlmClient client, ILogger<Applicatio
         return sb.ToString();
     }
 
-    /// <summary>Null when the reply is unparseable or either document came back empty.</summary>
-    internal static ApplicationDraft? ParseDraft(string raw)
+    /// <summary>
+    /// Null when the reply is unparseable or either document came back empty. The role and employer
+    /// are supplied by the caller, not read from the reply: they are known facts about the listing,
+    /// and asking a model to echo them only creates something for it to get wrong.
+    /// </summary>
+    internal static ApplicationDraft? ParseDraft(string raw, string jobTitle, string? companyName)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
         var stripped = StripFences(raw.Trim());
@@ -115,8 +124,8 @@ public sealed class ApplicationDraftWriter(ILlmClient client, ILogger<Applicatio
         if (resume is null || coverLetter is null) return null;
 
         return new ApplicationDraft(
-            JobTitle: ReadString(root, "jobTitle") ?? string.Empty,
-            CompanyName: ReadString(root, "companyName") ?? string.Empty,
+            JobTitle: jobTitle,
+            CompanyName: companyName ?? string.Empty,
             ResumeMarkdown: resume,
             CoverLetterMarkdown: coverLetter);
     }

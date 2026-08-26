@@ -19,10 +19,13 @@ public static class MarkdownDocx
         main.Document = new Document();
         var body = main.Document.AppendChild(new Body());
 
+        AddStyles(main);
         AddNumbering(main);
 
         foreach (var paragraph in Render(markdown))
             body.AppendChild(paragraph);
+
+        body.AppendChild(PageSetup());
     }
 
     internal static IEnumerable<Paragraph> Render(string markdown)
@@ -131,6 +134,64 @@ public static class MarkdownDocx
     }
 
     private const int BulletNumberingId = 1;
+
+    // A4, with 2cm margins, in twentieths of a point. Without a section, a reader picks its own
+    // default — which is Letter in a US build, and the resume is going to a Danish employer.
+    private static SectionProperties PageSetup() => new(
+        new PageSize { Width = 11906U, Height = 16838U },
+        new PageMargin
+        {
+            Top = 1134,
+            Bottom = 1134,
+            Left = 1134U,
+            Right = 1134U,
+            Header = 709U,
+            Footer = 709U,
+            Gutter = 0U,
+        });
+
+    // A paragraph that points at a style the document does not define renders as body text — Word
+    // quietly substitutes its built-in heading, other readers do not, so the same file looks
+    // structured in one and flat in the next. Defining them is what makes the headings headings.
+    private static void AddStyles(MainDocumentPart main)
+    {
+        var part = main.AddNewPart<StyleDefinitionsPart>();
+        part.Styles = new Styles(
+            new DocDefaults(
+                new RunPropertiesDefault(
+                    new RunPropertiesBaseStyle(
+                        new RunFonts { Ascii = "Calibri", HighAnsi = "Calibri" },
+                        new FontSize { Val = "22" }))),
+            NormalStyle(),
+            HeadingStyle(1, "32"),
+            HeadingStyle(2, "26"),
+            HeadingStyle(3, "24"));
+    }
+
+    private static Style NormalStyle() => new(
+        new StyleName { Val = "Normal" },
+        new PrimaryStyle())
+    {
+        Type = StyleValues.Paragraph,
+        StyleId = "Normal",
+        Default = true,
+    };
+
+    private static Style HeadingStyle(int level, string halfPoints) => new(
+        new StyleName { Val = $"heading {level}" },
+        new BasedOn { Val = "Normal" },
+        new NextParagraphStyle { Val = "Normal" },
+        new PrimaryStyle(),
+        new StyleParagraphProperties(
+            new KeepNext(),
+            new SpacingBetweenLines { Before = "240", After = "120" }),
+        new StyleRunProperties(
+            new Bold(),
+            new FontSize { Val = halfPoints }))
+    {
+        Type = StyleValues.Paragraph,
+        StyleId = $"Heading{level}",
+    };
 
     // Word renders a bulleted paragraph only when the numbering part defines the list it points at.
     private static void AddNumbering(MainDocumentPart main)

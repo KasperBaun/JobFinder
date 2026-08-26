@@ -39,7 +39,7 @@ public sealed class ApplicationDraftService(
 
     public async Task<DraftedDocuments> DraftAsync(string runId, string listingId, CancellationToken ct = default)
     {
-        var jobAdText = ResolveJobAdText(runId, listingId);
+        var ad = ResolveJobAd(runId, listingId);
 
         var cvText = cv.Find()
             ?? throw new InvalidRequestException(
@@ -55,7 +55,8 @@ public sealed class ApplicationDraftService(
         try
         {
             var writer = new ApplicationDraftWriter(client, loggers.CreateLogger<ApplicationDraftWriter>());
-            draft = await writer.WriteAsync(new DraftInputs(cvText, skillsets.Find(), jobAdText), ct).ConfigureAwait(false);
+            var inputs = new DraftInputs(cvText, skillsets.Find(), ad.Title, ad.Company, ad.Text);
+            draft = await writer.WriteAsync(inputs, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -74,7 +75,7 @@ public sealed class ApplicationDraftService(
         _ => llm,
     };
 
-    private string ResolveJobAdText(string runId, string listingId)
+    private (string Title, string? Company, string Text) ResolveJobAd(string runId, string listingId)
     {
         var detail = runs.Find(runId)
             ?? throw new NotFoundException($"Run '{runId}' has no recorded results.");
@@ -88,7 +89,16 @@ public sealed class ApplicationDraftService(
             throw new InvalidRequestException(
                 "That listing was saved without its ad text, so there is nothing to tailor against. Run a fresh search and draft from that run.");
 
-        return match.Description;
+        // Being present is not the same as being usable: some portals hand back a page whose text is
+        // stylesheet and script, and some syndicate a teaser that stops after the first sentence.
+        // Both survive the null check and would produce a confident application written about nothing,
+        // so what the model gets is the ad with its furniture stripped — and no ad at all is refused.
+        var text = JobAdTextNormalizer.Normalize(match.Description);
+        if (text.Length == 0)
+            throw new InvalidRequestException(
+                "That listing's saved ad text is page markup rather than a job description, so there is nothing to tailor against. Open the posting and draft from a run that captured it.");
+
+        return (match.Title, match.Company, text);
     }
 
     private (string ResumePath, string CoverLetterPath) WriteDocuments(ApplicationDraft draft, string listingId)

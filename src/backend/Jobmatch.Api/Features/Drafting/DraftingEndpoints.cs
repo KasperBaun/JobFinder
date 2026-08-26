@@ -22,9 +22,10 @@ public sealed class DraftingEndpoints : IEndpointRegistration
                 ([FromBody] DraftRequest request, [FromServices] IDraftingHandler handler) => handler.Start(request))
             .WithName($"{nameof(Routes.Drafting)}.{nameof(Routes.Drafting.Draft)}")
             .WithSummary("Draft a resume and cover letter for a listing")
-            .WithDescription("Starts a background draft against the listing's stored ad text and the user's CV, and returns immediately. Poll the status endpoint for the result. A repeat call while one is running observes that run rather than starting a second.")
+            .WithDescription("Starts a background draft against the listing's stored ad text and the user's CV, and returns immediately. Poll the status endpoint for the result. A repeat call for the same listing while one is running observes that run rather than starting a second; a call for a different listing is refused with 409 while one is in flight.")
             .Produces<DraftStatusResponse>(StatusCodes.Status202Accepted)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status409Conflict)
             .Produces(StatusCodes.Status500InternalServerError);
     }
 

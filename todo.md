@@ -6,13 +6,17 @@ Current status of work on `jobfinder`.
 
 - **Drafting: the GUI action, and what to do with the result (R-121).** The backend ships without a
   front end — drafting is reachable only over HTTP today. Needs: a draft action on a listing the user
-  has statused, a progress view over `/api/drafts/status` (minutes on CPU, so the CV-extraction
-  progress pattern applies), somewhere to edit the stored CV (`GET`/`PUT /api/cv`), and a way to open
-  or reveal the written .docx. English + Danish catalog keys for all of it. Two questions worth
-  settling first: whether a draft should be remembered per listing (today only the newest run's
-  result is held in memory, though both files persist under `documents/`), and whether Gemma 3 4B is
-  good enough at long-form prose to be the default here — the judge only ever asks it for one line.
-  Ollama with a larger model may be the honest recommendation for this feature specifically.
+  has statused, a progress view over `/api/drafts/status` (~50-75s per listing measured on CPU with
+  Gemma 3 4B, so the CV-extraction progress pattern applies but a spinner may be enough), somewhere to
+  edit the stored CV (`GET`/`PUT /api/cv`), and a way to open or reveal the written .docx. Note the
+  API hands back absolute paths: the desktop shell can open those, the browser shell cannot, so that
+  one needs a download endpoint rather than just a button. `POST /api/drafts` answers 409 while
+  another listing is drafting, which the UI has to show rather than swallow. English + Danish catalog
+  keys for all of it. Filenames are now derived from the listing record, so a draft's paths can be
+  recomputed without a lookup — but nothing lists `documents/`, so decide whether a draft is
+  remembered per listing before building around the newest-run-only status. Still open: whether Gemma
+  3 4B is good enough at long-form prose to be the default here — the judge only ever asks it for one
+  line. Ollama with a larger model may be the honest recommendation for this feature specifically.
 
 - **Nine ESLint warnings left standing, deliberately.** `npm run lint -w jobfinder-gui`
   passes with zero errors and nine warnings, and CI now runs it. Seven are

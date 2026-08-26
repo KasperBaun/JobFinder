@@ -25,6 +25,43 @@ public sealed class MarkdownDocxTests
         Assert.Contains("Plain line.", body.InnerText);
     }
 
+    // A pStyle pointing at a style the package does not define renders as body text everywhere except
+    // Word, which quietly substitutes its own built-in. Defining them is what makes a heading a
+    // heading in whatever the user opens it in.
+    [Fact]
+    public void Write_DefinesEveryStyleItReferences()
+    {
+        using var stream = new MemoryStream();
+        MarkdownDocx.Write("# One\n\n## Two\n\n### Three\n\nBody.", stream);
+
+        stream.Position = 0;
+        using var doc = WordprocessingDocument.Open(stream, isEditable: false);
+        var defined = doc.MainDocumentPart!.StyleDefinitionsPart?.Styles?.Elements<Style>()
+            .Select(s => s.StyleId?.Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.NotNull(defined);
+        var referenced = doc.MainDocumentPart.Document!.Body!.Descendants<ParagraphStyleId>()
+            .Select(p => p.Val?.Value);
+        Assert.All(referenced, styleId => Assert.Contains(styleId, defined!));
+        Assert.Contains("Normal", defined!);
+    }
+
+    [Fact]
+    public void Write_SetsA4_NotWhateverTheReaderDefaultsTo()
+    {
+        using var stream = new MemoryStream();
+        MarkdownDocx.Write("Body.", stream);
+
+        stream.Position = 0;
+        using var doc = WordprocessingDocument.Open(stream, isEditable: false);
+        var pageSize = doc.MainDocumentPart!.Document!.Body!.Elements<SectionProperties>()
+            .Single().Elements<PageSize>().Single();
+
+        Assert.Equal(11906U, pageSize.Width!.Value);
+        Assert.Equal(16838U, pageSize.Height!.Value);
+    }
+
     // Word silently refuses to open a package that violates the schema, so "it wrote bytes" is not
     // evidence the export works. The validator is the check that it does.
     [Fact]

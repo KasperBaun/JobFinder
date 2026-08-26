@@ -34,15 +34,22 @@ public sealed class DraftManager(
     }
 
     /// <summary>
-    /// Idempotent while running: a repeat call observes the in-flight draft instead of starting a
-    /// second one, so a double-click cannot put two model loads in memory at once.
+    /// Idempotent while running: a repeat call for the same listing observes the in-flight draft
+    /// instead of starting a second one, so a double-click cannot put two model loads in memory at
+    /// once. A call for a <em>different</em> listing is refused rather than absorbed — returning this
+    /// run's progress would report work that is never going to happen.
     /// </summary>
     public DraftStatusResponse Start(DraftRequest request)
     {
         lock (_gate)
         {
             if (_state == DraftState.Drafting)
-                return Current();
+            {
+                if (IsInFlight(request)) return Current();
+
+                throw new ConflictException(
+                    $"A draft for listing '{_listingId}' is already running. Only one draft runs at a time — wait for it to finish, then draft this one.");
+            }
 
             _state = DraftState.Drafting;
             _runId = request.RunId;
@@ -57,6 +64,10 @@ public sealed class DraftManager(
 
     private DraftStatusResponse Current() =>
         new(_state, _runId, _listingId, _startedAt, _error, _result);
+
+    private bool IsInFlight(DraftRequest request) =>
+        string.Equals(_runId, request.RunId, StringComparison.Ordinal)
+        && string.Equals(_listingId, request.ListingId, StringComparison.Ordinal);
 
     private async Task RunAsync(DraftRequest request)
     {
