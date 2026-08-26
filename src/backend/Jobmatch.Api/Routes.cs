@@ -94,6 +94,24 @@ public static class Routes
         public const string GetAll = Base;
     }
 
+    public static class Cv
+    {
+        public const string Tag = "Cv";
+        public const string Base = $"{Prefix}/cv";
+        public const string Get = Base;
+        public const string Update = Base;
+    }
+
+    public static class Drafting
+    {
+        public const string Tag = "Drafting";
+        public const string Base = $"{Prefix}/drafts";
+        // Writing two documents takes minutes on CPU, so it runs in the background and the GUI
+        // polls, the same shape as the CV extraction flow (R-121).
+        public const string Draft = Base;
+        public const string Status = $"{Base}/status";
+    }
+
     public static class Llm
     {
         public const string Tag = "Llm";

@@ -7,7 +7,7 @@ The backbone library: the domain, the search engine, the other user capabilities
 Domain/          the nouns — Listing, Match, Skillset, and Runs/ (a run's persisted record)
 Search/          the verb  — one search run, phase by phase
 Features/        the other verbs — Providers, Skillsets, History, Applications, Cv,
-                 Transfer, Bootstrap, AiModel
+                 Drafting, Transfer, Bootstrap, AiModel
 Infrastructure/  the plumbing — Paths/, IO/, Json/, Llm/
 Exceptions.cs    namespace `Jobmatch`, so every thrower reaches it without a using
 ```
@@ -49,6 +49,8 @@ distance maths and the radius filter, which both dedupe and ranking use.
 | Getting the model onto the machine | `Features/AiModel/` | A user capability behind `/api/llm/*`, never touched by a run |
 | Who the user is, where their data lives | `Features/Bootstrap/` | First-run setup, data directory, UI language |
 | The `portals.yml` parser | `Features/Providers/Legacy/` | Retired format; only the one-shot migration reads it |
+| Writing a resume for a listing | `Features/Drafting/` | Starts after a run ends, from the ad text the run stored |
+| The user's CV text | `Features/Cv/` | Read to prefill a profile, kept because drafting writes from it |
 
 **See:** [`../../../CLAUDE.md`](../../../CLAUDE.md) for the repo layout, and the
 `dotnet-backend-standards` skill for the API conventions.

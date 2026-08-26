@@ -29,6 +29,8 @@ public sealed class UserContext
     public required string ExamplesDir { get; init; }
     public required string ProviderStatePath { get; init; }
     public required string UserProvidersPath { get; init; }
+    public required string CvPath { get; init; }
+    public required string DocumentsDir { get; init; }
 
     /// <summary>
     /// Resolves the active user, lays out their paths under <c>{repoRoot}/data/{email}/</c>, and
@@ -88,6 +90,8 @@ public sealed class UserContext
             ExamplesDir = Path.Combine(rootDir, "examples"),
             ProviderStatePath = Path.Combine(rootDir, "provider-state.json"),
             UserProvidersPath = Path.Combine(rootDir, "user-providers.json"),
+            CvPath = Path.Combine(rootDir, "cv.md"),
+            DocumentsDir = Path.Combine(rootDir, "documents"),
         };
     }
 

@@ -4,6 +4,16 @@ Current status of work on `jobfinder`.
 
 ## Backlog (next up)
 
+- **Drafting: the GUI action, and what to do with the result (R-121).** The backend ships without a
+  front end — drafting is reachable only over HTTP today. Needs: a draft action on a listing the user
+  has statused, a progress view over `/api/drafts/status` (minutes on CPU, so the CV-extraction
+  progress pattern applies), somewhere to edit the stored CV (`GET`/`PUT /api/cv`), and a way to open
+  or reveal the written .docx. English + Danish catalog keys for all of it. Two questions worth
+  settling first: whether a draft should be remembered per listing (today only the newest run's
+  result is held in memory, though both files persist under `documents/`), and whether Gemma 3 4B is
+  good enough at long-form prose to be the default here — the judge only ever asks it for one line.
+  Ollama with a larger model may be the honest recommendation for this feature specifically.
+
 - **Nine ESLint warnings left standing, deliberately.** `npm run lint -w jobfinder-gui`
   passes with zero errors and nine warnings, and CI now runs it. Seven are
   `react-hooks/set-state-in-effect`: `MarkButton`, `StatusSelect` and `MarkWhy` reset optimistic

@@ -8,7 +8,7 @@ namespace Jobmatch.Features.Cv;
 // Resolves the CV source to text, then runs the LLM extraction. Creates and
 // disposes its own ILlmClient per call (same lifecycle as a search run) — a
 // llamasharp model load costs a few seconds, acceptable for a one-off action.
-public sealed class CvExtractionService(UserContext ctx, ILoggerFactory loggers) : ICvExtractionService
+public sealed class CvExtractionService(UserContext ctx, ICvDocumentStore cv, ILoggerFactory loggers) : ICvExtractionService
 {
     public async Task<ExtractedProfile> ExtractAsync(CvSource source, CancellationToken ct = default)
     {
@@ -16,6 +16,10 @@ public sealed class CvExtractionService(UserContext ctx, ILoggerFactory loggers)
         var normalized = CvTextNormalizer.Normalize(text);
         if (normalized.Length == 0)
             throw new InvalidRequestException("No readable text found in the CV.");
+
+        // Keep the text: extraction only prefills a profile, but drafting later needs the career
+        // facts a skillset does not carry, and this is the one point where they are already in hand.
+        cv.Save(normalized);
 
         var llm = RankingConfigLoader.Load(ctx.RankingPath).Llm;
         if (!llm.Enabled)
