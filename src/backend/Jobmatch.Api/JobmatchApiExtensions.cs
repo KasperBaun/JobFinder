@@ -1,4 +1,5 @@
 using Jobmatch.Api.Features.Applications;
+using Jobmatch.Api.Features.Drafting;
 using Jobmatch.Api.Features.Health;
 using Jobmatch.Api.Features.History;
 using Jobmatch.Api.Features.Llm;
@@ -44,6 +45,7 @@ public static class JobmatchApiExtensions
         services.AddSearch(enableBackgroundJobs);
         services.AddHistory();
         services.AddApplications();
+        services.AddDrafting();
         services.AddLlm();
         services.AddTransfer();
 
@@ -84,6 +86,7 @@ public static class JobmatchApiExtensions
         app.MapSearch();
         app.MapHistory();
         app.MapApplications();
+        app.MapDrafting();
         app.MapLlm();
         app.MapTransfer();
 

@@ -17,6 +17,10 @@ public static class SkillsetsModule
         services.AddScoped<ISkillsetService, SkillsetService>();
         services.AddScoped<ICvExtractionService, CvExtractionService>();
 
+        // Extraction writes the CV it read, so the store belongs to whoever registers extraction —
+        // Drafting reads it later, but it is not the reason the file exists.
+        services.AddScoped<ICvDocumentStore, CvDocumentStore>();
+
         // Save-time DAWA geocoding for the radius filter (R-105). Short timeout on purpose:
         // a slow or offline lookup degrades to a save without coordinates, never a failed save.
         services.AddHttpClient<IGeocodingService, DawaGeocodingService>(c => c.Timeout = TimeSpan.FromSeconds(5));

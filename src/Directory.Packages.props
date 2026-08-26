@@ -31,6 +31,10 @@
     <!-- PDF text extraction for CV-driven profile setup (R-011) — pure managed, no native deps -->
     <PackageVersion Include="PdfPig" Version="0.1.15" />
 
+    <!-- .docx writing for drafted applications (R-121). Microsoft's own OOXML SDK — pure managed,
+         no Office install and no native deps. Only the WordprocessingML subset is used. -->
+    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+
     <!-- In-process LLM judging via llama.cpp. Each backend NuGet bundles the
          native binaries for its target. Both Cpu and Vulkan are referenced:
          LLamaSharp auto-selects at runtime (WithAutoFallback, on by default) —

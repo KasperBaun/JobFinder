@@ -130,12 +130,15 @@ public sealed class ConfigTransferService(UserContext ctx) : IConfigTransferServ
     }
 
     // Directories that are transient/regenerable or held open by the running app: the multi-GB
-    // re-downloadable LLM model, the WARN+ runtime logs (host.log is locked while running), and
-    // prior-import .backup-* folders. Excluded from exports and left in place across an import (never
-    // moved to backup or overwritten). The user's search history lives in jobsearch/ + history/.
+    // re-downloadable LLM model, the WARN+ runtime logs (host.log is locked while running), the
+    // drafted .docx (rewritten from cv.md and the run they were drafted against, both of which are in
+    // the archive), and prior-import .backup-* folders. Excluded from exports and left in place across
+    // an import (never moved to backup or overwritten). The user's search history lives in
+    // jobsearch/ + history/.
     private static bool IsTransientDir(string segment) =>
         segment.Equals("models", StringComparison.OrdinalIgnoreCase)
         || segment.Equals("logs", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("documents", StringComparison.OrdinalIgnoreCase)
         || segment.StartsWith(".backup-", StringComparison.Ordinal);
 
     // Hangfire's local job queue (hangfire.db + its -wal/-shm sidecars) — a transient root-level file
