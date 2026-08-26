@@ -58,7 +58,7 @@ not reintroduce.
 | Business logic, file-based data access, ranking, adapter orchestration | | | ✅ |
 
 - **Endpoints** register routes only — no data-access types injected. Route constants live
-  in `src/backend/Jobmatch.Api/Endpoints/Routes.cs`.
+  in `src/backend/Jobmatch.Api/Routes.cs`.
 - **Handlers** inherit `HandlerBase` and wrap every public method body in `ExecuteAsync(...)`.
   That wrapper provides automatic logging and exception → HTTP mapping.
 - **Services** own file I/O (via stores), adapter orchestration, ranking, and validation.
@@ -87,7 +87,7 @@ and CLAUDE.md → *"Code conventions"*.
 | `InternalDataInvalidException` | 500 |
 
 Throw the right type from the service. Do not catch and translate manually — the base
-wrapper does it. **Adapters throw on failure**; the `SearchService` orchestrator wraps
+wrapper does it. **Adapters throw on failure**; the `SearchRunner` orchestrator wraps
 each adapter in try/catch, logs a structured warning, and continues. That pipeline-level
 degradation is intentional — do not push it up into handlers. Full convention in
 [`reference/security/error-handling.md`](reference/security/error-handling.md).

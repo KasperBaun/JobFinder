@@ -1,3 +1,0 @@
-namespace Jobmatch.Api.Models;
-
-public sealed record WhoamiResponse(string Email, string DataDir, string ToolVersion);

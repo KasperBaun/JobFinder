@@ -11,7 +11,6 @@ export const sources = {
 
   nameLabel: 'Name',
   addSource: 'Add source',
-  testFirst: 'Test first',
   fallbackName: 'source',
 
   notFoundHint:
@@ -29,4 +28,15 @@ export const sources = {
   foundJobs: (count: number) => `Found ${count} jobs`,
   nothingCameBack: 'Nothing came back',
   sample: (title: string) => `e.g. “${title}”`,
+
+  fetching: 'Fetching the jobs…',
+  checkingExisting: 'Checking whether you already have this…',
+
+  duplicateTitle: 'You already have this source',
+  duplicateBody: (name: string, shared: number, total: number) =>
+    `“${name}” already brings in ${shared} of these ${total} jobs. Adding this would fetch them twice.`,
+  overlapBody: (name: string, shared: number, total: number) =>
+    `${shared} of these ${total} jobs also come from “${name}”. The rest would be new.`,
+  openExisting: (name: string) => `Open ${name}`,
+  addAnyway: 'Add anyway',
 }

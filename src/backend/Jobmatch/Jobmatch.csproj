@@ -12,6 +12,7 @@
     <PackageReference Include="CodeHollow.FeedReader" />
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="PdfPig" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="LLamaSharp" />
     <PackageReference Include="LLamaSharp.Backend.Cpu" />
     <PackageReference Include="LLamaSharp.Backend.Vulkan" />
@@ -24,11 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Configuration/portals.json">
+    <None Update="Features/Providers/portals.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>portals.json</TargetPath>
     </None>
-    <None Update="Geo/gazetteer.tsv">
+    <None Update="Search/Locations/gazetteer.tsv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>geo/gazetteer.tsv</TargetPath>
     </None>

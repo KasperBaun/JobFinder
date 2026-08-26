@@ -1,6 +1,10 @@
 namespace Jobmatch;
 
-public abstract class JobfinderException(string message) : Exception(message);
+public abstract class JobfinderException : Exception
+{
+    protected JobfinderException(string message) : base(message) { }
+    protected JobfinderException(string message, Exception inner) : base(message, inner) { }
+}
 
 public sealed class NotFoundException(string message) : JobfinderException(message);
 
@@ -14,3 +18,10 @@ public sealed class ConflictException(string message) : JobfinderException(messa
 /// the GUI can route the user to the setup screen.
 /// </summary>
 public sealed class SetupRequiredException(string message) : JobfinderException(message);
+
+/// <summary>Thrown when user-supplied configuration is malformed or fails validation.</summary>
+public sealed class ConfigException : JobfinderException
+{
+    public ConfigException(string message) : base(message) { }
+    public ConfigException(string message, Exception inner) : base(message, inner) { }
+}

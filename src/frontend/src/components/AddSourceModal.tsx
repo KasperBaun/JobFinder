@@ -1,16 +1,20 @@
 import { useEffect, useId, useState } from 'react'
 import { createSource, detectSource, previewSource } from '../api/client'
-import type { DetectedSource, ProviderTestResult } from '../api/types'
+import type { DetectedSource, SourceOverlap, SourcePreviewResult } from '../api/types'
 import { useT } from '../i18n'
+import { SourceOverlapNotice } from './addSource/SourceOverlapNotice'
+import { TestResultLine } from './addSource/TestResultLine'
 
 type Step = 'paste' | 'confirm' | 'notfound' | 'manual'
 
 export function AddSourceModal({
   onClose,
   onCreated,
+  onOpenExisting,
 }: {
   onClose: () => void
   onCreated: (id: number, name: string) => void
+  onOpenExisting: (overlap: SourceOverlap) => void
 }) {
   const t = useT('sources')
   const common = useT('common')
@@ -20,7 +24,8 @@ export function AddSourceModal({
   const [candidate, setCandidate] = useState<DetectedSource | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [busy, setBusy] = useState(false)
-  const [testResult, setTestResult] = useState<ProviderTestResult | null>(null)
+  const [preview, setPreview] = useState<SourcePreviewResult | null>(null)
+  const [previewing, setPreviewing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -43,7 +48,7 @@ export function AddSourceModal({
   }
 
   async function find() {
-    setTestResult(null)
+    setPreview(null)
     const res = await run(() => detectSource(url))
     if (!res) return
     if (res.candidates.length === 0) {
@@ -54,12 +59,19 @@ export function AddSourceModal({
     setCandidate(c)
     setDisplayName(c.displayName)
     setStep('confirm')
+    // Recognising the address is not the answer the user came for — whether it returns jobs is. The
+    // same call reports any existing source already bringing those jobs in.
+    void fetchPreview(c)
   }
 
-  async function test() {
-    if (!candidate) return
-    const res = await run(() => previewSource({ url, kind: candidate.kind, displayName }))
-    if (res) setTestResult(res)
+  async function fetchPreview(c: DetectedSource) {
+    setPreviewing(true)
+    try {
+      const res = await run(() => previewSource({ url, kind: c.kind, displayName: c.displayName }))
+      if (res) setPreview(res)
+    } finally {
+      setPreviewing(false)
+    }
   }
 
   async function add(kind: string) {
@@ -71,10 +83,12 @@ export function AddSourceModal({
 
   function goManual() {
     setError(null)
-    setTestResult(null)
+    setPreview(null)
     setDisplayName('')
     setStep('manual')
   }
+
+  const duplicate = preview?.overlap?.duplicate === true
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -116,9 +130,6 @@ export function AddSourceModal({
         {step === 'confirm' && candidate && (
           <div className="add-source__body">
             <div className="add-source__found">{candidate.summary}</div>
-            {candidate.duplicateWarning && (
-              <p className="add-source__warn">{candidate.duplicateWarning}</p>
-            )}
             <label className="field__label" htmlFor={`${titleId}-name`}>{t.nameLabel}</label>
             <input
               id={`${titleId}-name`}
@@ -126,13 +137,23 @@ export function AddSourceModal({
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
-            {testResult && <TestResultLine result={testResult} />}
+            {previewing && <p className="field__hint">{preview ? t.checkingExisting : t.fetching}</p>}
+            {preview && <TestResultLine result={preview.test} />}
+            {preview?.overlap && (
+              <SourceOverlapNotice
+                overlap={preview.overlap}
+                fetchedCount={preview.test.fetchedCount}
+                onOpenExisting={onOpenExisting}
+              />
+            )}
             <div className="add-source__actions">
-              <button type="button" className="btn btn--primary" disabled={busy || !displayName.trim()} onClick={() => void add(candidate.kind)}>
-                {busy ? <span className="spinner" /> : t.addSource}
-              </button>
-              <button type="button" className="btn btn--secondary" disabled={busy} onClick={() => void test()}>
-                {t.testFirst}
+              <button
+                type="button"
+                className={`btn ${duplicate ? 'btn--secondary' : 'btn--primary'}`}
+                disabled={busy || !displayName.trim()}
+                onClick={() => void add(candidate.kind)}
+              >
+                {busy && !previewing ? <span className="spinner" /> : duplicate ? t.addAnyway : t.addSource}
               </button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('paste')}>{common.back}</button>
             </div>
@@ -172,21 +193,6 @@ export function AddSourceModal({
 
         {error && <p className="error-text add-source__error">{error}</p>}
       </div>
-    </div>
-  )
-}
-
-function TestResultLine({ result }: { result: ProviderTestResult }) {
-  const t = useT('sources')
-  return (
-    <div className={`provider-test-result provider-test-result--${result.ok ? 'ok' : 'fail'}`}>
-      <div className="provider-test-result__head">
-        <span className="provider-test-result__dot" aria-hidden />
-        <span>{result.ok ? t.foundJobs(result.fetchedCount) : t.nothingCameBack}</span>
-        <span className="provider-test-result__meta">{result.durationMs}ms</span>
-      </div>
-      {result.sampleTitle && <div className="add-source__sample">{t.sample(result.sampleTitle)}</div>}
-      {result.error && !result.ok && <div className="add-source__sample">{result.error}</div>}
     </div>
   )
 }

@@ -125,6 +125,13 @@ export function ProvidersPage() {
             void queryClient.invalidateQueries({ queryKey: ['providers'] })
             setToast({ kind: 'ok', message: t.added(name) })
           }}
+          // "You already have this" is only believable if the user can go and look at the source
+          // we mean, so filter the list down to it rather than just naming it.
+          onOpenExisting={(overlap) => {
+            setAdding(false)
+            setFilter('all')
+            setQuery(overlap.displayName)
+          }}
         />
       )}
 

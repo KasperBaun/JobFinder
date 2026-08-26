@@ -22,6 +22,7 @@ The user wants to:
 - **See what they have configured.** Inspect the providers currently in play and the search criteria currently driving rankings, so changes are visible and intentional.
 - **Look back at past searches.** Review previous runs with timestamp, how many listings came back, and how many of those they later marked as a good match.
 - **Teach the system over time.** Mark listings as good or bad matches so future rankings surface more of the former and less of the latter.
+- **Apply without starting from a blank page.** For a listing worth applying to, get a first-draft resume and cover letter built from their own CV and aimed at that ad — a starting point to edit, not a finished submission.
 - **Trust the system.** Be confident the system acts only when initiated, communicates only with providers the user explicitly configured, and respects the boundaries those providers set.
 
 ### System (`jobfinder`)
@@ -52,7 +53,7 @@ The system fulfils the user's goals through the following responsibilities and q
 
 - **Single source of truth per concept.** Exactly one active profile, one active provider list, one history. No shadow copies, no parallel views that can drift.
 - **One model, many doorways.** Every capability is reachable regardless of how the user chooses to interact with the system; no operation is exclusive to a particular interaction style.
-- **YAGNI, ruthlessly.** No multi-user accounts, no scheduling, no cover-letter generation, no salary normalisation. The system surfaces ranked listings.
+- **YAGNI, ruthlessly.** No multi-user accounts, no scheduling, no salary normalisation. The system surfaces ranked listings, and — once the user is applying to one — drafts the documents for that application from facts they supplied.
 - **Fail loud, not weird.** Broken providers, missing configuration, unreachable endpoints — surface the problem with context; never paper over it.
 
 ## Scope summary
@@ -65,10 +66,11 @@ The system fulfils the user's goals through the following responsibilities and q
 - Multiple interaction styles drawing on the same set of capabilities.
 - Per-run history and user-applied "good match" feedback.
 - Application-outcome tracking: a per-listing application status (applied / interview / offer / rejected / no-response) independent of the good/bad mark, a cross-run Applications view, and positive outcomes (interview, offer) feeding back into ranking calibration.
+- Application drafting for a listing the user has chosen: a resume and cover letter written on-device from the user's own CV and tailored to that listing's ad text, exported as .docx.
 
 **Out of scope**
 
-- Cover-letter or application generation.
+- Bulk or unattended application generation: drafting is per-listing and user-initiated, and the system never submits an application on the user's behalf.
 - Salary normalisation or estimation.
 - Cross-user features, sharing, or external synchronisation.
 - Scheduled or background runs.

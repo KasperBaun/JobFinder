@@ -1,3 +1,5 @@
+namespace Jobmatch.Host;
+
 /// <summary>
 /// Minimal terminal output formatting for the host process — startup banner, errors that
 /// should surface to the user even though Kestrel logs are suppressed.

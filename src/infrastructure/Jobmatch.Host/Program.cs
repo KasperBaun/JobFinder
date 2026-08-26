@@ -1,13 +1,15 @@
+using Jobmatch.Host;
 using System.Diagnostics;
-using System.Net;
 using System.Net.Sockets;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using Hangfire;
 using Hangfire.Dashboard;
-using Jobmatch;
+using Hangfire;
 using Jobmatch.Api;
-using Jobmatch.Configuration;
+using Jobmatch.Features.Bootstrap;
+using Jobmatch.Infrastructure.Paths;
+using Jobmatch;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using NReco.Logging.File;
@@ -171,8 +173,7 @@ static string ResolveFallbackLogRoot()
     }
     catch
     {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "jobfinder");
+        return DataRoot.EnsureFallback();
     }
 }
 

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Jobmatch.Domain.Runs;
 
 namespace Jobmatch.Search;
 

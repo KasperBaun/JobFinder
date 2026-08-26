@@ -1,0 +1,45 @@
+namespace Jobmatch.Api.Features.Skillsets;
+
+public sealed record SkillsetResponse(
+    string Name,
+    string Location,
+    int ExperienceYears,
+    IReadOnlyList<string> TargetRoles,
+    string RemotePreference,
+    string Seniority,
+    IReadOnlyList<string> PrimaryStack,
+    IReadOnlyList<string> SecondaryStack,
+    IReadOnlyList<string> Domains,
+    IReadOnlyList<string> Disqualifiers,
+    IReadOnlyList<string> Languages,
+    IReadOnlyList<string> EmploymentTypes,
+    string? Country,
+    string? Region,
+    IReadOnlyList<string> Metro,
+    IReadOnlyList<string> PreferredCompanies,
+    string? Address = null,
+    double? RadiusKm = null,
+    // Server-computed at save time (DAWA geocoding) — response-only, never client input.
+    double? Latitude = null,
+    double? Longitude = null,
+    string? ResolvedAddress = null);
+
+public sealed record SkillsetUpdateRequest(
+    string? Name,
+    string? Location,
+    int? ExperienceYears,
+    IReadOnlyList<string>? TargetRoles,
+    string? RemotePreference,
+    string? Seniority,
+    IReadOnlyList<string>? PrimaryStack,
+    IReadOnlyList<string>? SecondaryStack,
+    IReadOnlyList<string>? Domains,
+    IReadOnlyList<string>? Disqualifiers,
+    IReadOnlyList<string>? Languages,
+    IReadOnlyList<string>? EmploymentTypes,
+    string? Country,
+    string? Region,
+    IReadOnlyList<string>? Metro,
+    IReadOnlyList<string>? PreferredCompanies,
+    string? Address = null,
+    double? RadiusKm = null);

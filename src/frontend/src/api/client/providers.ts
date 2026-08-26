@@ -6,6 +6,7 @@ import type {
   ProvidersResponse,
   ProviderTestResult,
   SaveResponse,
+  SourcePreviewResult,
 } from '../types'
 import { apiFetch, jsonBody } from './http'
 
@@ -43,8 +44,8 @@ export async function detectSource(url: string): Promise<DetectSourceResponse> {
 
 type SourceRef = { url?: string; kind: string; displayName?: string }
 
-export async function previewSource(ref: SourceRef): Promise<ProviderTestResult> {
-  return apiFetch<ProviderTestResult>('/api/providers/detect/test', jsonBody('POST', ref))
+export async function previewSource(ref: SourceRef): Promise<SourcePreviewResult> {
+  return apiFetch<SourcePreviewResult>('/api/providers/detect/test', jsonBody('POST', ref))
 }
 
 export async function createSource(ref: SourceRef): Promise<ProviderCreatedResponse> {

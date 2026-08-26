@@ -94,9 +94,27 @@ export type DetectedSource = {
   kind: string
   displayName: string
   summary: string
-  duplicateWarning?: string
 }
 
 export type DetectSourceResponse = { candidates: DetectedSource[] }
+
+/**
+ * A source the candidate turned out to duplicate, found by comparing the jobs it actually returned
+ * against the jobs an existing source returns. `ratio` is the share of the smaller job set the two
+ * have in common; `duplicate` marks a 1-to-1 match.
+ */
+export type SourceOverlap = {
+  providerId: number
+  displayName: string
+  existingCount: number
+  sharedCount: number
+  ratio: number
+  duplicate: boolean
+}
+
+export type SourcePreviewResult = {
+  test: ProviderTestResult
+  overlap?: SourceOverlap
+}
 
 export type ProviderCreatedResponse = { id: number }
